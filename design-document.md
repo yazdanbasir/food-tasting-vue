@@ -40,25 +40,66 @@ Storing price in cents is a common, important practice. When you display it, div
 
 ### The Scraper
 
-Giant's website is a modern JavaScript-rendered SPA (their site uses React), which means traditional HTTP scrapers (like `open-uri` + Nokogiri in Ruby, or Python's `requests` + BeautifulSoup) will not work — they only see the raw HTML before JavaScript runs and the product data is loaded. You need a **browser automation** tool.
+#### Why Plain Playwright Won't Work Out of the Box
 
-**Recommended tool: Playwright (Python or Node)**
+`giantfoodstores.com` blocks automated access aggressively — the site returns a 403 immediately on any non-browser request. It uses Cloudflare bot protection, which detects headless browsers by examining browser fingerprints and the `navigator.webdriver` flag. Running plain Playwright against it will get you blocked just as fast as a simple HTTP request.
 
-Playwright drives a real browser (Chromium, Firefox, or WebKit) programmatically. It waits for JavaScript to execute, handles dynamic content, and lets you interact with the page exactly as a human would. It is actively maintained by Microsoft and significantly more reliable than Puppeteer or Selenium for modern sites.
+Traditional scrapers (`requests` + BeautifulSoup, `open-uri` + Nokogiri) are not viable either — Giant's product pages are JavaScript-rendered and return empty shells without JS execution.
 
-The scraper should be a standalone script (not part of the Rails app) that:
+#### The Aisle Number Constraint
 
-1. Launches a headless browser via Playwright
-2. Navigates to each product category on Giant's site
-3. For each product listing, extracts: name, product ID, image, price, size, and aisle
-4. Writes the collected data to a JSON or CSV file
-5. You then import that file into the Rails database via a seed script or a custom `rake` task
+Aisle numbers are the most important and most difficult field to obtain. They exist on Giant's own product detail pages but are not surfaced by third-party services like Instacart. This constrains the approach: any solution that doesn't hit Giant's own site directly will likely not return aisle data. Keep this in mind as you weigh the options below.
 
-This separation matters: the scraper is brittle by nature (Giant can change their site anytime), so keeping it outside the Rails app means you can update and re-run it independently without touching the rest of the application. You run it once before an event, then import the output.
+#### Option 1: Reverse Engineer the Giant Mobile App API (Recommended First Attempt)
 
-**Handling site changes:** Playwright allows you to select elements by visible text, ARIA roles, and test IDs — not just CSS class names. This makes your scraper more resilient to layout/style changes. That said, you should expect to update it if Giant does a major redesign. Build it with that reality in mind: keep the selectors well-documented and easy to find and change.
+Giant has an iOS/Android app that loads product data from a backend API. That API almost certainly returns structured JSON containing all the fields needed — name, price, size, image, and aisle. Mobile app APIs are typically far less protected than public websites; they don't have Cloudflare in the same way.
 
-**Re-running before each event:** Add a `scraped_at` timestamp to every row. Your Rails seed/import script should upsert records by `product_id` (insert if new, update if existing). This way re-running the scraper before a new event refreshes prices and availability without duplicating data.
+**How to do it:**
+1. Install [mitmproxy](https://mitmproxy.org/) (free, open source) on your laptop
+2. Configure your phone to route traffic through it
+3. Open the Giant app and browse a few product categories and individual product pages
+4. Watch the intercepted requests — identify the API endpoints being called and the JSON responses
+5. Once you have the endpoint patterns and any required headers/tokens, call them directly from a Python or Ruby script
+
+If this yields clean structured data, it is by far the most durable and reliable approach. App APIs change less frequently than website HTML, and you can re-run the script before each event with minimal maintenance.
+
+#### Option 2: Playwright + Stealth + Residential Proxy (DIY, Full Control)
+
+If the app API approach doesn't pan out, Playwright can still work against Giant's website — but it needs two additions:
+
+- **`playwright-extra` + `puppeteer-extra-plugin-stealth`** (Python or Node): patches the fingerprinting tells that Cloudflare detects, making the browser appear to be a real user
+- **A residential proxy service**: rotates real residential IP addresses so your requests don't get rate-limited or blocked by IP. Bright Data, Oxylabs, and Smartproxy all offer pay-as-you-go plans starting around $3–5/GB. A single pre-event scrape of Giant's full inventory would likely cost under $2 in proxy bandwidth.
+
+The scraper structure remains the same as any Playwright script:
+1. Launch a stealth browser session through the proxy
+2. Navigate category by category through Giant's product listings
+3. For each product, open the detail page and extract: name, product ID, price, size, image, and aisle
+4. Write all collected data to a JSON or CSV file
+5. Import that file into the Rails database via a `rake` task (upsert by `product_id`)
+
+This approach gives you Giant's exact data including aisle numbers, but it is the most brittle — Giant can change their HTML at any time, and you'll need to update selectors when they do. Keep selector logic well-documented and isolated so it's easy to patch.
+
+#### Option 3: Apify Instacart Scraper (Easiest Setup, No Aisle Data)
+
+Instacart carries Giant Food Stores (the Easton, PA location is available). Apify offers pre-built, actively maintained [Instacart scrapers](https://apify.com/tropical_quince/instacart-product-scraper) that handle anti-bot and proxy management internally. They return: product name, price, size, image, and Instacart's own category labels.
+
+**What's missing: physical aisle numbers.** Instacart uses its own category taxonomy ("Produce", "Dairy & Eggs", "Frozen Foods") rather than Giant's store aisle labels. This means the organizer grocery list could still be sorted and grouped logically by category — it just wouldn't map to Giant's exact aisle letters/numbers.
+
+Use this option only if you decide aisle-letter precision isn't critical and Instacart's broader categories are sufficient for the shopping workflow. Cost on Apify's free tier is likely enough for a single event's scrape.
+
+#### Scraper Architecture (All Options)
+
+Regardless of which approach is used, the scraper is a **standalone script outside the Rails app**, run manually before each event. The workflow is always:
+
+```
+Run scraper → outputs products.json
+→ Run: rails db:seed:scraper (or rake import:products)
+→ Upserts records into the ingredients table by product_id
+```
+
+This keeps the fragile scraping logic completely separate from the application. You fix the scraper independently without touching Rails.
+
+**Re-running before each event:** The `scraped_at` timestamp on each row tracks freshness. The import task upserts by `product_id` — existing products get their price/size/aisle updated, new products get inserted, nothing is duplicated.
 
 ### Ingredient Search API
 
@@ -99,18 +140,30 @@ Users can also add free-text ingredients for items not found in the Giant databa
 
 ### Submission Identity & Access
 
-This is the mechanism by which submitters can return and edit their submission later. Two viable options:
+This is the mechanism by which submitters can return and edit their submission later. No email required. Two options, both simple:
 
-**Option A: Magic Link (Recommended)**
-When a team submits, they provide one email address. The app emails them a unique, one-time-use link. Clicking that link authenticates them as that team's submitter and lets them view and edit their submission. No passwords. Works great for a one-time event. Rails has `ActionMailer` built in; a service like Resend or Postmark handles actual delivery.
+**Option A: Short Code (Default — No Account)**
+When a team submits, the app generates a short alphanumeric code (e.g. `TEAM-4F9X`) and displays it on a confirmation screen. The team saves this code — screenshot it, write it down, whatever. To return and edit, they enter the code on a simple lookup page and are taken directly to their submission. No login, no account, nothing to remember except one code.
 
-**Option B: Short Code**
-When a team submits, generate a short alphanumeric code (e.g. `TEAM-4F9X`). Display this on-screen and tell them to save it. Entering this code later retrieves their submission. Simpler to implement but relies on the user saving the code.
+This is the zero-friction path. Implement this first.
 
-Magic links are the better experience for a non-technical audience. The recommendation is to implement Option A.
+**Option B: Optional Account (If You Want It)**
+If you decide to give submitters a more permanent way to access their submission, you can offer a simple account creation step at the end of the submission flow. This is entirely optional — teams that skip it fall back to the short code.
+
+Account creation is three fields: a username (or just their team name slugified), a password, and a confirmed password. That's it. No email, no verification step, no onboarding flow. Rails' `has_secure_password` handles all the password hashing.
+
+When they return, they log in with their username and password and land directly on their submission.
+
+**Forgotten Password (for Option B)**
+Since there's no email, the recovery flow is organizer-assisted:
+
+- At account creation, the app generates and displays a **one-time recovery code** (a random string like `RCV-7X2MQP`). The user is told to save this alongside their password. If they forget their password, they enter their username + recovery code and are allowed to set a new one. Recovery codes are single-use and hashed in the database the same way passwords are.
+- As a fallback, any organizer can also trigger a password reset from the organizer dashboard. This produces a new temporary password that the team can use to log in and immediately change. Since there are only ~20–30 teams total, this is a perfectly practical escape hatch for the rare case someone loses both their password and recovery code.
+
+The short code (Option A) is still generated regardless of whether an account exists — it serves as a permanent backup identifier tied to that submission.
 
 ### Editing a Submission
-Once authenticated via magic link (or code), the submitter sees their existing submission pre-filled in the same form. Any saved changes trigger a background notification to the organizer dashboard (see Part 3).
+Once in (via short code or account login), the submitter sees their existing submission pre-filled in the same form. Any saved changes trigger a background notification to the organizer dashboard (see Part 3).
 
 ---
 
@@ -191,7 +244,6 @@ For submitters checking on their own submission (not organizers), a simple perio
 | Rails API | **Render** (free tier or $7/mo) | Simple deploys from Git, supports Action Cable/WebSockets, includes PostgreSQL |
 | Vue Frontend | **Render Static Sites** or **Netlify** (free) | Serves the built Vite output as a static site on a CDN |
 | Database | **Render PostgreSQL** or **Supabase** (free tier) | Managed Postgres, no server administration |
-| Email | **Resend** (free tier: 3,000 emails/mo) | Simple API, excellent Rails integration, free at this scale |
 
 This entire stack can run for free or near-free for an event of this scale (~10 organizers, ~20–30 submitter teams).
 
