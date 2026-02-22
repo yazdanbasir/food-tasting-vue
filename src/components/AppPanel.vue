@@ -1,5 +1,7 @@
 <script setup lang="ts">
-withDefaults(
+import { computed } from 'vue'
+
+const props = withDefaults(
   defineProps<{
     title: string
     variant: 'dish-name' | 'group-members' | 'lower' | 'search' | 'upper'
@@ -26,17 +28,69 @@ function handleTitleKeydown(e: KeyboardEvent) {
     emit('toggle')
   }
 }
+
+const isCollapsed = computed(() => props.collapsible && !props.expanded)
+
+const containerClasses = computed(() => {
+  const base = ['rounded-2xl', 'bg-[#ececf1]', 'relative']
+
+  if (props.variant === 'search') {
+    return [...base, 'flex', 'flex-col', 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
+  }
+  if (props.variant === 'dish-name') {
+    return [...base, 'flex-none', 'min-w-0']
+  }
+  if (props.variant === 'group-members') {
+    if (isCollapsed.value) {
+      return [...base, 'flex-none', 'min-w-0', 'h-16', 'min-h-16']
+    }
+    return [...base, 'flex-1', 'min-h-0', 'min-w-0']
+  }
+  if (props.variant === 'lower') {
+    if (isCollapsed.value) {
+      return [...base, 'flex-none', 'h-16', 'min-h-16']
+    }
+    return [...base, 'flex-1']
+  }
+  if (props.variant === 'upper') {
+    return [...base, 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
+  }
+  return [...base, 'flex-1']
+})
+
+const titleClasses = computed(() => {
+  const base = [
+    'absolute', 'left-4', 'px-4', 'py-1',
+    'bg-white', 'rounded-full',
+    'min-h-8', 'flex', 'items-center', 'justify-center', 'z-10',
+  ]
+  if (props.collapsible) {
+    base.push('cursor-pointer', 'hover:opacity-80')
+  }
+  if (isCollapsed.value) {
+    return [...base, 'top-1/2', '-translate-y-1/2']
+  }
+  return [...base, 'top-4']
+})
+
+const bodyClasses = computed(() => {
+  if (props.variant === 'search') {
+    return ['flex', 'flex-col', 'flex-[1_1_0]', 'min-h-0', 'min-w-0', 'overflow-hidden', 'p-4']
+  }
+  if (props.variant === 'dish-name') {
+    return ['px-4', 'py-3', 'mt-12', 'min-w-0', 'overflow-hidden']
+  }
+  if (props.variant === 'group-members') {
+    return ['p-4', 'mt-14', 'min-w-0', 'overflow-hidden']
+  }
+  return ['p-4', 'mt-14']
+})
 </script>
 
 <template>
-  <div
-    :class="[
-      variant === 'search' ? 'events' : `panel panel--${variant}`,
-      collapsible && !expanded ? 'panel--collapsed' : '',
-    ]"
-  >
+  <div :class="containerClasses">
     <div
-      class="panel-title"
+      :class="titleClasses"
       :role="collapsible ? 'button' : undefined"
       :tabindex="collapsible ? 0 : undefined"
       @click="collapsible ? handleTitleClick() : undefined"
@@ -44,135 +98,8 @@ function handleTitleKeydown(e: KeyboardEvent) {
     >
       {{ title }}
     </div>
-    <div v-if="!collapsible || expanded" class="panel-body">
+    <div v-if="!collapsible || expanded" :class="bodyClasses">
       <slot />
     </div>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.events,
-[class^='panel'] {
-  border-radius: 16px;
-  background-color: #ececf1;
-  position: relative;
-}
-
-.panel-title {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 4px 16px;
-  background-color: #fff;
-  border-radius: 1000px;
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-  font-size: 17px;
-
-  &[role='button'] {
-    cursor: pointer;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-}
-
-.panel-body {
-  padding: 16px;
-  margin-top: 56px;
-}
-
-// Search panel (variant="search") uses .events
-.events {
-  flex: 1 1 50%;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-
-  .panel-body {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
-    min-width: 0;
-    overflow: hidden;
-    padding: 16px;
-    box-sizing: border-box;
-  }
-}
-
-// Base panel
-.panel {
-  flex: 1;
-}
-
-// Variant: upper (grocery list)
-.panel--upper {
-  flex: 1 1 50%;
-  min-width: 0;
-  min-height: 0;
-}
-
-// Variant: dish-name
-.panel--dish-name {
-  flex: 0 0 auto;
-  min-height: auto;
-  min-width: 0;
-
-  .panel-body {
-    padding: 12px 16px;
-    margin-top: 48px;
-    min-width: 0;
-    overflow: hidden;
-  }
-}
-
-// Variant: group-members
-.panel--group-members {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  box-sizing: border-box;
-
-  .panel-body {
-    min-width: 0;
-    overflow: hidden;
-  }
-}
-
-// Variant: lower (recipe)
-.panel--lower {
-  box-sizing: border-box;
-}
-
-// Collapsed state
-.panel--collapsed {
-  flex: 0 0 auto !important;
-  min-height: 0;
-
-  .panel-body {
-    display: none;
-  }
-
-  .panel-title {
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  &.panel--group-members {
-    flex: 0 0 auto !important;
-    min-height: 64px;
-    height: 64px;
-  }
-
-  &.panel--lower {
-    min-height: 64px;
-    height: 64px;
-  }
-}
-</style>
