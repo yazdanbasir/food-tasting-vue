@@ -325,16 +325,58 @@ Claude API calls are inexpensive at this scale. A few dozen recipe suggestions p
 
 ## Build Order (Recommended Sequence)
 
-1. **Scraper** — Get Giant's product data into a local database. Nothing else is meaningful without this.
-2. **Rails API skeleton** — Set up the Rails project, database schema (`ingredients` table), and the search endpoint.
-3. **Ingredient search in Vue** — Wire up the autocomplete search to confirm the pipeline works end to end.
-4. **Submissions** — Build the submission form and the Rails model/controller for submissions.
-5. **Magic link auth** — Implement email delivery and the link-based access flow.
+1. ✅ **Scraper** — Get Giant's product data into a local database. Nothing else is meaningful without this.
+2. ✅ **Rails API skeleton** — Set up the Rails project, database schema (`ingredients` table), and the search endpoint.
+3. ✅ **Vue UI shell** — Static component layout matching the UI reference design (no functionality yet). See below.
+4. **Ingredient search in Vue** — Wire up the autocomplete search to confirm the pipeline works end to end.
+5. **Submissions** — Build the submission form and the Rails model/controller for submissions.
 6. **Organizer auth** — Basic login for organizers.
 7. **Organizer dashboard** — Submissions list view and the master grocery list aggregation.
 8. **Real-time sync** — Add Action Cable for grocery list checkbox sync and notifications.
 9. **Deployment** — Deploy both apps to Render/Netlify and test the full flow in production.
 10. **AI suggestions** — Add Claude integration once everything else is stable.
+
+---
+
+## Implementation Log
+
+### Step 3 — Vue UI Shell (completed)
+
+Converted the React UI reference (`ui-reference/`) into Vue 3 SFCs. Static layout only — no reactive state or API calls yet.
+
+**Files created/modified:**
+
+| File | Change |
+|---|---|
+| `src/components/AppHeader.vue` | Header with Lafayette logo (left) + ISA logo (right). Props: `lafayetteSrc`, `isaSrc`. |
+| `src/components/AppPanel.vue` | Generic panel used for every section. Props: `title`, `variant`, `collapsible`, `expanded`. Emits `toggle`. Default slot for body content. |
+| `src/assets/logos/lafayette-logo.png` | Copied from `ui-reference/public/` |
+| `src/assets/logos/ISA-logo.png` | Copied from `ui-reference/public/` |
+| `index.html` | Added Roboto Mono font (Google Fonts), updated page title |
+| `src/assets/base.css` | Full-height `html/body/#app`, Roboto Mono as default body font, removed Vue default background/color |
+| `src/views/HomeView.vue` | 2-column layout: left (dish name, group members, recipe panels) + right (search, grocery list panels) |
+| `package.json` | Added `sass` dev dependency for SCSS in Vue SFCs |
+
+**`AppPanel` variant map:**
+
+| `variant` prop | CSS class(es) applied | Flex behavior |
+|---|---|---|
+| `'dish-name'` | `panel panel--dish-name` | `flex: 0 0 auto` (fixed height) |
+| `'group-members'` | `panel panel--group-members` | `flex: 1` (grows to fill) |
+| `'lower'` | `panel panel--lower` | `flex: 1`, collapses to 64px |
+| `'search'` | `events` | `flex: 1 1 50%` (search column) |
+| `'upper'` | `panel panel--upper` | `flex: 1 1 50%` (list column) |
+
+**To add content to a panel later**, pass content into the slot and wire `@toggle` for collapsible panels:
+```vue
+<AppPanel title="dish name" variant="dish-name">
+  <DishNameForm />
+</AppPanel>
+
+<AppPanel title="group members" variant="group-members" collapsible :expanded="isExpanded" @toggle="isExpanded = !isExpanded">
+  <GroupMembersPanel />
+</AppPanel>
+```
 
 ---
 

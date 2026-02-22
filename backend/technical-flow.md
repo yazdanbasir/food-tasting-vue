@@ -122,3 +122,26 @@ This means you can re-run the scraper before each event, drop the new DB into `b
 **Files modified:**
 - `backend/storage/giant-inventory.db` — scraper source database (added)
 - `backend/storage/development.sqlite3` — Rails app database, now populated with 13,848 ingredients
+
+---
+
+## 10. Built the Vue UI shell
+
+**What:** Converted the React UI reference (`ui-reference/`) into Vue 3 SFCs. Static layout only — no reactive state or API calls yet.
+
+**Why:** Establishes the visual structure and component architecture before wiring in functionality. Using a generic `AppPanel` component for every section keeps the layout DRY and makes it easy to slot in content piece by piece without restructuring anything.
+
+**Component architecture:**
+
+- `AppHeader.vue` — header with Lafayette logo (left) and ISA logo (right). Props: `lafayetteSrc`, `isaSrc`.
+- `AppPanel.vue` — generic panel used for all five sections. Props: `title`, `variant`, `collapsible`, `expanded`. Emits `toggle`. Accepts a default slot for body content. The `variant` prop controls which CSS flex rules apply and maps to the exact class structure from the reference.
+
+**Files modified:**
+- `src/components/AppHeader.vue` — new
+- `src/components/AppPanel.vue` — new
+- `src/assets/logos/lafayette-logo.png` — copied from `ui-reference/public/`
+- `src/assets/logos/ISA-logo.png` — copied from `ui-reference/public/`
+- `index.html` — added Roboto Mono Google Fonts link, updated page title
+- `src/assets/base.css` — full-height `html/body/#app`, Roboto Mono as default font, removed Vue boilerplate background/color
+- `src/views/HomeView.vue` — 2-column layout (left: dish name, group members, recipe; right: search, grocery list)
+- `package.json` — added `sass` dev dependency for `<style lang="scss">` in SFCs
