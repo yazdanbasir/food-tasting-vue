@@ -4,7 +4,7 @@ import { computed } from 'vue'
 const props = withDefaults(
   defineProps<{
     title: string
-    variant: 'dish-name' | 'group-members' | 'lower' | 'search' | 'upper'
+    variant: 'dish-name' | 'group-members' | 'lower' | 'search' | 'search-slim' | 'upper'
     collapsible?: boolean
     expanded?: boolean
   }>(),
@@ -38,7 +38,7 @@ const containerClasses = computed(() => {
     return [...base, 'flex', 'flex-col', 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
   }
   if (props.variant === 'dish-name') {
-    return [...base, 'flex-none', 'min-w-0']
+    return [...base, 'flex-none', 'min-w-0', 'h-16']
   }
   if (props.variant === 'group-members') {
     if (isCollapsed.value) {
@@ -52,8 +52,11 @@ const containerClasses = computed(() => {
     }
     return [...base, 'flex-1']
   }
+  if (props.variant === 'search-slim') {
+    return [...base, 'flex-none', 'min-w-0', 'h-16']
+  }
   if (props.variant === 'upper') {
-    return [...base, 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
+    return [...base, 'flex', 'flex-col', 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
   }
   return [...base, 'flex-1']
 })
@@ -77,11 +80,17 @@ const bodyClasses = computed(() => {
   if (props.variant === 'search') {
     return ['flex', 'flex-col', 'flex-[1_1_0]', 'min-h-0', 'min-w-0', 'overflow-hidden', 'p-4']
   }
+  if (props.variant === 'search-slim') {
+    return ['flex', 'flex-col', 'p-4', 'min-w-0']
+  }
   if (props.variant === 'dish-name') {
-    return ['px-4', 'py-3', 'mt-12', 'min-w-0', 'overflow-hidden']
+    return ['flex', 'p-4', 'min-w-0', 'overflow-hidden']
   }
   if (props.variant === 'group-members') {
     return ['p-4', 'mt-14', 'min-w-0', 'overflow-hidden']
+  }
+  if (props.variant === 'upper') {
+    return ['flex', 'flex-col', 'flex-1', 'min-h-0', 'overflow-hidden', 'p-4', 'mt-14']
   }
   return ['p-4', 'mt-14']
 })

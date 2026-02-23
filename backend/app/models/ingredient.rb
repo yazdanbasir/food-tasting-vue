@@ -3,9 +3,14 @@ class Ingredient < ApplicationRecord
   validates :name, presence: true
   validates :price_cents, numericality: { greater_than_or_equal_to: 0 }
 
-  # Case-insensitive name search
+  # Each whitespace-separated word must appear somewhere in the name (AND logic).
+  # "philadelphia cream cheese" matches "Philadelphia Original Cream Cheese".
   scope :search, ->(query) {
-    where("name LIKE ?", "%#{sanitize_sql_like(query)}%") if query.present?
+    if query.present?
+      query.split.reduce(all) { |rel, term|
+        rel.where("name LIKE ?", "%#{sanitize_sql_like(term)}%")
+      }
+    end
   }
 
   # Convenience: return price as a decimal for display
