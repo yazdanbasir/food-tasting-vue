@@ -328,11 +328,11 @@ Claude API calls are inexpensive at this scale. A few dozen recipe suggestions p
 1. ✅ **Scraper** — Get Giant's product data into a local database. Nothing else is meaningful without this.
 2. ✅ **Rails API skeleton** — Set up the Rails project, database schema (`ingredients` table), and the search endpoint.
 3. ✅ **Vue UI shell** — Static component layout matching the UI reference design (no functionality yet). See below.
-4. **Ingredient search in Vue** — Wire up the autocomplete search to confirm the pipeline works end to end.
-5. **Submissions** — Build the submission form and the Rails model/controller for submissions.
-6. **Organizer auth** — Basic login for organizers.
-7. **Organizer dashboard** — Submissions list view and the master grocery list aggregation.
-8. **Real-time sync** — Add Action Cable for grocery list checkbox sync and notifications.
+4. ✅ **Ingredient search in Vue** — Wire up the autocomplete search to confirm the pipeline works end to end. See Step 4.
+5. ✅ **Submissions** — Build the submission form and the Rails model/controller for submissions. See Step 5.
+6. ✅ **Organizer auth** — Basic login for organizers. See Step 5.
+7. ✅ **Organizer dashboard** — Submissions list view and the master grocery list aggregation. See Step 5.
+8. ✅ **Real-time sync** — Add Action Cable for grocery list checkbox sync and notifications. See Step 5.
 9. **Deployment** — Deploy both apps to Render/Netlify and test the full flow in production.
 10. **AI suggestions** — Add Claude integration once everything else is stable.
 
@@ -380,9 +380,94 @@ Converted the React UI reference (`ui-reference/`) into Vue 3 SFCs. Static layou
 
 ---
 
+### Step 4 — Ingredient Search + Submission State (completed)
+
+Wired up the full ingredient search pipeline and built the submission form state on the frontend. Backend CORS was also fixed to allow any localhost port.
+
+**What was built:**
+
+- **Ingredient search** — `IngredientSearch.vue` uses a debounced composable (`useIngredientSearch.ts`) to query `GET /api/v1/ingredients?q=` as the user types. Results appear in an absolute-positioned dropdown (`top-full`) that overlays content below without disrupting layout.
+- **Multi-word search fix** — Changed the Rails `search` scope from a single `LIKE` to word-split AND logic, so "philadelphia cream cheese" matches "Philadelphia Original Cream Cheese."
+- **Ingredient list** — `IngredientList.vue` reads from the Pinia store and renders each selected item with quantity input, line total, and remove button.
+- **Pinia store** (`src/stores/submission.ts`) — Central state holding `dishName`, `members`, and `ingredients`. Exposes `canSubmit` (requires all three), `totalCents`, and a `masterGroceryList` computed getter that aggregates by aisle.
+- **Submission form inputs** — `DishNameInput.vue` binds to `dishName`; `GroupMembersInput.vue` manages a dynamic list of member name pills with add/remove.
+- **Submit button** — Disabled until `canSubmit` is true (dish name + ≥1 member + ≥1 ingredient). Styled as a black pill.
+- **CORS** (`backend/config/initializers/cors.rb`) — Changed from an explicit port list to a regex `/\Ahttp:\/\/localhost(:\d+)?\z/` to allow the Vue dev server on any port.
+
+**Key files:**
+
+| File | Purpose |
+|---|---|
+| `src/composables/useIngredientSearch.ts` | Debounced search logic, 300ms delay, clears on Escape |
+| `src/stores/submission.ts` | All submission state + canSubmit + masterGroceryList |
+| `src/components/IngredientSearch.vue` | Search input + dropdown |
+| `src/components/IngredientList.vue` | Selected items list + submit button |
+| `src/components/DishNameInput.vue` | Team name + dish name inputs |
+| `src/components/GroupMembersInput.vue` | Member pills with add/remove |
+| `src/api/ingredients.ts` | Fetch wrapper for `GET /api/v1/ingredients?q=` |
+| `backend/app/models/ingredient.rb` | Word-split AND search scope |
+| `backend/config/initializers/cors.rb` | Regex-based localhost CORS allow |
+
+---
+
+### Step 5 — Submission Flow + Organizer Dashboard (completed)
+
+Built the complete submission lifecycle: teams submit their ingredient list → access code is generated → organizers view all submissions and a live-updating grocery list with checkboxes.
+
+**Why each piece exists:**
+
+- **Access code** — The simplest zero-friction way for a team to return and edit their submission. No email or login required. An 8-char uppercase alphanumeric code is generated server-side on `before_validation`.
+- **Token auth for organizers** — Organizers log in with username/password; the server stores a `SecureRandom.hex(32)` token in the `organizers` table and returns it to the frontend. The frontend stores it in `localStorage` and sends it as `Authorization: Bearer <token>` on organizer-only requests.
+- **Grocery list aggregation** — The `GET /api/v1/grocery_list` endpoint queries `submission_ingredients` joined to `submissions` and `ingredients`, groups by `ingredient_id`, sums quantities, collects team names, and joins with `grocery_checkins` for checked state. All aggregation is on the server; the frontend just renders.
+- **Checkbox persistence** (`grocery_checkins` table) — One row per ingredient across the whole event. `PATCH /api/v1/grocery_list/:ingredient_id` updates the row and broadcasts to `GroceryListChannel`.
+- **Real-time sync** — Uses Action Cable via `solid_cable` (SQLite-backed pub/sub, no Redis needed). `GroceryListChannel` broadcasts checkbox changes to all connected organizers. `NotificationsChannel` broadcasts when a new submission arrives, triggering a list refresh.
+- **No multi-event support (by design)** — The app is reset between events by deleting submissions and grocery_checkins. The ingredients table is preserved.
+
+**Backend files created:**
+
+| File | Purpose |
+|---|---|
+| `backend/Gemfile` | Uncommented `bcrypt` for `has_secure_password` |
+| `backend/db/migrate/..._create_submissions.rb` | `dish_name`, `team_name`, `notes`, `access_code` (unique) |
+| `backend/db/migrate/..._create_submission_ingredients.rb` | Join table: `submission_id`, `ingredient_id`, `quantity` |
+| `backend/db/migrate/..._create_organizers.rb` | `username` (unique), `password_digest`, `token` (unique) |
+| `backend/db/migrate/..._create_grocery_checkins.rb` | `ingredient_id` (unique), `checked`, `checked_by`, `checked_at` |
+| `backend/app/models/submission.rb` | `before_validation :generate_access_code`, associations, validations |
+| `backend/app/models/organizer.rb` | `has_secure_password`, `regenerate_token`, `clear_token` |
+| `backend/app/controllers/concerns/organizer_authenticatable.rb` | `before_action :require_organizer_auth` reads Bearer token |
+| `backend/app/controllers/api/v1/submissions_controller.rb` | `POST /submissions` (create + broadcast), `GET /submissions` (index, organizer only), `GET /submissions/:access_code` (show) |
+| `backend/app/controllers/api/v1/organizer_sessions_controller.rb` | `POST /organizer_session` (login), `DELETE` (logout) |
+| `backend/app/controllers/api/v1/grocery_list_controller.rb` | `GET /grocery_list` (aggregated), `PATCH /grocery_list/:id` (checkbox + broadcast) |
+| `backend/app/channels/grocery_list_channel.rb` | `stream_from "grocery_list"` |
+| `backend/app/channels/notifications_channel.rb` | `stream_from "notifications"` |
+| `backend/config/routes.rb` | Added `/cable` mount, submissions, organizer_session, grocery_list routes |
+| `backend/db/seeds.rb` | Seeds default organizer: `username=organizer`, `password=changeme123` |
+
+**Frontend files created/modified:**
+
+| File | Purpose |
+|---|---|
+| `src/stores/submission.ts` | Added `teamName`, updated `canSubmit` to require team name, added `reset()` |
+| `src/api/submissions.ts` | `createSubmission`, `getAllSubmissions` fetch wrappers |
+| `src/api/organizer.ts` | `organizerLogin`, `organizerLogout`, `getGroceryList`, `checkGroceryItem` |
+| `src/components/DishNameInput.vue` | Now has two inputs: team name + dish name |
+| `src/components/AppPanel.vue` | `dish-name` variant height changed from `h-16` to `h-28` to fit two inputs |
+| `src/components/IngredientList.vue` | Submit button wired to `createSubmission`; redirects to `/confirmation/:accessCode` on success |
+| `src/views/ConfirmationView.vue` | Displays the access code after a successful submission |
+| `src/views/OrganizerLoginView.vue` | Username/password login form; stores token in `localStorage` |
+| `src/views/OrganizerDashboardView.vue` | Two-tab view: submissions list (expandable) + grocery list with real-time checkboxes via Action Cable |
+| `src/router/index.ts` | Added `/confirmation/:accessCode`, `/organizer/login`, `/organizer` routes |
+| `package.json` | Added `@rails/actioncable` for WebSocket client |
+
+**Credentials (development):**
+- Organizer login: `username=organizer`, `password=changeme123`
+- Change before deploying to production.
+
+---
+
 ## Open Questions to Resolve
 
-- **Scraper language:** Python (Playwright is most mature there) or Node (same Playwright library, closer to your existing JS/TS stack)? Python is the more common choice for scraping work.
-- **Magic link vs. short code:** This document recommends magic links, but confirm whether email collection from submitters is acceptable.
-- **Event scoping:** Will the app support multiple events over time (e.g. fall semester and spring semester each have their own set of submissions)? If yes, a top-level `Event` model is needed that all submissions belong to. If the app is wiped and re-seeded between events, this can be deferred.
-- **Ingredient quantities on the master list:** When two teams both add "Chicken Breast (1 lb pack)", the master list can show "× 3 packs" or "3 lbs". The aggregation unit needs to be consistent — define this before building that feature.
+- **Scraper language:** ✅ Resolved — Python was used. Scraped 13,906 products from Giant; 13,848 imported into SQLite.
+- **Magic link vs. short code:** ✅ Resolved — Short code (Option A). No email required. 8-char uppercase alphanumeric generated server-side.
+- **Event scoping:** ✅ Resolved (deferred) — No multi-event support for now. Between events, delete all `submissions` and `grocery_checkins` rows. The `ingredients` table is reused as-is.
+- **Ingredient quantities on the master list:** ✅ Resolved — Quantities are in pack units (× N packs), matching the unit as listed in the Giant database. No unit conversion is performed.

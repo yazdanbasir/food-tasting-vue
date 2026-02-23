@@ -1,9 +1,42 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useSubmissionStore } from '@/stores/submission'
+import { createSubmission } from '@/api/submissions'
 
 const store = useSubmissionStore()
 const { ingredients, totalCents, canSubmit } = storeToRefs(store)
+const router = useRouter()
+
+const isSubmitting = ref(false)
+const submitError = ref<string | null>(null)
+
+async function handleSubmit() {
+  if (!canSubmit.value || isSubmitting.value) return
+
+  isSubmitting.value = true
+  submitError.value = null
+
+  try {
+    const result = await createSubmission({
+      team_name: store.teamName,
+      dish_name: store.dishName,
+      notes: '',
+      ingredients: ingredients.value.map((item) => ({
+        ingredient_id: item.ingredient.id,
+        quantity: item.quantity,
+      })),
+    })
+
+    store.reset()
+    router.push(`/confirmation/${result.access_code}`)
+  } catch (err) {
+    submitError.value = err instanceof Error ? err.message : 'Submission failed'
+  } finally {
+    isSubmitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -65,15 +98,17 @@ const { ingredients, totalCents, canSubmit } = storeToRefs(store)
     </ul>
 
     <!-- Total + Submit -->
-    <div v-if="ingredients.length" class="border-t border-gray-200 pt-2 mt-2 flex items-center">
+    <div v-if="ingredients.length" class="border-t border-gray-200 pt-2 mt-2 flex items-center gap-3">
       <button
-        :disabled="!canSubmit"
+        :disabled="!canSubmit || isSubmitting"
         class="rounded-full px-4 py-1 min-h-8 bg-black text-white transition-opacity"
-        :class="canSubmit ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed'"
+        :class="canSubmit && !isSubmitting ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed'"
+        @click="handleSubmit"
       >
-        submit
+        {{ isSubmitting ? 'submitting...' : 'submit' }}
       </button>
-      <span class="flex-1 text-sm font-medium text-right tabular-nums">
+      <span v-if="submitError" class="text-xs text-red-500 flex-1">{{ submitError }}</span>
+      <span v-else class="flex-1 text-sm font-medium text-right tabular-nums">
         Total: ${{ (totalCents / 100).toFixed(2) }}
       </span>
     </div>

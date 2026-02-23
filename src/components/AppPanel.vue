@@ -38,7 +38,7 @@ const containerClasses = computed(() => {
     return [...base, 'flex', 'flex-col', 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
   }
   if (props.variant === 'dish-name') {
-    return [...base, 'flex-none', 'min-w-0', 'h-16']
+    return [...base, 'flex-none', 'min-w-0', 'h-28']
   }
   if (props.variant === 'group-members') {
     if (isCollapsed.value) {
@@ -84,7 +84,7 @@ const bodyClasses = computed(() => {
     return ['flex', 'flex-col', 'p-4', 'min-w-0']
   }
   if (props.variant === 'dish-name') {
-    return ['flex', 'p-4', 'min-w-0', 'overflow-hidden']
+    return ['flex', 'flex-col', 'justify-center', 'p-4', 'min-w-0', 'overflow-hidden', 'h-full']
   }
   if (props.variant === 'group-members') {
     return ['p-4', 'mt-14', 'min-w-0', 'overflow-hidden']

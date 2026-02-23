@@ -4,6 +4,7 @@ import type { Ingredient } from '@/types/ingredient'
 import type { MasterListItem, SubmissionIngredient } from '@/types/submission'
 
 export const useSubmissionStore = defineStore('submission', () => {
+  const teamName = ref('')
   const dishName = ref('')
   const members = ref<string[]>([])
 
@@ -84,10 +85,22 @@ export const useSubmissionStore = defineStore('submission', () => {
   })
 
   const canSubmit = computed(
-    () => dishName.value.trim().length > 0 && members.value.length > 0 && ingredients.value.length > 0,
+    () =>
+      teamName.value.trim().length > 0 &&
+      dishName.value.trim().length > 0 &&
+      members.value.length > 0 &&
+      ingredients.value.length > 0,
   )
 
+  function reset() {
+    teamName.value = ''
+    dishName.value = ''
+    members.value = []
+    ingredients.value = []
+  }
+
   return {
+    teamName,
     dishName,
     members,
     addMember,
@@ -99,5 +112,6 @@ export const useSubmissionStore = defineStore('submission', () => {
     addIngredient,
     removeIngredient,
     updateQuantity,
+    reset,
   }
 })

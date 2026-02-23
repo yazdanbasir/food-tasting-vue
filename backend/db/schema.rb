@@ -10,7 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_22_143944) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_23_025158) do
+  create_table "grocery_checkins", force: :cascade do |t|
+    t.boolean "checked", default: false, null: false
+    t.datetime "checked_at"
+    t.string "checked_by"
+    t.datetime "created_at", null: false
+    t.integer "ingredient_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ingredient_id"], name: "index_grocery_checkins_on_ingredient_id", unique: true
+  end
+
   create_table "ingredients", force: :cascade do |t|
     t.string "aisle"
     t.string "category"
@@ -36,4 +46,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_22_143944) do
     t.index ["name"], name: "index_ingredients_on_name"
     t.index ["product_id"], name: "index_ingredients_on_product_id", unique: true
   end
+
+  create_table "organizers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "password_digest", null: false
+    t.string "token"
+    t.datetime "updated_at", null: false
+    t.string "username", null: false
+    t.index ["token"], name: "index_organizers_on_token", unique: true
+    t.index ["username"], name: "index_organizers_on_username", unique: true
+  end
+
+  create_table "submission_ingredients", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "ingredient_id", null: false
+    t.integer "quantity", default: 1, null: false
+    t.integer "submission_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ingredient_id"], name: "index_submission_ingredients_on_ingredient_id"
+    t.index ["submission_id"], name: "index_submission_ingredients_on_submission_id"
+  end
+
+  create_table "submissions", force: :cascade do |t|
+    t.string "access_code", null: false
+    t.datetime "created_at", null: false
+    t.string "dish_name", null: false
+    t.text "notes"
+    t.string "team_name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["access_code"], name: "index_submissions_on_access_code", unique: true
+  end
+
+  add_foreign_key "grocery_checkins", "ingredients"
+  add_foreign_key "submission_ingredients", "ingredients"
+  add_foreign_key "submission_ingredients", "submissions"
 end
