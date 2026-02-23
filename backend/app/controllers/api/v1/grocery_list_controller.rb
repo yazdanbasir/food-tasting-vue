@@ -1,5 +1,6 @@
 class Api::V1::GroceryListController < ApplicationController
   include OrganizerAuthenticatable
+  skip_before_action :require_organizer_auth, only: [:show, :update]
 
   # GET /api/v1/grocery_list
   def show
@@ -26,6 +27,7 @@ class Api::V1::GroceryListController < ApplicationController
     # Build items
     items = aggregated.map do |row|
       checkin = checkins[row.ingredient_id]
+      aggregated_qty = row.total_quantity.to_i
       {
         ingredient: {
           id: row.ingredient_id,
@@ -36,7 +38,8 @@ class Api::V1::GroceryListController < ApplicationController
           price_cents: row.price_cents,
           image_url: row.image_url
         },
-        total_quantity: row.total_quantity.to_i,
+        total_quantity: checkin&.quantity_override || aggregated_qty,
+        aggregated_quantity: aggregated_qty,
         teams: row.team_names.split("||").uniq,
         checked: checkin&.checked || false,
         checked_by: checkin&.checked_by,
@@ -62,20 +65,27 @@ class Api::V1::GroceryListController < ApplicationController
   def update
     ingredient = Ingredient.find(params[:ingredient_id])
     checkin = GroceryCheckin.find_or_initialize_by(ingredient: ingredient)
-    checked = params[:checked]
 
-    checkin.assign_attributes(
-      checked: checked,
-      checked_by: checked ? @current_organizer.username : nil,
-      checked_at: checked ? Time.current : nil
-    )
+    attrs = {}
+    if params.key?(:checked)
+      checked = params[:checked]
+      attrs[:checked] = checked
+      attrs[:checked_by] = checked ? (@current_organizer&.username) : nil
+      attrs[:checked_at] = checked ? Time.current : nil
+    end
+    if params.key?(:quantity)
+      attrs[:quantity_override] = params[:quantity].to_i
+    end
+
+    checkin.assign_attributes(attrs)
     checkin.save!
 
     payload = {
       ingredient_id: ingredient.id,
       checked: checkin.checked,
       checked_by: checkin.checked_by,
-      checked_at: checkin.checked_at
+      checked_at: checkin.checked_at,
+      quantity_override: checkin.quantity_override
     }
 
     ActionCable.server.broadcast("grocery_list", payload)

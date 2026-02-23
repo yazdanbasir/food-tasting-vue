@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_23_025158) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_23_030000) do
   create_table "grocery_checkins", force: :cascade do |t|
     t.boolean "checked", default: false, null: false
     t.datetime "checked_at"
     t.string "checked_by"
     t.datetime "created_at", null: false
     t.integer "ingredient_id", null: false
+    t.integer "quantity_override"
     t.datetime "updated_at", null: false
     t.index ["ingredient_id"], name: "index_grocery_checkins_on_ingredient_id", unique: true
   end

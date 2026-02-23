@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
-import { getGroceryList, checkGroceryItem, organizerLogout, type GroceryListResponse, type GroceryItem } from '@/api/organizer'
+import { getGroceryList, checkGroceryItem, updateGroceryQuantity, organizerLogout, type GroceryListResponse, type GroceryItem } from '@/api/organizer'
 
 const router = useRouter()
 const token = localStorage.getItem('organizer_token') ?? ''
@@ -21,11 +21,6 @@ const cable = createConsumer(`${import.meta.env.VITE_API_BASE_URL.replace(/^http
 let grocerySubscription: ReturnType<typeof cable.subscriptions.create> | null = null
 
 onMounted(async () => {
-  if (!token) {
-    router.push('/organizer/login')
-    return
-  }
-
   await loadSubmissions()
 
   // Subscribe to real-time grocery list updates
@@ -63,11 +58,7 @@ async function loadSubmissions() {
   try {
     submissions.value = await getAllSubmissions(token)
   } catch (err) {
-    if (err instanceof Error && err.message.includes('401')) {
-      handleAuthFailure()
-    } else {
-      error.value = err instanceof Error ? err.message : 'Failed to load'
-    }
+    error.value = err instanceof Error ? err.message : 'Failed to load'
   } finally {
     isLoading.value = false
   }
@@ -79,11 +70,7 @@ async function loadGroceryList() {
   try {
     groceryList.value = await getGroceryList(token)
   } catch (err) {
-    if (err instanceof Error && err.message.includes('401')) {
-      handleAuthFailure()
-    } else {
-      error.value = err instanceof Error ? err.message : 'Failed to load'
-    }
+    error.value = err instanceof Error ? err.message : 'Failed to load'
   } finally {
     isLoading.value = false
   }
@@ -96,13 +83,22 @@ async function switchToGrocery() {
 
 async function toggleCheck(item: GroceryItem) {
   const newChecked = !item.checked
-  // Optimistic update
   item.checked = newChecked
   try {
     await checkGroceryItem(token, item.ingredient.id, newChecked)
   } catch {
-    // Revert on failure
     item.checked = !newChecked
+  }
+}
+
+async function changeQuantity(item: GroceryItem, delta: number) {
+  const newQty = Math.max(1, item.total_quantity + delta)
+  const prev = item.total_quantity
+  item.total_quantity = newQty
+  try {
+    await updateGroceryQuantity(token, item.ingredient.id, newQty)
+  } catch {
+    item.total_quantity = prev
   }
 }
 
@@ -214,10 +210,10 @@ const totalCents = computed(() => {
           <div v-for="(items, aisle) in groceryList.aisles" :key="aisle">
             <div class="text-sm font-medium text-gray-500 mb-2">{{ aisle }}</div>
             <div class="flex flex-col gap-1">
-              <label
+              <div
                 v-for="item in items"
                 :key="item.ingredient.id"
-                class="flex items-center gap-3 bg-[#ececf1] rounded-xl px-4 py-3 cursor-pointer hover:opacity-80 transition-opacity"
+                class="flex items-center gap-3 bg-[#ececf1] rounded-xl px-4 py-3 transition-opacity"
                 :class="item.checked ? 'opacity-50' : ''"
               >
                 <input
@@ -227,17 +223,29 @@ const totalCents = computed(() => {
                   @change="toggleCheck(item)"
                 />
                 <div class="flex-1 min-w-0">
-                  <div class="text-sm" :class="item.checked ? 'line-through text-gray-400' : ''">
-                    {{ item.ingredient.name }}
+                  <div class="text-sm flex items-center gap-2" :class="item.checked ? 'line-through text-gray-400' : ''">
+                    <span>{{ item.ingredient.name }}</span>
                     <span class="text-gray-400">{{ item.ingredient.size }}</span>
-                    × {{ item.total_quantity }}
+                    <span class="flex items-center gap-1 no-underline" style="text-decoration: none;">
+                      <button
+                        class="w-5 h-5 flex items-center justify-center rounded-full bg-white text-black leading-none hover:opacity-70 transition-opacity cursor-pointer"
+                        style="text-decoration: none;"
+                        @click.prevent.stop="changeQuantity(item, -1)"
+                      >−</button>
+                      <span class="tabular-nums w-5 text-center">{{ item.total_quantity }}</span>
+                      <button
+                        class="w-5 h-5 flex items-center justify-center rounded-full bg-white text-black leading-none hover:opacity-70 transition-opacity cursor-pointer"
+                        style="text-decoration: none;"
+                        @click.prevent.stop="changeQuantity(item, +1)"
+                      >+</button>
+                    </span>
                   </div>
                   <div class="text-xs text-gray-400">{{ item.teams.join(', ') }}</div>
                 </div>
                 <div class="text-sm tabular-nums flex-none">
                   ${{ ((item.ingredient.price_cents * item.total_quantity) / 100).toFixed(2) }}
                 </div>
-              </label>
+              </div>
             </div>
           </div>
         </div>

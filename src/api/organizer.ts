@@ -68,3 +68,19 @@ export async function checkGroceryItem(
   })
   if (!res.ok) throw new Error(`Failed to update item: ${res.status}`)
 }
+
+export async function updateGroceryQuantity(
+  token: string,
+  ingredientId: number,
+  quantity: number,
+): Promise<void> {
+  const res = await fetch(`${BASE}/api/v1/grocery_list/${ingredientId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ quantity }),
+  })
+  if (!res.ok) throw new Error(`Failed to update quantity: ${res.status}`)
+}
