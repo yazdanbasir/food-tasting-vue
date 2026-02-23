@@ -18,26 +18,36 @@ function addMember() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <input
-      v-model="newMember"
-      type="text"
-      placeholder="add a member, press enter..."
-      class="bg-white rounded-full px-4 py-1 min-h-8 outline-none border-0 placeholder:text-gray-400"
-      @keydown.enter.prevent="addMember"
-    />
-    <div v-if="members.length" class="flex flex-wrap gap-2">
-      <span
+  <div class="flex flex-col gap-3 min-h-0">
+    <!-- Row aligned with pill + 1rem: spacer then input (same as app bar styling) -->
+    <div class="flex items-center flex-none">
+      <div class="min-w-[11rem] flex-none" />
+      <input
+        v-model="newMember"
+        type="text"
+        placeholder="add a member, press enter..."
+        class="flex-1 bg-white rounded-full px-4 py-1 min-h-8 outline-none border-0 placeholder:text-gray-400"
+        @keydown.enter.prevent="addMember"
+      />
+    </div>
+    <!-- Members list: aligned with input bar, same styling as app (rounded-full, bg-white, min-h-8) -->
+    <div
+      v-if="members.length"
+      class="flex flex-col gap-2 overflow-y-auto min-h-0 pl-[11rem]"
+    >
+      <div
         v-for="member in members"
         :key="member"
-        class="flex items-center gap-1.5 bg-white rounded-full pl-3 pr-2 py-1 min-h-8"
+        class="flex items-center gap-2 bg-white rounded-full pl-4 pr-2 py-1 min-h-8 w-full max-w-md"
       >
-        {{ member }}
+        <span class="flex-1 min-w-0 truncate text-[15px]">{{ member }}</span>
         <button
-          class="text-gray-400 hover:text-gray-700 leading-none transition-colors"
+          class="text-gray-400 hover:text-gray-700 leading-none transition-colors flex-none"
           @click="store.removeMember(member)"
-        >×</button>
-      </span>
+        >
+          ×
+        </button>
+      </div>
     </div>
   </div>
 </template>

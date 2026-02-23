@@ -4,7 +4,7 @@ import { computed } from 'vue'
 const props = withDefaults(
   defineProps<{
     title: string
-    variant: 'dish-name' | 'group-members' | 'lower' | 'search' | 'search-slim' | 'upper'
+    variant: 'country' | 'dish-name' | 'group-members' | 'lower' | 'search' | 'search-slim' | 'upper'
     collapsible?: boolean
     expanded?: boolean
   }>(),
@@ -37,8 +37,12 @@ const containerClasses = computed(() => {
   if (props.variant === 'search') {
     return [...base, 'flex', 'flex-col', 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
   }
-  if (props.variant === 'dish-name') {
-    return [...base, 'flex-none', 'min-w-0', 'h-28']
+  // One-line in-flow: [p-4] [pill] [gap-4] [slot] so bar sits 1rem after pill (same as left spacing)
+  if (props.variant === 'country' || props.variant === 'dish-name') {
+    return [...base, 'flex', 'flex-row', 'items-center', 'p-4', 'gap-4', 'flex-none', 'min-w-0', 'h-16']
+  }
+  if (props.variant === 'search-slim') {
+    return [...base, 'flex-none', 'min-w-0', 'h-16']
   }
   if (props.variant === 'group-members') {
     if (isCollapsed.value) {
@@ -52,9 +56,6 @@ const containerClasses = computed(() => {
     }
     return [...base, 'flex-1']
   }
-  if (props.variant === 'search-slim') {
-    return [...base, 'flex-none', 'min-w-0', 'h-16']
-  }
   if (props.variant === 'upper') {
     return [...base, 'flex', 'flex-col', 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
   }
@@ -62,11 +63,12 @@ const containerClasses = computed(() => {
 })
 
 const titleClasses = computed(() => {
-  const base = [
-    'absolute', 'left-4', 'px-4', 'py-1',
-    'bg-white', 'rounded-full',
-    'min-h-8', 'flex', 'items-center', 'justify-center', 'z-10',
-  ]
+  const pillBase = ['px-4', 'py-1', 'bg-white', 'rounded-full', 'min-h-8', 'flex', 'items-center', 'justify-center']
+  // In-flow pill for country, dish-name, team (no absolute)
+  if (['country', 'dish-name'].includes(props.variant)) {
+    return [...pillBase, 'flex-none']
+  }
+  const base = [...pillBase, 'absolute', 'left-4', 'z-10']
   if (props.collapsible) {
     base.push('cursor-pointer', 'hover:opacity-80')
   }
@@ -83,11 +85,12 @@ const bodyClasses = computed(() => {
   if (props.variant === 'search-slim') {
     return ['flex', 'flex-col', 'p-4', 'min-w-0']
   }
-  if (props.variant === 'dish-name') {
-    return ['flex', 'flex-col', 'justify-center', 'p-4', 'min-w-0', 'overflow-hidden', 'h-full']
+  // country, dish-name, team: slot is second flex child (no wrapper body)
+  if (['country', 'dish-name'].includes(props.variant)) {
+    return ['flex-1', 'min-w-0']
   }
   if (props.variant === 'group-members') {
-    return ['p-4', 'mt-14', 'min-w-0', 'overflow-hidden']
+    return ['flex', 'flex-col', 'p-4', 'min-w-0', 'overflow-hidden']
   }
   if (props.variant === 'upper') {
     return ['flex', 'flex-col', 'flex-1', 'min-h-0', 'overflow-hidden', 'p-4', 'mt-14']
