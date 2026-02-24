@@ -38,16 +38,18 @@ export function useIngredientSearch() {
 
   let debounceTimer: ReturnType<typeof setTimeout>
 
-  watch(query, (val) => {
+  function runSearch(val: string) {
     clearTimeout(debounceTimer)
     error.value = null
 
     if (val.length < 2) {
       results.value = []
+      isLoading.value = false
       return
     }
 
     if (cache.loaded) {
+      isLoading.value = false
       results.value = searchLocal(val, cache.all)
       return
     }
@@ -64,6 +66,16 @@ export function useIngredientSearch() {
         isLoading.value = false
       }
     }, 300)
+  }
+
+  watch(query, runSearch)
+
+  // When the cache finishes loading, immediately re-run the current query
+  // so "searching..." clears and local results appear right away
+  watch(() => cache.loaded, (loaded) => {
+    if (loaded && query.value.length >= 2) {
+      runSearch(query.value)
+    }
   })
 
   function clear() {
