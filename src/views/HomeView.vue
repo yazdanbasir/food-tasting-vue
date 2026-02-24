@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
-import AppPanel from '@/components/AppPanel.vue'
 import CountrySelect from '@/components/CountrySelect.vue'
-import IngredientSearch from '@/components/IngredientSearch.vue'
-import IngredientList from '@/components/IngredientList.vue'
 import { useSubmissionStore } from '@/stores/submission'
+
+const IngredientSearch = defineAsyncComponent(
+  () => import('@/components/IngredientSearch.vue')
+)
+const IngredientList = defineAsyncComponent(
+  () => import('@/components/IngredientList.vue')
+)
 
 const store = useSubmissionStore()
 const { members } = storeToRefs(store)
@@ -54,17 +58,26 @@ const membersText = computed({
 
     <div class="home-layout">
       <div class="home-main">
-        <div class="ingredients-section">
-          <div class="home-top-bar-inner">
-            <div class="home-top-pill home-top-pill-label">Which ingredients do you need?</div>
-            <div class="home-top-pill home-top-pill-search">
-              <IngredientSearch :hide-price="true" />
+        <Suspense>
+          <template #default>
+            <div class="ingredients-section">
+              <div class="home-top-bar-inner">
+                <div class="home-top-pill home-top-pill-label">Which ingredients do you need?</div>
+                <div class="home-top-pill home-top-pill-search">
+                  <IngredientSearch :hide-price="true" />
+                </div>
+              </div>
+              <div class="ingredients-list-body">
+                <IngredientList />
+              </div>
             </div>
-          </div>
-          <div class="ingredients-list-body">
-            <IngredientList />
-          </div>
-        </div>
+          </template>
+          <template #fallback>
+            <div class="ingredients-section">
+              <div class="ingredients-section-fallback" aria-hidden="true" />
+            </div>
+          </template>
+        </Suspense>
       </div>
     </div>
   </div>
@@ -224,6 +237,11 @@ const membersText = computed({
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+.ingredients-section-fallback {
+  flex: 1;
+  min-height: 0;
 }
 
 </style>

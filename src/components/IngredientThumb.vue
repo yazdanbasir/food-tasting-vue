@@ -7,7 +7,14 @@ const props = defineProps<{
 }>()
 
 const imageLoadFailed = ref(false)
-watch(() => [props.ingredient?.id, props.ingredient?.image_url], () => { imageLoadFailed.value = false })
+const imageLoaded = ref(false)
+watch(
+  () => [props.ingredient?.id, props.ingredient?.image_url],
+  () => {
+    imageLoadFailed.value = false
+    imageLoaded.value = false
+  }
+)
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 const imageSrc = computed(() => {
@@ -18,30 +25,53 @@ const imageSrc = computed(() => {
   return base ? `${base}${url.startsWith('/') ? url : `/${url}`}` : url
 })
 
-const showImage = computed(() => imageSrc.value && !imageLoadFailed.value)
+const showImage = computed(
+  () => imageSrc.value && !imageLoadFailed.value && imageLoaded.value
+)
 </script>
 
 <template>
-  <img
-    v-if="showImage"
-    :src="imageSrc!"
-    :alt="ingredient.name"
-    class="ingredient-thumb"
-    @error="imageLoadFailed = true"
-  />
-  <div v-else class="ingredient-thumb ingredient-thumb-placeholder" />
+  <div class="ingredient-thumb-wrap">
+    <img
+      v-if="imageSrc && !imageLoadFailed"
+      :src="imageSrc"
+      :alt="ingredient.name"
+      class="ingredient-thumb"
+      loading="lazy"
+      decoding="async"
+      @load="imageLoaded = true"
+      @error="imageLoadFailed = true"
+    />
+    <div
+      v-show="!showImage"
+      class="ingredient-thumb ingredient-thumb-placeholder"
+      aria-hidden="true"
+    />
+  </div>
 </template>
 
 <style scoped>
-.ingredient-thumb {
+.ingredient-thumb-wrap {
+  position: relative;
   width: 2.5rem;
   height: 2.5rem;
-  object-fit: contain;
   flex: none;
   border-radius: 0.25rem;
 }
 
+.ingredient-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0.25rem;
+}
+
 .ingredient-thumb-placeholder {
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.08);
+  border-radius: 0.25rem;
 }
 </style>
