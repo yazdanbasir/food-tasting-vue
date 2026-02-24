@@ -4,9 +4,10 @@ class Api::V1::GroceryListController < ApplicationController
 
   # GET /api/v1/grocery_list
   def show
-    # Aggregate all submission_ingredients, group by ingredient
+    # Single query: aggregate submission_ingredients by ingredient and left-join checkin state
     aggregated = SubmissionIngredient
       .joins(:ingredient, :submission)
+      .left_joins(ingredient: :grocery_checkin)
       .select(
         "ingredients.id as ingredient_id",
         "ingredients.product_id",
@@ -16,34 +17,37 @@ class Api::V1::GroceryListController < ApplicationController
         "ingredients.price_cents",
         "ingredients.image_url",
         "SUM(submission_ingredients.quantity) as total_quantity",
-        "GROUP_CONCAT(submissions.team_name, '||') as team_names"
+        "GROUP_CONCAT(submissions.team_name, '||') as team_names",
+        "grocery_checkins.checked as checkin_checked",
+        "grocery_checkins.checked_by as checkin_checked_by",
+        "grocery_checkins.checked_at as checkin_checked_at",
+        "grocery_checkins.quantity_override as checkin_quantity_override"
       )
       .group("ingredients.id")
 
-    # Load checkin state
-    checkins = GroceryCheckin.where(ingredient_id: aggregated.map(&:ingredient_id))
-      .index_by(&:ingredient_id)
-
-    # Build items
     items = aggregated.map do |row|
-      checkin = checkins[row.ingredient_id]
       aggregated_qty = row.total_quantity.to_i
+      ingredient_row = {
+        "id" => row.ingredient_id,
+        "ingredient_id" => row.ingredient_id,
+        "product_id" => row.product_id,
+        "name" => row.name,
+        "size" => row.size,
+        "aisle" => row.aisle,
+        "price_cents" => row.price_cents,
+        "image_url" => row.image_url
+      }
+      checkin_qty = row.try(:checkin_quantity_override)
+      total_qty = checkin_qty.present? ? checkin_qty.to_i : aggregated_qty
+      checked_val = row.try(:checkin_checked)
       {
-        ingredient: {
-          id: row.ingredient_id,
-          product_id: row.product_id,
-          name: row.name,
-          size: row.size,
-          aisle: row.aisle,
-          price_cents: row.price_cents,
-          image_url: row.image_url
-        },
-        total_quantity: checkin&.quantity_override || aggregated_qty,
+        ingredient: IngredientSerializer.as_json(ingredient_row, variant: :grocery_list),
+        total_quantity: total_qty,
         aggregated_quantity: aggregated_qty,
-        teams: row.team_names.split("||").uniq,
-        checked: checkin&.checked || false,
-        checked_by: checkin&.checked_by,
-        checked_at: checkin&.checked_at
+        teams: row.team_names.to_s.split("||").uniq,
+        checked: checked_val == true || checked_val == 1,
+        checked_by: row.try(:checkin_checked_by),
+        checked_at: row.try(:checkin_checked_at)
       }
     end
 

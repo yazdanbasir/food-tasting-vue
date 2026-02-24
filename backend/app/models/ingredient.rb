@@ -1,4 +1,6 @@
 class Ingredient < ApplicationRecord
+  has_one :grocery_checkin, dependent: :destroy
+
   validates :product_id, presence: true, uniqueness: true
   validates :name, presence: true
   validates :price_cents, numericality: { greater_than_or_equal_to: 0 }
@@ -16,6 +18,7 @@ class Ingredient < ApplicationRecord
   # Order by relevance: names starting with the first search term first, then by
   # where the term appears (earlier = better), then alphabetically. So "milk"
   # shows "Milk", "Milk 2%", "Lactose free milk" before less relevant matches.
+  # DB-agnostic: uses INSTR for SQLite/MySQL, position() for PostgreSQL.
   scope :order_by_relevance, ->(query) {
     first_term = query.to_s.split.first
     return order(:name) if first_term.blank?
@@ -24,11 +27,13 @@ class Ingredient < ApplicationRecord
     pattern = "#{safe}%"
     quoted_pattern = connection.quote(pattern)
     quoted_term = connection.quote(safe)
-    order(
-      Arel.sql("CASE WHEN LOWER(name) LIKE LOWER(#{quoted_pattern}) THEN 0 ELSE 1 END")
-    ).order(
-      Arel.sql("INSTR(LOWER(name), LOWER(#{quoted_term}))")
-    ).order(:name)
+    start_order = Arel.sql("CASE WHEN LOWER(name) LIKE LOWER(#{quoted_pattern}) THEN 0 ELSE 1 END")
+    pos_expr = if connection.adapter_name == "PostgreSQL"
+                 Arel.sql("POSITION(LOWER(#{quoted_term}) IN LOWER(name))")
+               else
+                 Arel.sql("INSTR(LOWER(name), LOWER(#{quoted_term}))")
+               end
+    order(start_order).order(pos_expr).order(:name)
   }
 
   # Convenience: return price as a decimal for display

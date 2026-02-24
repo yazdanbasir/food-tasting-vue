@@ -1,6 +1,6 @@
 class Api::V1::SubmissionsController < ApplicationController
   include OrganizerAuthenticatable
-  skip_before_action :require_organizer_auth, only: [:create, :show, :index, :add_ingredient, :destroy]
+  skip_before_action :require_organizer_auth, only: [:create, :show, :index]
 
   # POST /api/v1/submissions
   def create
@@ -40,6 +40,8 @@ class Api::V1::SubmissionsController < ApplicationController
     }, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Ingredient not found" }, status: :not_found
   end
 
   # GET /api/v1/submissions/:access_code
@@ -95,15 +97,24 @@ class Api::V1::SubmissionsController < ApplicationController
       members: raw_members.is_a?(Array) ? raw_members : submission.members
     )
 
+    desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
+
     Submission.transaction do
       submission.save!
-      submission.submission_ingredients.destroy_all
-      (params[:ingredients] || []).each do |item|
-        ingredient = Ingredient.find(item[:ingredient_id])
-        submission.submission_ingredients.create!(
-          ingredient: ingredient,
-          quantity: item[:quantity].to_i
-        )
+      current_by_ingredient = submission.submission_ingredients.index_by(&:ingredient_id)
+
+      desired.each do |ingredient_id, qty|
+        si = current_by_ingredient[ingredient_id]
+        if si
+          si.update!(quantity: qty) if si.quantity != qty
+        else
+          ingredient = Ingredient.find(ingredient_id)
+          submission.submission_ingredients.create!(ingredient: ingredient, quantity: qty)
+        end
+      end
+
+      current_by_ingredient.each_key do |ingredient_id|
+        current_by_ingredient[ingredient_id].destroy! unless desired.key?(ingredient_id)
       end
     end
 
@@ -157,26 +168,6 @@ class Api::V1::SubmissionsController < ApplicationController
   end
 
   def ingredient_json(ingredient)
-    {
-      id: ingredient.id,
-      product_id: ingredient.product_id,
-      name: ingredient.name,
-      size: ingredient.size,
-      aisle: ingredient.aisle,
-      price_cents: ingredient.price_cents,
-      image_url: ingredient.image_url,
-      dietary: {
-        is_alcohol: ingredient.is_alcohol,
-        gluten: ingredient.gluten,
-        dairy: ingredient.dairy,
-        egg: ingredient.egg,
-        peanut: ingredient.peanut,
-        kosher: ingredient.kosher,
-        vegan: ingredient.vegan,
-        vegetarian: ingredient.vegetarian,
-        lactose_free: ingredient.lactose_free,
-        wheat_free: ingredient.wheat_free
-      }
-    }
+    IngredientSerializer.as_json(ingredient, variant: :summary)
   end
 end
