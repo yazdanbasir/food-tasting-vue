@@ -10,7 +10,7 @@ console_command = '/rails/bin/rails console'
 [build]
 
 [env]
-  FRONTEND_URL = ''
+  FRONTEND_URL = '  FRONTEND_URL = 'https://food-tasting-form.vercel.app/'
   HTTP_PORT = '8080'
   RAILS_ENV = 'production'
   SOLID_QUEUE_IN_PUMA = 'true'
