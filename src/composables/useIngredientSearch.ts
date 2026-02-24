@@ -49,17 +49,23 @@ export function useIngredientSearch() {
     }
 
     if (cache.loaded) {
+      console.log(`[search] local for "${val}", cache has ${cache.all.length} items`)
       isLoading.value = false
       results.value = searchLocal(val, cache.all)
+      console.log(`[search] local found ${results.value.length}`)
       return
     }
 
+    console.log(`[search] cache not ready, debouncing API call for "${val}"`)
     // Cache not ready yet — fall back to server API with debounce
     debounceTimer = setTimeout(async () => {
       isLoading.value = true
       try {
+        console.log(`[search] API call for "${val}"`)
         results.value = await searchIngredients(val)
-      } catch {
+        console.log(`[search] API returned ${results.value.length}`)
+      } catch (err) {
+        console.error('[search] API FAILED', err)
         error.value = 'Search failed. Is the server running?'
         results.value = []
       } finally {
