@@ -8,7 +8,7 @@ module Api
       # Returns every ingredient ordered by name; browser-cached for 1 hour.
       # Used by the frontend to preload the full dataset for instant client-side search.
       def all
-        expires_in 1.hour, public: true
+        expires_in 1.hour
         rows = ActiveRecord::Base.connection.select_all(
           "SELECT id, product_id, name, size, aisle, category, image_url, price_cents,
            is_alcohol, gluten, dairy, egg, peanut, kosher, vegan, vegetarian, lactose_free, wheat_free
