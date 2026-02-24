@@ -9,7 +9,36 @@ module Api
       # Used by the frontend to preload the full dataset for instant client-side search.
       def all
         expires_in 1.hour, public: true
-        render json: Ingredient.order(:name).map { |i| serialize(i) }
+        rows = ActiveRecord::Base.connection.select_all(
+          "SELECT id, product_id, name, size, aisle, category, image_url, price_cents,
+           is_alcohol, gluten, dairy, egg, peanut, kosher, vegan, vegetarian, lactose_free, wheat_free
+           FROM ingredients ORDER BY name"
+        ).map do |row|
+          {
+            id:          row["id"],
+            product_id:  row["product_id"],
+            name:        row["name"],
+            size:        row["size"],
+            aisle:       row["aisle"],
+            category:    row["category"],
+            image_url:   row["image_url"],
+            price_cents: row["price_cents"],
+            price:       row["price_cents"].to_f / 100,
+            dietary: {
+              is_alcohol:   row["is_alcohol"] == 1,
+              gluten:       row["gluten"] == 1,
+              dairy:        row["dairy"] == 1,
+              egg:          row["egg"] == 1,
+              peanut:       row["peanut"] == 1,
+              kosher:       row["kosher"] == 1,
+              vegan:        row["vegan"] == 1,
+              vegetarian:   row["vegetarian"] == 1,
+              lactose_free: row["lactose_free"] == 1,
+              wheat_free:   row["wheat_free"] == 1
+            }
+          }
+        end
+        render json: rows
       end
 
       # GET /api/v1/ingredients?q=chicken
