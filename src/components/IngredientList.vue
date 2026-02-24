@@ -117,6 +117,7 @@ async function handleSubmit() {
   justify-content: center;
   font-size: 1.125rem;
   color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
   padding: 0.25rem 0;
   text-align: center;
 }

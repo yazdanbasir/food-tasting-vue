@@ -88,7 +88,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 0.375rem;
   padding: 0.25rem 1rem;
-  min-height: 2rem;
+  min-height: 2.5rem;
   border: none;
   border-radius: 9999px;
   background: transparent;

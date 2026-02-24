@@ -54,4 +54,10 @@
   #app {
     height: 100%;
   }
+
+  /* Remove default macOS/browser focus outline everywhere */
+  *:focus,
+  *:focus-visible {
+    outline: none;
+  }
 }

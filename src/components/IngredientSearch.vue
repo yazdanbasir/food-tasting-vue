@@ -164,7 +164,7 @@ onUnmounted(() => {
   background: #fff;
   border-radius: 9999px;
   padding: 0.25rem 1rem;
-  min-height: 2rem;
+  min-height: 2.5rem;
   outline: none;
   border: none;
   font-size: inherit;

@@ -11,7 +11,7 @@ import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
 import { getGroceryList, checkGroceryItem, updateGroceryQuantity, addGroceryItem, addSubmissionIngredient, updateSubmissionIngredientQuantity, deleteSubmission, type GroceryListResponse, type GroceryItem } from '@/api/organizer'
 import OrganizerAddProduct from '@/components/OrganizerAddProduct.vue'
 import LockOverlay from '@/components/LockOverlay.vue'
-import { flagEmoji } from '@/data/countries'
+import { COUNTRIES, flagEmoji } from '@/data/countries'
 import { useSubmissionStore } from '@/stores/submission'
 import type { Ingredient, IngredientDietary } from '@/types/ingredient'
 
@@ -198,6 +198,12 @@ function formatAisleTitle(aisle: string): string {
   return `Aisle ${aisle}`
 }
 
+function countryLabel(code: string | null): string {
+  if (!code) return 'country'
+  const c = COUNTRIES.find((x) => x.code === code)
+  return c ? `${flagEmoji(c.code)} ${c.name}` : 'country'
+}
+
 function handleEditSubmission(sub: SubmissionResponse) {
   submissionStore.loadForEdit(sub)
   router.push('/')
@@ -269,15 +275,30 @@ const totalCents = computed(() => {
               class="submission-row"
               @click="toggleSubmissionExpanded(sub.id)"
             >
-              <span class="submission-flag" :title="sub.country_code || ''">{{ (sub.country_code && flagEmoji(sub.country_code)) || '—' }}</span>
-              <span class="submission-dish truncate">{{ sub.dish_name }}</span>
-              <span class="submission-members truncate">{{ (sub.members || []).join(', ') }}</span>
-              <span class="submission-dietary">
-                <DietaryIcons :dietary="aggregateDietary(sub)" :size="16" />
-              </span>
-              <span class="submission-count tabular-nums">{{ sub.ingredients.length }} item{{ sub.ingredients.length !== 1 ? 's' : '' }}</span>
-              <span class="submission-date tabular-nums">{{ new Date(sub.submitted_at).toLocaleDateString() }}</span>
-              <span class="submission-expand">{{ expandedSubmissions.has(sub.id) ? '▲' : '▼' }}</span>
+              <div class="submission-bar form-section-top-bar">
+                <div class="form-section-top-bar-inner">
+                  <div class="form-section-pill">
+                    <span class="submission-country-display" :title="sub.country_code || ''">{{ countryLabel(sub.country_code) }}</span>
+                  </div>
+                  <div class="form-section-pill submission-dish-pill">
+                    <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name || 'dish name...' }}</span>
+                  </div>
+                  <div class="form-section-pill submission-members-pill">
+                    <span
+                      class="form-section-pill-input submission-members-text"
+                      :class="{ 'submission-members-placeholder': !(sub.members || []).length }"
+                    >{{ (sub.members || []).length ? (sub.members || []).join(', ') : 'members...' }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="submission-meta">
+                <span class="submission-dietary">
+                  <DietaryIcons :dietary="aggregateDietary(sub)" :size="16" />
+                </span>
+                <span class="submission-count tabular-nums">{{ sub.ingredients.length }} item{{ sub.ingredients.length !== 1 ? 's' : '' }}</span>
+                <span class="submission-date tabular-nums">{{ new Date(sub.submitted_at).toLocaleDateString() }}</span>
+                <span class="submission-expand">{{ expandedSubmissions.has(sub.id) ? '▲' : '▼' }}</span>
+              </div>
             </button>
 
             <div v-if="expandedSubmissions.has(sub.id)" class="submission-detail">
@@ -500,11 +521,10 @@ const totalCents = computed(() => {
 
 .submission-row {
   width: 100%;
-  display: grid;
-  grid-template-columns: 3.5rem minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(7rem, auto) 6rem 6.5rem 2rem;
-  gap: 1rem;
+  display: flex;
   align-items: center;
-  padding: 1rem;
+  gap: 1rem;
+  padding: 0;
   text-align: left;
   cursor: pointer;
   border: none;
@@ -522,24 +542,75 @@ const totalCents = computed(() => {
   outline-offset: 2px;
 }
 
-.submission-flag {
-  font-size: 1.75rem;
-  line-height: 1;
-  flex-shrink: 0;
-  min-width: 3.5rem;
-  text-align: center;
-  display: inline-block;
+.submission-bar {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 1rem;
 }
 
-.submission-dish {
-  font-weight: 600;
+.submission-country-display {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.25rem 1rem;
+  min-height: 2rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Dish pill: width fits text only (override shared flex grow + min-width) */
+.submission-bar .submission-dish-pill {
+  flex: none;
+  width: fit-content;
   min-width: 0;
 }
 
-.submission-members {
-  font-style: italic;
+.submission-dish-pill .form-section-pill-input {
+  width: auto;
+  min-width: 4ch;
+}
+
+.submission-dish-text {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* Members pill: same as form (one pill, comma-separated text), auto-fit width */
+.submission-bar .submission-members-pill {
+  flex: none;
+  width: fit-content;
+  min-width: 0;
+}
+
+.submission-members-pill .form-section-pill-input {
+  width: auto;
+  min-width: 4ch;
+}
+
+.submission-members-text {
+  white-space: nowrap;
+}
+
+.submission-members-placeholder {
   color: var(--color-lafayette-gray, #3c373c);
-  min-width: 0;
+  opacity: 0.8;
+}
+
+.submission-meta {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem 0.75rem 0;
 }
 
 .submission-dietary {
@@ -561,7 +632,6 @@ const totalCents = computed(() => {
 .submission-expand {
   color: var(--color-lafayette-gray, #3c373c);
   text-align: center;
-  justify-self: center;
 }
 
 .submission-detail {
