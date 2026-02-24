@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSubmissionStore } from '@/stores/submission'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
@@ -8,11 +8,31 @@ const { countryCode } = storeToRefs(useSubmissionStore())
 const open = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
+const countrySearchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
 
 const selectedLabel = computed(() => {
   if (!countryCode.value) return 'country'
   const c = COUNTRIES.find((x) => x.code === countryCode.value)
   return c ? `${flagEmoji(c.code)} ${c.name}` : 'country'
+})
+
+const filteredCountries = computed(() => {
+  const q = countrySearchQuery.value.trim().toLowerCase()
+  if (!q) return COUNTRIES
+  return COUNTRIES.filter(
+    (c) =>
+      c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+  )
+})
+
+watch(open, async (isOpen) => {
+  if (!isOpen) {
+    countrySearchQuery.value = ''
+  } else {
+    await nextTick()
+    searchInputRef.value?.focus()
+  }
 })
 
 function toggle() {
@@ -59,8 +79,18 @@ onUnmounted(() => {
       role="listbox"
       tabindex="-1"
     >
+      <div class="country-select-search-wrap">
+        <input
+          ref="searchInputRef"
+          v-model="countrySearchQuery"
+          type="text"
+          placeholder="Search countries..."
+          class="search-input"
+          aria-label="Search countries"
+        />
+      </div>
       <button
-        v-for="c in COUNTRIES"
+        v-for="c in filteredCountries"
         :key="c.code"
         type="button"
         role="option"
@@ -125,7 +155,7 @@ onUnmounted(() => {
   min-width: 18rem;
   width: max-content;
   max-width: min(22rem, 95vw);
-  max-height: 28rem;
+  max-height: 36rem;
   overflow-y: auto;
   background: #fff;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
@@ -134,6 +164,32 @@ onUnmounted(() => {
   z-index: 50;
   padding: 0.25rem 0;
   outline: none;
+}
+
+.country-select-search-wrap {
+  padding: 0.25rem 0.5rem 0.5rem;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+
+/* Same as IngredientSearch / other app search bars */
+.search-input {
+  width: 100%;
+  background: #fff;
+  border-radius: 9999px;
+  padding: 0.25rem 1rem;
+  min-height: 2.5rem;
+  outline: none;
+  border: none;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
 }
 
 .country-select-option {
