@@ -6,7 +6,9 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :ingredients, only: [ :index, :show ]
+      resources :ingredients, only: [ :index, :show ] do
+        get "all", on: :collection
+      end
       resources :submissions, only: [ :create, :show, :index ], param: :access_code
       patch "submissions/by_id/:id", to: "submissions#update"
       delete "submissions/by_id/:id", to: "submissions#destroy"

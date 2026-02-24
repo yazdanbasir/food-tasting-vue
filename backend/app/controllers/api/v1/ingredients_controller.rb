@@ -4,6 +4,14 @@ module Api
       # Broad queries (e.g. "milk") can match many products; return enough to scroll and find the one you want
       SEARCH_LIMIT = 500
 
+      # GET /api/v1/ingredients/all
+      # Returns every ingredient ordered by name; browser-cached for 1 hour.
+      # Used by the frontend to preload the full dataset for instant client-side search.
+      def all
+        expires_in 1.hour, public: true
+        render json: Ingredient.order(:name).map { |i| serialize(i) }
+      end
+
       # GET /api/v1/ingredients?q=chicken
       # Returns empty array if query is missing or fewer than 2 characters
       def index

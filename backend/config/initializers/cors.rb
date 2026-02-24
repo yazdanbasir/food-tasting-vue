@@ -1,8 +1,9 @@
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    # Vue dev server + production preview server
-    # Add your production frontend URL here when deploying
-    origins /\Ahttp:\/\/localhost(:\d+)?\z/
+    allowed = [ /\Ahttp:\/\/localhost(:\d+)?\z/ ]
+    allowed << ENV["FRONTEND_URL"] if ENV["FRONTEND_URL"].present?
+
+    origins(*allowed)
 
     resource "*",
       headers: :any,

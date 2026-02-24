@@ -1,6 +1,11 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
+import { useIngredientCacheStore } from '@/stores/ingredientCache'
+
+const ingredientCache = useIngredientCacheStore()
+onMounted(() => { ingredientCache.preload() })
 </script>
 
 <template>
