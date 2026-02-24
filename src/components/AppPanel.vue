@@ -4,7 +4,7 @@ import { computed } from 'vue'
 const props = withDefaults(
   defineProps<{
     title: string
-    variant: 'country' | 'dish-name' | 'group-members' | 'lower' | 'search' | 'search-slim' | 'upper'
+    variant: 'country' | 'dish-name' | 'group-members' | 'ingredients' | 'search' | 'search-slim' | 'upper'
     collapsible?: boolean
     expanded?: boolean
   }>(),
@@ -37,8 +37,10 @@ const containerClasses = computed(() => {
   if (props.variant === 'search') {
     return [...base, 'flex', 'flex-col', 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
   }
-  // One-line in-flow: [p-4] [pill] [gap-4] [slot] so bar sits 1rem after pill (same as left spacing)
-  if (props.variant === 'country' || props.variant === 'dish-name' || props.variant === 'search-slim') {
+  if (props.variant === 'country') {
+    return [...base, 'flex', 'flex-row', 'items-center', 'p-3', 'gap-0', 'flex-none', 'min-w-0']
+  }
+  if (props.variant === 'dish-name' || props.variant === 'search-slim') {
     return [...base, 'flex', 'flex-row', 'items-center', 'p-4', 'gap-4', 'flex-none', 'min-w-0', 'h-16']
   }
   if (props.variant === 'group-members') {
@@ -47,13 +49,7 @@ const containerClasses = computed(() => {
     }
     return [...base, 'flex', 'flex-row', 'items-start', 'p-4', 'gap-4', 'flex-1', 'min-h-0', 'min-w-0']
   }
-  if (props.variant === 'lower') {
-    if (isCollapsed.value) {
-      return [...base, 'flex-none', 'h-16', 'min-h-16']
-    }
-    return [...base, 'flex-1']
-  }
-  if (props.variant === 'upper') {
+  if (props.variant === 'upper' || props.variant === 'ingredients') {
     return [...base, 'flex', 'flex-col', 'min-w-0', 'min-h-0', isCollapsed.value ? 'flex-none' : 'flex-[1_1_50%]']
   }
   return [...base, 'flex-1']
@@ -68,7 +64,12 @@ const titleClasses = computed(() => {
   if (props.variant === 'group-members' && !isCollapsed.value) {
     return [...pillBase, 'flex-none', 'cursor-pointer', 'hover:opacity-80']
   }
+  // ingredients: in-flow bar (same padding + gap as top bar), not a pill
+  if (props.variant === 'ingredients') {
+    return ['flex', 'items-center', 'gap-3', 'px-4', 'py-3', 'flex-none', 'min-w-0']
+  }
   const base = [...pillBase, 'absolute', 'left-4', 'z-10']
+  if (props.variant === 'upper') base.push('right-4')
   if (props.collapsible) {
     base.push('cursor-pointer', 'hover:opacity-80')
   }
@@ -82,16 +83,21 @@ const bodyClasses = computed(() => {
   if (props.variant === 'search') {
     return ['flex', 'flex-col', 'flex-[1_1_0]', 'min-h-0', 'min-w-0', 'overflow-hidden', 'p-4']
   }
-  // country, dish-name, search-slim: slot is second flex child (bar only)
-  if (['country', 'dish-name', 'search-slim'].includes(props.variant)) {
+  if (['dish-name', 'search-slim'].includes(props.variant)) {
     return ['flex-1', 'min-w-0']
+  }
+  if (props.variant === 'country') {
+    return []
   }
   // group-members when expanded: slot has bar + list column
   if (props.variant === 'group-members') {
     return ['flex-1', 'min-w-0', 'flex', 'flex-col', 'min-h-0', 'overflow-hidden']
   }
   if (props.variant === 'upper') {
-    return ['flex', 'flex-col', 'flex-1', 'min-h-0', 'overflow-hidden', 'p-4', 'mt-14']
+    return ['flex', 'flex-col', 'flex-1', 'min-h-0', 'overflow-hidden', 'p-4', 'mt-20']
+  }
+  if (props.variant === 'ingredients') {
+    return ['flex', 'flex-col', 'flex-1', 'min-h-0', 'overflow-hidden', 'p-4', 'mt-4']
   }
   return ['p-4', 'mt-14']
 })
@@ -101,15 +107,17 @@ const bodyClasses = computed(() => {
   <div :class="containerClasses">
     <div
       :class="titleClasses"
-      :role="collapsible ? 'button' : undefined"
-      :tabindex="collapsible ? 0 : undefined"
-      @click="collapsible ? handleTitleClick() : undefined"
-      @keydown="collapsible ? handleTitleKeydown($event) : undefined"
+      :role="collapsible && variant !== 'country' ? 'button' : undefined"
+      :tabindex="collapsible && variant !== 'country' ? 0 : undefined"
+      @click="collapsible && variant !== 'country' ? handleTitleClick() : undefined"
+      @keydown="collapsible && variant !== 'country' ? handleTitleKeydown($event) : undefined"
     >
-      {{ title }}
+      <slot name="title">{{ title }}</slot>
     </div>
-    <div v-if="!collapsible || expanded" :class="bodyClasses">
-      <slot />
-    </div>
+    <template v-if="variant !== 'country'">
+      <div v-if="!collapsible || expanded" :class="bodyClasses">
+        <slot />
+      </div>
+    </template>
   </div>
 </template>

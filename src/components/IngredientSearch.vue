@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIngredientSearch } from '@/composables/useIngredientSearch'
 import { useSubmissionStore } from '@/stores/submission'
 import type { Ingredient } from '@/types/ingredient'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 
+const props = withDefaults(
+  defineProps<{ hidePrice?: boolean }>(),
+  { hidePrice: false }
+)
+
 const { query, results, isLoading, error, clear } = useIngredientSearch()
 const store = useSubmissionStore()
 
+const searchWrapRef = ref<HTMLElement | null>(null)
 const selectedIngredient = ref<Ingredient | null>(null)
 const quantity = ref(1)
 
@@ -20,6 +26,12 @@ const showDropdown = computed(
     !!selectedIngredient.value
 )
 
+function closeDropdown() {
+  selectedIngredient.value = null
+  quantity.value = 1
+  clear()
+}
+
 function select(ingredient: Ingredient) {
   selectedIngredient.value = ingredient
   quantity.value = 1
@@ -28,9 +40,7 @@ function select(ingredient: Ingredient) {
 function confirmAdd() {
   if (!selectedIngredient.value) return
   store.addIngredient(selectedIngredient.value, quantity.value)
-  selectedIngredient.value = null
-  quantity.value = 1
-  clear()
+  closeDropdown()
 }
 
 function cancelSelection() {
@@ -41,10 +51,23 @@ function cancelSelection() {
 function changeQty(delta: number) {
   quantity.value = Math.max(1, quantity.value + delta)
 }
+
+function handleClickOutside(e: MouseEvent) {
+  if (searchWrapRef.value && !searchWrapRef.value.contains(e.target as Node)) {
+    closeDropdown()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
-  <div class="search-wrap">
+  <div ref="searchWrapRef" class="search-wrap">
     <input
       v-model="query"
       type="text"
@@ -110,7 +133,7 @@ function changeQty(delta: number) {
             <div class="search-result-name truncate">{{ ingredient.name }}</div>
             <div class="search-result-size">{{ ingredient.size }}</div>
           </div>
-          <div class="search-result-price tabular-nums">
+          <div v-if="!hidePrice" class="search-result-price tabular-nums">
             ${{ (ingredient.price_cents / 100).toFixed(2) }}
           </div>
         </li>
@@ -146,22 +169,27 @@ function changeQty(delta: number) {
   opacity: 0.9;
 }
 
+/* Results box: same styling as country dropdown */
 .search-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 0.25rem);
   left: 0;
   right: 0;
-  margin-top: 0.5rem;
+  min-width: 18rem;
+  max-height: 28rem;
+  overflow-y: auto;
   background: #fff;
-  border-radius: 1rem;
-  box-shadow: var(--shadow-natural, 6px 6px 9px rgba(0, 0, 0, 0.2));
-  overflow: hidden;
+  border: 1px solid var(--color-lafayette-gray, #3c373c);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 50;
+  padding: 0.25rem 0;
+  outline: none;
 }
 
 .search-dropdown-msg {
   padding: 1rem;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: var(--color-lafayette-gray, #3c373c);
 }
 
@@ -186,7 +214,7 @@ function changeQty(delta: number) {
 }
 
 .add-product-size {
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: var(--color-lafayette-gray, #3c373c);
 }
 
@@ -208,7 +236,7 @@ function changeQty(delta: number) {
   background: #fff;
   color: #000;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s;
@@ -234,7 +262,7 @@ function changeQty(delta: number) {
 .add-product-add {
   padding: 0.375rem 0.75rem;
   border-radius: 9999px;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   font-weight: 500;
   cursor: pointer;
   border: none;
@@ -261,26 +289,24 @@ function changeQty(delta: number) {
 }
 
 .search-results {
-  max-height: min(24rem, 60vh);
-  overflow-y: auto;
-  overflow-x: hidden;
   list-style: none;
   margin: 0;
   padding: 0;
   -webkit-overflow-scrolling: touch;
 }
 
+/* Result items: same hover as country dropdown options */
 .search-result-item {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color 0.1s;
 }
 
 .search-result-item:hover {
-  background: var(--color-menu-gray, #e5e3e0);
+  background-color: rgba(145, 0, 41, 0.08);
 }
 
 .search-result-info {
@@ -289,18 +315,18 @@ function changeQty(delta: number) {
 }
 
 .search-result-name {
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1.3;
 }
 
 .search-result-size {
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: var(--color-lafayette-gray, #3c373c);
   line-height: 1.3;
 }
 
 .search-result-price {
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: var(--color-lafayette-gray, #3c373c);
   flex: none;
 }

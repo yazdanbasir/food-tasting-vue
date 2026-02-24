@@ -7,7 +7,7 @@ import { useSubmissionStore } from '@/stores/submission'
 import { createSubmission } from '@/api/submissions'
 
 const store = useSubmissionStore()
-const { ingredients, totalCents, canSubmit, countryCode, members } = storeToRefs(store)
+const { ingredients, canSubmit, countryCode, members } = storeToRefs(store)
 const router = useRouter()
 
 const isSubmitting = ref(false)
@@ -15,7 +15,10 @@ const submitError = ref<string | null>(null)
 
 function changeQty(productId: string, delta: number) {
   const item = ingredients.value.find((i) => i.ingredient.product_id === productId)
-  if (item) store.updateQuantity(productId, Math.max(1, item.quantity + delta))
+  if (!item) return
+  const newQty = item.quantity + delta
+  if (newQty < 1) store.removeIngredient(productId)
+  else store.updateQuantity(productId, newQty)
 }
 
 async function handleSubmit() {
@@ -51,7 +54,7 @@ async function handleSubmit() {
   <div class="ingredient-list">
     <!-- Empty state -->
     <div v-if="!ingredients.length" class="ingredient-list-empty">
-      No ingredients added yet. Search above to add items.
+      No ingredients added yet. Search to add items.
     </div>
 
     <!-- List -->
@@ -88,23 +91,13 @@ async function handleSubmit() {
               +
             </button>
           </span>
-          <span class="ingredient-list-price tabular-nums">
-            ${{ ((item.ingredient.price_cents * item.quantity) / 100).toFixed(2) }}
-          </span>
-          <button
-            type="button"
-            class="ingredient-list-remove"
-            aria-label="Remove ingredient"
-            @click="store.removeIngredient(item.ingredient.product_id)"
-          >
-            ×
-          </button>
         </div>
       </li>
     </ul>
 
-    <!-- Total + Submit -->
+    <!-- Submit -->
     <div v-if="ingredients.length" class="ingredient-list-footer">
+      <span v-if="submitError" class="ingredient-list-error">{{ submitError }}</span>
       <button
         type="button"
         :disabled="!canSubmit || isSubmitting"
@@ -112,12 +105,8 @@ async function handleSubmit() {
         :class="canSubmit && !isSubmitting ? 'ingredient-list-submit-enabled' : 'ingredient-list-submit-disabled'"
         @click="handleSubmit"
       >
-        {{ isSubmitting ? 'submitting...' : 'submit' }}
+        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
       </button>
-      <span v-if="submitError" class="ingredient-list-error">{{ submitError }}</span>
-      <span v-else class="ingredient-list-total tabular-nums">
-        Total: ${{ (totalCents / 100).toFixed(2) }}
-      </span>
     </div>
   </div>
 </template>
@@ -127,13 +116,18 @@ async function handleSubmit() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  font-size: var(--body-font-size, 1.125rem);
+  font-size: 1.125rem;
 }
 
 .ingredient-list-empty {
-  font-size: 1rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
   color: var(--color-lafayette-gray, #3c373c);
   padding: 0.25rem 0;
+  text-align: center;
 }
 
 .ingredient-list-ul {
@@ -141,16 +135,28 @@ async function handleSubmit() {
   overflow-y: auto;
   list-style: none;
   margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--color-lafayette-gray, #3c373c);
+  padding: 0.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .ingredient-list-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--color-lafayette-gray, #3c373c);
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.15s, border-color 0.15s, background-color 0.15s;
+}
+
+.ingredient-list-row:hover {
+  background: #fafafa;
+  border-color: #d5d5d5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 .ingredient-list-info {
@@ -159,12 +165,15 @@ async function handleSubmit() {
 }
 
 .ingredient-list-name {
-  font-size: 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
 .ingredient-list-size {
-  font-size: 0.875rem;
-  color: var(--color-lafayette-gray, #3c373c);
+  font-size: 0.9375rem;
+  color: #666;
+  margin-top: 0.125rem;
 }
 
 .ingredient-list-actions {
@@ -181,27 +190,27 @@ async function handleSubmit() {
 }
 
 .ingredient-list-qty-btn {
-  width: 2rem;
-  height: 2rem;
-  min-width: 2rem;
-  min-height: 2rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: #fff;
-  color: #000;
-  border: 1px solid var(--color-lafayette-gray, #3c373c);
-  font-size: 1.125rem;
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .ingredient-list-qty-btn:hover {
-  background: var(--color-lafayette-dark-blue, #006690);
+  background: var(--color-lafayette-red, #910029);
   color: #fff;
-  border-color: var(--color-lafayette-dark-blue, #006690);
+  border-color: var(--color-lafayette-red, #910029);
 }
 
 .ingredient-list-qty-btn:focus-visible {
@@ -214,52 +223,36 @@ async function handleSubmit() {
   text-align: center;
 }
 
-.ingredient-list-price {
-  width: 4rem;
-  text-align: right;
-  font-size: 1rem;
-}
-
-.ingredient-list-remove {
-  width: 2rem;
-  height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--color-lafayette-gray, #3c373c);
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 0.15s;
-}
-
-.ingredient-list-remove:hover {
-  color: var(--color-lafayette-red, #910029);
-}
-
-.ingredient-list-remove:focus-visible {
-  outline: 2px solid #000;
-  outline-offset: 2px;
-}
-
 .ingredient-list-footer {
-  border-top: 1px solid var(--color-lafayette-gray, #3c373c);
+  border-top: 1px solid #e0e0e0;
   padding-top: 1rem;
   margin-top: 1rem;
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex: none;
 }
 
+.ingredient-list-footer .ingredient-list-error {
+  flex: 1;
+}
+
+.ingredient-list-footer .ingredient-list-submit {
+  margin-left: auto;
+}
+
+/* Match header tab nav: pill shape, padding, font */
 .ingredient-list-submit {
   border-radius: 9999px;
-  padding: calc(0.667em + 2px) calc(1.333em + 2px);
-  min-height: 2.5rem;
+  padding: 0.5rem 1.5rem;
+  min-height: 2.75rem;
   border: none;
-  font-size: 1rem;
-  transition: background-color 0.15s, opacity 0.15s;
+  font-size: 1.25rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .ingredient-list-submit-enabled {
@@ -267,34 +260,30 @@ async function handleSubmit() {
   color: #fff;
   cursor: pointer;
   opacity: 1;
+  border: 1px solid var(--color-lafayette-red, #910029);
 }
 
 .ingredient-list-submit-enabled:hover {
-  background-color: var(--color-lafayette-dark-blue, #006690);
+  background-color: var(--color-lafayette-dark-blue, #6d001f);
+  color: #fff;
+  border-color: var(--color-lafayette-dark-blue, #6d001f);
 }
 
 .ingredient-list-submit-enabled:focus-visible {
-  outline: 2px solid #000;
+  outline: 2px solid var(--color-lafayette-red, #910029);
   outline-offset: 2px;
 }
 
 .ingredient-list-submit-disabled {
-  background-color: var(--color-lafayette-gray, #3c373c);
-  color: #fff;
+  background-color: #e5e5e5;
+  color: #737373;
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.8;
+  border: 1px solid #d4d4d4;
 }
 
 .ingredient-list-error {
-  flex: 1;
-  font-size: 0.875rem;
-  color: #b91c1c;
-}
-
-.ingredient-list-total {
-  flex: 1;
   font-size: 1rem;
-  font-weight: 600;
-  text-align: right;
+  color: #b91c1c;
 }
 </style>

@@ -143,5 +143,5 @@ This means you can re-run the scraper before each event, drop the new DB into `b
 - `src/assets/logos/ISA-logo.png` — copied from `ui-reference/public/`
 - `index.html` — added Roboto Mono Google Fonts link, updated page title
 - `src/assets/base.css` — full-height `html/body/#app`, Roboto Mono as default font, removed Vue boilerplate background/color
-- `src/views/HomeView.vue` — 2-column layout (left: dish name, group members, recipe; right: search, grocery list)
+- `src/views/HomeView.vue` — top bar (country, dish name, members) + main column (search, grocery list)
 - `package.json` — added `sass` dev dependency for `<style lang="scss">` in SFCs

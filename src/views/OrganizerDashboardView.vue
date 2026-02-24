@@ -181,24 +181,24 @@ const totalCents = computed(() => {
 <template>
   <LockOverlay>
   <div class="h-full flex flex-col dashboard">
-    <!-- Header -->
-    <div class="dashboard-header">
-      <div class="flex gap-2">
+    <!-- Subtab bar: Dishes | Grocery List (only one active at a time) -->
+    <div class="dashboard-subtab-bar">
+      <div class="dashboard-subtab-row">
         <button
           type="button"
-          class="dashboard-tab"
-          :class="activeTab === 'submissions' ? 'dashboard-tab-active' : 'dashboard-tab-inactive'"
+          class="dashboard-subtab"
+          :class="activeTab === 'submissions' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
           @click="activeTab = 'submissions'; addProductError = null"
         >
-          submissions
+          Dishes
         </button>
         <button
           type="button"
-          class="dashboard-tab"
-          :class="activeTab === 'grocery' ? 'dashboard-tab-active' : 'dashboard-tab-inactive'"
+          class="dashboard-subtab"
+          :class="activeTab === 'grocery' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
           @click="switchToGrocery"
         >
-          grocery list
+          Grocery List
         </button>
       </div>
     </div>
@@ -361,52 +361,62 @@ const totalCents = computed(() => {
   font-size: var(--body-font-size, 1.125rem);
 }
 
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-bottom: 1px solid var(--color-lafayette-gray, #3c373c);
-  background: var(--color-menu-gray, #e5e3e0);
+/* Subtab bar: same pill style as main nav but smaller, clearly secondary */
+.dashboard-subtab-bar {
+  flex: none;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border, #e5e5e5);
+  background: rgba(255, 255, 255, 0.6);
 }
 
-.dashboard-tab {
+.dashboard-subtab-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard-subtab {
   border-radius: 9999px;
-  padding: calc(0.667em + 2px) calc(1.333em + 2px);
-  min-height: 2.5rem;
-  font-size: 1rem;
+  padding: 0.375rem 1.125rem;
+  min-height: 2.25rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   transition: background-color 0.15s, color 0.15s;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.dashboard-tab-active {
-  background-color: var(--color-lafayette-red, #910029);
-  color: #fff;
+.dashboard-subtab-active {
+  background-color: #fff;
+  color: var(--color-lafayette-red, #910029);
+  border-color: var(--color-lafayette-red, #910029);
 }
 
-.dashboard-tab-active:hover {
-  background-color: var(--color-lafayette-dark-blue, #006690);
+.dashboard-subtab-active:hover {
+  background-color: #fff;
+  color: var(--color-lafayette-red, #910029);
 }
 
-.dashboard-tab-active:focus-visible {
-  outline: 2px solid #000;
+.dashboard-subtab-active:focus-visible {
+  outline: 2px solid var(--color-lafayette-red, #910029);
   outline-offset: 2px;
 }
 
-.dashboard-tab-inactive {
-  background-color: #fff;
+.dashboard-subtab-inactive {
+  background-color: transparent;
   color: var(--color-lafayette-gray, #3c373c);
 }
 
-.dashboard-tab-inactive:hover {
-  background-color: var(--color-lafayette-dark-blue, #006690);
-  color: #fff;
+.dashboard-subtab-inactive:hover {
+  background-color: rgba(145, 0, 41, 0.08);
+  color: var(--color-lafayette-red, #910029);
 }
 
-.dashboard-tab-inactive:focus-visible {
-  outline: 2px solid #000;
+.dashboard-subtab-inactive:focus-visible {
+  outline: 2px solid var(--color-lafayette-gray, #3c373c);
   outline-offset: 2px;
 }
 

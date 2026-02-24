@@ -108,7 +108,7 @@ const lafayetteLogoSrc = '/lafayette-logo.png'
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.0625rem;
+  font-size: 1.25rem;
   font-weight: 500;
   transition: background-color 0.15s, color 0.15s;
   text-decoration: none;

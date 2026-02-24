@@ -3,6 +3,11 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSubmissionStore } from '@/stores/submission'
 
+const props = withDefaults(
+  defineProps<{ showAddInput?: boolean }>(),
+  { showAddInput: true },
+)
+
 const store = useSubmissionStore()
 const { members } = storeToRefs(store)
 
@@ -20,6 +25,7 @@ function addMember() {
 <template>
   <div class="members-wrap">
     <input
+      v-if="showAddInput"
       v-model="newMember"
       type="text"
       placeholder="add members..."

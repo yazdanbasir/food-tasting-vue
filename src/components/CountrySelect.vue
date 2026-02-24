@@ -1,31 +1,162 @@
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSubmissionStore } from '@/stores/submission'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
 
 const { countryCode } = storeToRefs(useSubmissionStore())
+const open = ref(false)
+const dropdownRef = ref<HTMLElement | null>(null)
+const buttonRef = ref<HTMLElement | null>(null)
+
+const selectedLabel = computed(() => {
+  if (!countryCode.value) return 'country'
+  const c = COUNTRIES.find((x) => x.code === countryCode.value)
+  return c ? `${flagEmoji(c.code)} ${c.name}` : 'country'
+})
+
+function toggle() {
+  open.value = !open.value
+}
+
+function select(code: string) {
+  countryCode.value = code
+  open.value = false
+}
+
+function handleClickOutside(e: MouseEvent) {
+  const target = e.target as Node
+  if (open.value && dropdownRef.value && !dropdownRef.value.contains(target) && buttonRef.value && !buttonRef.value.contains(target)) {
+    open.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
-  <select
-    v-model="countryCode"
-    class="country-select w-full bg-white rounded-full pl-4 pr-8 py-1 min-h-8 outline-none border-0 appearance-none cursor-pointer font-inherit"
-    :class="{ 'country-placeholder': !countryCode }"
-    style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%23666%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center;"
-  >
-      <option value="">country...</option>
-      <option
+  <div class="country-select-wrap">
+    <button
+      ref="buttonRef"
+      type="button"
+      class="country-select-btn"
+      aria-haspopup="listbox"
+      :aria-expanded="open"
+      @click="toggle"
+    >
+      {{ selectedLabel }}
+      <span class="country-select-chevron" aria-hidden="true">{{ open ? '▲' : '▼' }}</span>
+    </button>
+    <div
+      v-show="open"
+      ref="dropdownRef"
+      class="country-select-dropdown"
+      role="listbox"
+      tabindex="-1"
+    >
+      <button
         v-for="c in COUNTRIES"
         :key="c.code"
-        :value="c.code"
+        type="button"
+        role="option"
+        class="country-select-option"
+        :aria-selected="countryCode === c.code"
+        @click="select(c.code)"
       >
         {{ flagEmoji(c.code) }} {{ c.name }}
-      </option>
-  </select>
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.country-select.country-placeholder {
-  color: #9ca3af;
+.country-select-wrap {
+  position: relative;
+  display: inline-block;
+  width: max-content;
+  min-width: 0;
+}
+
+.country-select-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.25rem 1rem;
+  min-height: 2rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  outline: none;
+}
+
+.country-select-btn:hover {
+  opacity: 0.85;
+}
+
+.country-select-btn:focus-visible {
+  outline: none;
+}
+
+.country-select-chevron {
+  flex-shrink: 0;
+  font-size: 0.65em;
+  opacity: 0.8;
+}
+
+.country-select-dropdown {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  min-width: 18rem;
+  width: max-content;
+  max-width: min(22rem, 95vw);
+  max-height: 28rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--color-lafayette-gray, #3c373c);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  padding: 0.25rem 0;
+  outline: none;
+}
+
+.country-select-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.country-select-option:hover {
+  background-color: rgba(145, 0, 41, 0.08);
+}
+
+.country-select-option[aria-selected="true"] {
+  background-color: rgba(145, 0, 41, 0.12);
+  font-weight: 500;
 }
 </style>

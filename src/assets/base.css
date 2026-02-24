@@ -10,7 +10,7 @@
   --color-lafayette-gray: #3c373c;
   --color-lafayette-tan: #e8ba81;
   --color-menu-gray: #e5e3e0;
-  --color-page-bg: #f2f1f0;
+  --color-page-bg: #ffffff;
   /* Spacing (fluid tokens from Lafayette) */
   --spacing-30: clamp(1.5rem, 5vw, 2rem);
   --spacing-40: clamp(1.8rem, 1.8rem + ((1vw - 0.48rem) * 2.885), 3rem);
@@ -28,7 +28,7 @@
     --color-lafayette-dark-blue: #6d001f;
     --color-lafayette-gray: #3c373c;
     --color-menu-gray: #e5e3e0;
-    --color-page-bg: #f2f1f0;
+    --color-page-bg: #ffffff;
     --spacing-30: clamp(1.5rem, 5vw, 2rem);
     --spacing-40: clamp(1.8rem, 1.8rem + ((1vw - 0.48rem) * 2.885), 3rem);
     --spacing-50: clamp(2.5rem, 8vw, 4.5rem);
@@ -42,7 +42,7 @@
   }
 
   body {
-    background-color: var(--color-page-bg, #f2f1f0);
+    background-color: var(--color-page-bg, #ffffff);
     font-family: var(--font-mono);
     font-size: var(--body-font-size);
     line-height: 1.75rem;
