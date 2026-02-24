@@ -64,6 +64,62 @@ class Api::V1::SubmissionsController < ApplicationController
     render json: { error: "Submission or ingredient not found" }, status: :not_found
   end
 
+  # PATCH /api/v1/submissions/by_id/:submission_id/ingredients/:ingredient_id (organizer only)
+  def update_ingredient_quantity
+    submission = Submission.find(params[:submission_id])
+    ingredient = Ingredient.find(params[:ingredient_id])
+    si = submission.submission_ingredients.find_by!(ingredient: ingredient)
+    quantity = (params[:quantity].presence || 0).to_i
+    if quantity < 1
+      si.destroy!
+      render json: submission_json(submission.reload), status: :ok
+    else
+      si.update!(quantity: quantity)
+      render json: submission_json(submission.reload), status: :ok
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Submission or ingredient not found" }, status: :not_found
+  end
+
+  # PATCH /api/v1/submissions/by_id/:id (organizer only)
+  def update
+    submission = Submission.find(params[:id])
+    raw_country = params[:country_code] || params["country_code"]
+    raw_members = params[:members] || params["members"]
+
+    submission.assign_attributes(
+      dish_name: params[:dish_name],
+      team_name: params[:team_name],
+      notes: params[:notes],
+      country_code: raw_country.presence,
+      members: raw_members.is_a?(Array) ? raw_members : submission.members
+    )
+
+    Submission.transaction do
+      submission.save!
+      submission.submission_ingredients.destroy_all
+      (params[:ingredients] || []).each do |item|
+        ingredient = Ingredient.find(item[:ingredient_id])
+        submission.submission_ingredients.create!(
+          ingredient: ingredient,
+          quantity: item[:quantity].to_i
+        )
+      end
+    end
+
+    ActionCable.server.broadcast("notifications", {
+      type: "submission_updated",
+      submission_id: submission.id,
+      timestamp: submission.updated_at
+    })
+
+    render json: submission_json(submission.reload), status: :ok
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Submission or ingredient not found" }, status: :not_found
+  end
+
   # DELETE /api/v1/submissions/by_id/:id (organizer only)
   def destroy
     submission = Submission.find(params[:id])

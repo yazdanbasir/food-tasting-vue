@@ -2,12 +2,16 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { Ingredient } from '@/types/ingredient'
 import type { MasterListItem, SubmissionIngredient } from '@/types/submission'
+import type { SubmissionResponse } from '@/api/submissions'
 
 export const useSubmissionStore = defineStore('submission', () => {
   const teamName = ref('')
   const dishName = ref('')
   const countryCode = ref('')
   const members = ref<string[]>([])
+
+  /** When set, form is in edit mode; submit becomes PATCH update */
+  const editingSubmissionId = ref<number | null>(null)
 
   function addMember(name: string) {
     const trimmed = name.trim()
@@ -102,11 +106,37 @@ export const useSubmissionStore = defineStore('submission', () => {
     ingredients.value = []
   }
 
+  /** Map API ingredient response to frontend Ingredient (price, category) */
+  function mapResponseIngredient(raw: SubmissionResponse['ingredients'][0]['ingredient']): Ingredient {
+    return {
+      ...raw,
+      price: raw.price_cents / 100,
+      category: null,
+    }
+  }
+
+  function loadForEdit(sub: SubmissionResponse) {
+    editingSubmissionId.value = sub.id
+    dishName.value = sub.dish_name
+    countryCode.value = sub.country_code ?? ''
+    members.value = [...(sub.members || [])]
+    ingredients.value = sub.ingredients.map((item) => ({
+      ingredient: mapResponseIngredient(item.ingredient),
+      quantity: item.quantity,
+    }))
+  }
+
+  function clearEdit() {
+    editingSubmissionId.value = null
+    reset()
+  }
+
   return {
     teamName,
     dishName,
     countryCode,
     members,
+    editingSubmissionId,
     addMember,
     removeMember,
     ingredients,
@@ -117,5 +147,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     removeIngredient,
     updateQuantity,
     reset,
+    loadForEdit,
+    clearEdit,
   }
 })

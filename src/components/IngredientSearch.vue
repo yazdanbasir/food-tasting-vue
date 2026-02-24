@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/styles/form-section.css'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIngredientSearch } from '@/composables/useIngredientSearch'
 import { useSubmissionStore } from '@/stores/submission'
@@ -6,8 +7,12 @@ import type { Ingredient } from '@/types/ingredient'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 
 const props = withDefaults(
-  defineProps<{ hidePrice?: boolean }>(),
-  { hidePrice: false }
+  defineProps<{
+    hidePrice?: boolean
+    /** When set, called instead of store.addIngredient (e.g. for organizer add-to-submission) */
+    addCallback?: (ingredient: Ingredient, quantity: number) => void
+  }>(),
+  { hidePrice: false, addCallback: undefined }
 )
 
 const { query, results, isLoading, error, clear } = useIngredientSearch()
@@ -39,7 +44,11 @@ function select(ingredient: Ingredient) {
 
 function confirmAdd() {
   if (!selectedIngredient.value) return
-  store.addIngredient(selectedIngredient.value, quantity.value)
+  if (props.addCallback) {
+    props.addCallback(selectedIngredient.value, quantity.value)
+  } else {
+    store.addIngredient(selectedIngredient.value, quantity.value)
+  }
   closeDropdown()
 }
 
@@ -92,23 +101,25 @@ onUnmounted(() => {
             <span class="add-product-size">{{ selectedIngredient.size }}</span>
           </div>
           <div class="add-product-qty">
-            <button
-              type="button"
-              class="add-product-qty-btn"
-              aria-label="Decrease quantity"
-              @click="changeQty(-1)"
-            >
-              −
-            </button>
-            <span class="tabular-nums add-product-qty-num">{{ quantity }}</span>
-            <button
-              type="button"
-              class="add-product-qty-btn"
-              aria-label="Increase quantity"
-              @click="changeQty(1)"
-            >
-              +
-            </button>
+            <span class="qty-controls">
+              <button
+                type="button"
+                class="qty-btn"
+                aria-label="Decrease quantity"
+                @click="changeQty(-1)"
+              >
+                −
+              </button>
+              <span class="tabular-nums qty-num">{{ quantity }}</span>
+              <button
+                type="button"
+                class="qty-btn"
+                aria-label="Increase quantity"
+                @click="changeQty(1)"
+              >
+                +
+              </button>
+            </span>
           </div>
           <div class="add-product-actions">
             <button type="button" class="add-product-cancel" @click="cancelSelection">
@@ -221,36 +232,6 @@ onUnmounted(() => {
 .add-product-qty {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-}
-
-.add-product-qty-btn {
-  width: 2rem;
-  height: 2rem;
-  min-width: 2rem;
-  min-height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: #fff;
-  color: #000;
-  border: 1px solid var(--color-lafayette-gray, #3c373c);
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.add-product-qty-btn:hover {
-  background: var(--color-lafayette-dark-blue, #006690);
-  color: #fff;
-  border-color: var(--color-lafayette-dark-blue, #006690);
-}
-
-.add-product-qty-num {
-  min-width: 1.5rem;
-  text-align: center;
 }
 
 .add-product-actions {

@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import type { Ingredient } from '@/types/ingredient'
 
 const props = defineProps<{
-  ingredient: Ingredient
+  ingredient: Pick<Ingredient, 'id' | 'name' | 'image_url'>
 }>()
 
 const imageLoadFailed = ref(false)
@@ -15,14 +15,18 @@ watch(
     imageLoaded.value = false
   }
 )
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+// Use same base as API so relative image_url (e.g. /uploads/...) resolve correctly
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:1826'
 
 const imageSrc = computed(() => {
   const url = props.ingredient?.image_url
-  if (!url) return null
-  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  if (!url || typeof url !== 'string') return null
+  const trimmed = url.trim()
+  if (!trimmed) return null
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
   const base = API_BASE.replace(/\/$/, '')
-  return base ? `${base}${url.startsWith('/') ? url : `/${url}`}` : url
+  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  return `${base}${path}`
 })
 
 const showImage = computed(

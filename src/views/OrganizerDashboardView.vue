@@ -1,14 +1,38 @@
 <script setup lang="ts">
+import '@/styles/form-section.css'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
 import IngredientThumb from '@/components/IngredientThumb.vue'
+import IngredientRow from '@/components/IngredientRow.vue'
+import IngredientSearch from '@/components/IngredientSearch.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
-import { getGroceryList, checkGroceryItem, updateGroceryQuantity, addGroceryItem, addSubmissionIngredient, deleteSubmission, type GroceryListResponse, type GroceryItem } from '@/api/organizer'
+import { getGroceryList, checkGroceryItem, updateGroceryQuantity, addGroceryItem, addSubmissionIngredient, updateSubmissionIngredientQuantity, deleteSubmission, type GroceryListResponse, type GroceryItem } from '@/api/organizer'
 import OrganizerAddProduct from '@/components/OrganizerAddProduct.vue'
 import LockOverlay from '@/components/LockOverlay.vue'
 import { flagEmoji } from '@/data/countries'
+import { useSubmissionStore } from '@/stores/submission'
 import type { Ingredient, IngredientDietary } from '@/types/ingredient'
+
+const router = useRouter()
+const submissionStore = useSubmissionStore()
+
+/** Map API ingredient to frontend Ingredient for IngredientRow */
+function toIngredient(raw: SubmissionResponse['ingredients'][0]['ingredient']): Ingredient {
+  return {
+    id: raw.id,
+    product_id: raw.product_id,
+    name: raw.name,
+    size: raw.size,
+    aisle: raw.aisle,
+    price_cents: raw.price_cents,
+    image_url: raw.image_url,
+    dietary: raw.dietary,
+    price: raw.price_cents / 100,
+    category: null,
+  }
+}
 
 /** Aggregate dietary flags for a submission: true if any ingredient has that flag */
 function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
@@ -153,9 +177,30 @@ async function handleAddToSubmission(submissionId: number, ingredient: Ingredien
   }
 }
 
+async function handleSubmissionIngredientQty(
+  submissionId: number,
+  ingredientId: number,
+  currentQty: number,
+  delta: number,
+) {
+  const newQty = Math.max(0, currentQty + delta)
+  addProductError.value = null
+  try {
+    await updateSubmissionIngredientQuantity(submissionId, ingredientId, newQty)
+    await loadSubmissions()
+  } catch (err) {
+    addProductError.value = err instanceof Error ? err.message : 'Failed to update quantity'
+  }
+}
+
 function formatAisleTitle(aisle: string): string {
   if (!aisle || aisle === 'Other' || aisle === 'Unknown') return 'Aisle Unknown'
   return `Aisle ${aisle}`
+}
+
+function handleEditSubmission(sub: SubmissionResponse) {
+  submissionStore.loadForEdit(sub)
+  router.push('/')
 }
 
 async function handleDeleteSubmission(sub: SubmissionResponse) {
@@ -236,47 +281,49 @@ const totalCents = computed(() => {
             </button>
 
             <div v-if="expandedSubmissions.has(sub.id)" class="submission-detail">
-              <div class="ingredients-header">
-                <span class="ingredients-header-thumb" />
-                <span>Item</span>
-                <span class="ingredients-header-dietary" />
-                <span>Size</span>
-                <span class="text-center">Qty</span>
-                <span class="text-right">Price</span>
-              </div>
-              <div
-                v-for="item in sub.ingredients"
-                :key="item.ingredient.product_id"
-                class="ingredients-row"
-              >
-                <IngredientThumb :ingredient="item.ingredient" />
-                <span class="truncate">{{ item.ingredient.name }}</span>
-                <span class="ingredients-cell-dietary">
-                  <DietaryIcons :dietary="item.ingredient.dietary" :size="16" />
-                </span>
-                <span class="ingredient-size truncate">{{ item.ingredient.size }}</span>
-                <span class="tabular-nums text-center">× {{ item.quantity }}</span>
-                <span class="tabular-nums text-right">${{ ((item.ingredient.price_cents * item.quantity) / 100).toFixed(2) }}</span>
-              </div>
-              <div class="add-product-in-submission">
-                <OrganizerAddProduct
-                  placeholder="add product to this submission..."
-                  :disabled="addProductLoading"
-                  @add="(ing, qty) => handleAddToSubmission(sub.id, ing, qty)"
-                />
+              <div class="form-section-ingredients submission-detail-ingredients">
+                <div class="form-section-top-bar-inner">
+                  <div class="form-section-pill form-section-pill-label">Items in this dish</div>
+                  <div class="form-section-pill form-section-pill-search">
+                    <IngredientSearch
+                      :hide-price="true"
+                      :add-callback="(ing, qty) => handleAddToSubmission(sub.id, ing, qty)"
+                    />
+                  </div>
+                </div>
+                <div class="submission-detail-list">
+                  <IngredientRow
+                    v-for="item in sub.ingredients"
+                    :key="item.ingredient.product_id"
+                    :ingredient="toIngredient(item.ingredient)"
+                    :quantity="item.quantity"
+                    :editable="true"
+                    :show-price="true"
+                    @change-qty="(delta) => handleSubmissionIngredientQty(sub.id, item.ingredient.id, item.quantity, delta)"
+                  />
+                </div>
               </div>
               <div v-if="addProductError && expandedSubmissions.has(sub.id)" class="dashboard-error add-product-err">
                 {{ addProductError }}
               </div>
               <div v-if="sub.notes" class="submission-notes">{{ sub.notes }}</div>
               <div class="submission-detail-actions">
-                <button
-                  type="button"
-                  class="submission-delete-btn"
-                  @click.stop="handleDeleteSubmission(sub)"
-                >
-                  delete submission
-                </button>
+                <div class="submission-detail-buttons">
+                  <button
+                    type="button"
+                    class="btn-pill-primary"
+                    @click.stop="handleEditSubmission(sub)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-pill-secondary btn-pill-danger"
+                    @click.stop="handleDeleteSubmission(sub)"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -318,28 +365,28 @@ const totalCents = computed(() => {
                   <span class="grocery-name truncate" :class="item.checked ? 'line-through' : ''">{{ item.ingredient.name }}</span>
                   <span class="grocery-size" :class="item.checked ? 'line-through' : ''">{{ item.ingredient.size }}</span>
                 </div>
-                <div class="grocery-cell grocery-cell-qty">
-                  <span class="grocery-qty-controls">
-                    <button
-                      type="button"
-                      class="grocery-qty-btn"
-                      aria-label="Decrease quantity"
-                      @click.prevent.stop="changeQuantity(item, -1)"
-                    >−</button>
-                    <span class="tabular-nums grocery-qty-num">{{ item.total_quantity }}</span>
-                    <button
-                      type="button"
-                      class="grocery-qty-btn"
-                      aria-label="Increase quantity"
-                      @click.prevent.stop="changeQuantity(item, +1)"
-                    >+</button>
-                  </span>
-                </div>
                 <div class="grocery-cell grocery-cell-teams truncate" :title="item.teams.join(', ')">
                   <span class="grocery-teams">{{ item.teams.join(', ') }}</span>
                 </div>
                 <div class="grocery-cell grocery-cell-price tabular-nums text-right">
                   ${{ ((item.ingredient.price_cents * item.total_quantity) / 100).toFixed(2) }}
+                </div>
+                <div class="grocery-cell grocery-cell-qty">
+                  <span class="qty-controls">
+                    <button
+                      type="button"
+                      class="qty-btn"
+                      aria-label="Decrease quantity"
+                      @click.prevent.stop="changeQuantity(item, -1)"
+                    >−</button>
+                    <span class="tabular-nums qty-num">{{ item.total_quantity }}</span>
+                    <button
+                      type="button"
+                      class="qty-btn"
+                      aria-label="Increase quantity"
+                      @click.prevent.stop="changeQuantity(item, +1)"
+                    >+</button>
+                  </span>
                 </div>
               </div>
             </div>
@@ -519,76 +566,36 @@ const totalCents = computed(() => {
 
 .submission-detail {
   padding: 0 1rem 1rem;
-  border-top: 1px solid var(--color-lafayette-gray, #3c373c);
+}
+
+.submission-detail-ingredients {
+  flex: none;
+  min-height: 0;
+}
+
+.submission-detail-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
 }
 
 .submission-detail-actions {
   margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px dashed var(--color-lafayette-gray, #3c373c);
-}
-
-.submission-delete-btn {
-  padding: 0.375rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid var(--color-lafayette-gray, #3c373c);
-  background: #fff;
-  color: var(--color-lafayette-gray, #3c373c);
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.submission-delete-btn:hover {
-  background: #b91c1c;
-  color: #fff;
-  border-color: #b91c1c;
-}
-
-.submission-delete-btn:focus-visible {
-  outline: 2px solid #000;
-  outline-offset: 2px;
-}
-
-.ingredients-header {
-  display: grid;
-  grid-template-columns: 2.5rem 1fr minmax(7rem, auto) 6rem 4rem 5rem;
-  gap: 1rem;
-  align-items: center;
-  padding: 0.75rem 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-lafayette-gray, #3c373c);
-}
-
-.ingredients-header-dietary {
-  min-width: 0;
-}
-
-.ingredients-cell-dietary {
   display: flex;
   align-items: center;
-  min-width: 0;
-}
-
-.ingredients-header-thumb {
-  width: 2.5rem;
-  height: 2.5rem;
+  gap: 1rem;
   flex: none;
 }
 
-.ingredients-row {
-  display: grid;
-  grid-template-columns: 2.5rem 1fr minmax(7rem, auto) 6rem 4rem 5rem;
-  gap: 1rem;
+.submission-detail-actions .submission-detail-buttons {
+  margin-left: auto;
+  display: inline-flex;
   align-items: center;
-  padding: 0.5rem 0;
-  font-size: 1rem;
-}
-
-.ingredient-size {
-  color: var(--color-lafayette-gray, #3c373c);
+  gap: 1rem;
 }
 
 .submission-notes {
@@ -620,7 +627,7 @@ const totalCents = computed(() => {
 
 .grocery-row {
   display: grid;
-  grid-template-columns: auto 2.5rem 1fr auto 10rem 5.5rem;
+  grid-template-columns: auto 2.5rem 1fr 10rem 5.5rem auto;
   gap: 1rem;
   align-items: center;
   background: var(--color-menu-gray, #e5e3e0);
@@ -674,46 +681,6 @@ const totalCents = computed(() => {
   justify-content: center;
 }
 
-.grocery-qty-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.grocery-qty-btn {
-  width: 2rem;
-  height: 2rem;
-  min-width: 2rem;
-  min-height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: #fff;
-  color: #000;
-  border: 1px solid var(--color-lafayette-gray, #3c373c);
-  font-size: 1.125rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.grocery-qty-btn:hover {
-  background: var(--color-lafayette-dark-blue, #006690);
-  color: #fff;
-  border-color: var(--color-lafayette-dark-blue, #006690);
-}
-
-.grocery-qty-btn:focus-visible {
-  outline: 2px solid #000;
-  outline-offset: 2px;
-}
-
-.grocery-qty-num {
-  min-width: 1.5rem;
-  text-align: center;
-}
-
 .grocery-teams {
   font-size: 0.875rem;
   color: var(--color-lafayette-gray, #3c373c);
@@ -735,13 +702,6 @@ const totalCents = computed(() => {
 
 .grocery-add-product {
   margin-bottom: 1rem;
-}
-
-.add-product-in-submission {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px dashed var(--color-lafayette-gray, #3c373c);
-  min-height: 2.5rem;
 }
 
 .add-product-err {

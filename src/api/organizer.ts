@@ -1,10 +1,32 @@
 const BASE = import.meta.env.VITE_API_BASE_URL
 
-function organizerHeaders(): HeadersInit {
+export function organizerHeaders(): HeadersInit {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('organizer_token') : null
-  const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`
+  const headers = new Headers({ 'Content-Type': 'application/json' })
+  if (token) headers.set('Authorization', `Bearer ${token}`)
   return headers
+}
+
+/** Check if the current client has an organizer token (e.g. before update). */
+export function hasOrganizerToken(): boolean {
+  if (typeof localStorage === 'undefined') return false
+  return !!localStorage.getItem('organizer_token')
+}
+
+export async function organizerLogin(
+  username: string,
+  password: string,
+): Promise<{ token: string; username: string }> {
+  const res = await fetch(`${BASE}/api/v1/organizer_session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || 'Login failed')
+  }
+  return res.json()
 }
 
 export interface GroceryItem {
@@ -78,6 +100,27 @@ export async function addSubmissionIngredient(
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error((body as { error?: string }).error || `Failed to add ingredient: ${res.status}`)
+  }
+}
+
+export async function updateSubmissionIngredientQuantity(
+  submissionId: number,
+  ingredientId: number,
+  quantity: number,
+): Promise<void> {
+  const res = await fetch(
+    `${BASE}/api/v1/submissions/by_id/${submissionId}/ingredients/${ingredientId}`,
+    {
+      method: 'PATCH',
+      headers: organizerHeaders(),
+      body: JSON.stringify({ quantity }),
+    },
+  )
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(
+      (body as { error?: string }).error || `Failed to update quantity: ${res.status}`,
+    )
   }
 }
 

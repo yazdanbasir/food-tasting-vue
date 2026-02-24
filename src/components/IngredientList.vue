@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import '@/styles/form-section.css'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import IngredientThumb from '@/components/IngredientThumb.vue'
+import IngredientRow from '@/components/IngredientRow.vue'
 import { useSubmissionStore } from '@/stores/submission'
-import { createSubmission } from '@/api/submissions'
+import { createSubmission, updateSubmission } from '@/api/submissions'
+import { hasOrganizerToken } from '@/api/organizer'
 
 const store = useSubmissionStore()
 const { ingredients, canSubmit, countryCode, members } = storeToRefs(store)
@@ -27,21 +29,33 @@ async function handleSubmit() {
   isSubmitting.value = true
   submitError.value = null
 
-  try {
-    const result = await createSubmission({
-      team_name: store.teamName,
-      dish_name: store.dishName,
-      notes: '',
-      country_code: countryCode.value || '',
-      members: [...members.value],
-      ingredients: ingredients.value.map((item) => ({
-        ingredient_id: item.ingredient.id,
-        quantity: item.quantity,
-      })),
-    })
+  const payload = {
+    team_name: store.teamName,
+    dish_name: store.dishName,
+    notes: '',
+    country_code: countryCode.value || '',
+    members: [...members.value],
+    ingredients: ingredients.value.map((item) => ({
+      ingredient_id: item.ingredient.id,
+      quantity: item.quantity,
+    })),
+  }
 
-    store.reset()
-    router.push(`/confirmation/${result.access_code}`)
+  try {
+    const editingId = store.editingSubmissionId
+    if (editingId != null) {
+      if (!hasOrganizerToken()) {
+        submitError.value = 'Please log in from the Organizer tab to update a submission.'
+        return
+      }
+      const result = await updateSubmission(editingId, payload)
+      store.clearEdit()
+      router.push(`/confirmation/${result.access_code}`)
+    } else {
+      const result = await createSubmission(payload)
+      store.reset()
+      router.push(`/confirmation/${result.access_code}`)
+    }
   } catch (err) {
     submitError.value = err instanceof Error ? err.message : 'Submission failed'
   } finally {
@@ -62,36 +76,14 @@ async function handleSubmit() {
       <li
         v-for="item in ingredients"
         :key="item.ingredient.product_id"
-        class="ingredient-list-row"
+        class="ingredient-list-li"
       >
-        <IngredientThumb :ingredient="item.ingredient" />
-
-        <div class="ingredient-list-info">
-          <div class="ingredient-list-name truncate">{{ item.ingredient.name }}</div>
-          <div class="ingredient-list-size">{{ item.ingredient.size }}</div>
-        </div>
-
-        <div class="ingredient-list-actions">
-          <span class="ingredient-list-qty-controls">
-            <button
-              type="button"
-              class="ingredient-list-qty-btn"
-              aria-label="Decrease quantity"
-              @click="changeQty(item.ingredient.product_id, -1)"
-            >
-              −
-            </button>
-            <span class="tabular-nums ingredient-list-qty-num">{{ item.quantity }}</span>
-            <button
-              type="button"
-              class="ingredient-list-qty-btn"
-              aria-label="Increase quantity"
-              @click="changeQty(item.ingredient.product_id, 1)"
-            >
-              +
-            </button>
-          </span>
-        </div>
+        <IngredientRow
+          :ingredient="item.ingredient"
+          :quantity="item.quantity"
+          :editable="true"
+          @change-qty="(delta) => changeQty(item.ingredient.product_id, delta)"
+        />
       </li>
     </ul>
 
@@ -101,11 +93,10 @@ async function handleSubmit() {
       <button
         type="button"
         :disabled="!canSubmit || isSubmitting"
-        class="ingredient-list-submit"
-        :class="canSubmit && !isSubmitting ? 'ingredient-list-submit-enabled' : 'ingredient-list-submit-disabled'"
+        class="btn-pill-primary"
         @click="handleSubmit"
       >
-        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+        {{ isSubmitting ? (store.editingSubmissionId != null ? 'Updating...' : 'Submitting...') : (store.editingSubmissionId != null ? 'Update' : 'Submit') }}
       </button>
     </div>
   </div>
@@ -141,86 +132,8 @@ async function handleSubmit() {
   gap: 0.5rem;
 }
 
-.ingredient-list-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.15s, border-color 0.15s, background-color 0.15s;
-}
-
-.ingredient-list-row:hover {
-  background: #fafafa;
-  border-color: #d5d5d5;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-}
-
-.ingredient-list-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.ingredient-list-name {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.ingredient-list-size {
-  font-size: 0.9375rem;
-  color: #666;
-  margin-top: 0.125rem;
-}
-
-.ingredient-list-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: none;
-}
-
-.ingredient-list-qty-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.ingredient-list-qty-btn {
-  width: 2.25rem;
-  height: 2.25rem;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: #f0f0f0;
-  color: #333;
-  border: 1px solid #ddd;
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.ingredient-list-qty-btn:hover {
-  background: var(--color-lafayette-red, #910029);
-  color: #fff;
-  border-color: var(--color-lafayette-red, #910029);
-}
-
-.ingredient-list-qty-btn:focus-visible {
-  outline: 2px solid #000;
-  outline-offset: 2px;
-}
-
-.ingredient-list-qty-num {
-  min-width: 1.5rem;
-  text-align: center;
+.ingredient-list-li {
+  list-style: none;
 }
 
 .ingredient-list-footer {
@@ -237,49 +150,8 @@ async function handleSubmit() {
   flex: 1;
 }
 
-.ingredient-list-footer .ingredient-list-submit {
+.ingredient-list-footer .btn-pill-primary {
   margin-left: auto;
-}
-
-/* Match header tab nav: pill shape, padding, font */
-.ingredient-list-submit {
-  border-radius: 9999px;
-  padding: 0.5rem 1.5rem;
-  min-height: 2.75rem;
-  border: none;
-  font-size: 1.25rem;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.15s, color 0.15s, opacity 0.15s;
-}
-
-.ingredient-list-submit-enabled {
-  background-color: var(--color-lafayette-red, #910029);
-  color: #fff;
-  cursor: pointer;
-  opacity: 1;
-  border: 1px solid var(--color-lafayette-red, #910029);
-}
-
-.ingredient-list-submit-enabled:hover {
-  background-color: var(--color-lafayette-dark-blue, #6d001f);
-  color: #fff;
-  border-color: var(--color-lafayette-dark-blue, #6d001f);
-}
-
-.ingredient-list-submit-enabled:focus-visible {
-  outline: 2px solid var(--color-lafayette-red, #910029);
-  outline-offset: 2px;
-}
-
-.ingredient-list-submit-disabled {
-  background-color: #e5e5e5;
-  color: #737373;
-  cursor: not-allowed;
-  opacity: 0.8;
-  border: 1px solid #d4d4d4;
 }
 
 .ingredient-list-error {

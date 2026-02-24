@@ -19,15 +19,20 @@ const activeFlags = computed(() =>
 
 <template>
   <span v-if="activeFlags.length" class="dietary-icons" :class="props.class">
-    <component
+    <span
       v-for="{ key, label, icon } in activeFlags"
       :key="key"
-      :is="icon"
-      :size="size"
-      :aria-label="label"
+      class="dietary-icon-wrap"
       :title="label"
-      class="dietary-icon"
-    />
+      :aria-label="label"
+    >
+      <component
+        :is="icon"
+        :size="size"
+        class="dietary-icon"
+        aria-hidden="true"
+      />
+    </span>
   </span>
 </template>
 
@@ -39,8 +44,18 @@ const activeFlags = computed(() =>
   flex-wrap: wrap;
 }
 
+.dietary-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 1.25rem;
+  min-height: 1.25rem;
+}
+
 .dietary-icon {
   flex-shrink: 0;
   color: var(--color-lafayette-gray, #3c373c);
+  pointer-events: none;
 }
 </style>

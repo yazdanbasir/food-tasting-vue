@@ -1,4 +1,17 @@
+import { organizerHeaders } from '@/api/organizer'
+
 const BASE = import.meta.env.VITE_API_BASE_URL
+
+function clearStaleOrganizerToken(): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('organizer_token')
+      localStorage.removeItem('organizer_username')
+    }
+  } catch {
+    // ignore
+  }
+}
 
 export interface SubmissionPayload {
   team_name: string
@@ -55,5 +68,25 @@ export async function createSubmission(
 export async function getAllSubmissions(): Promise<SubmissionResponse[]> {
   const res = await fetch(`${BASE}/api/v1/submissions`)
   if (!res.ok) throw new Error(`Failed to load submissions: ${res.status}`)
+  return res.json()
+}
+
+export async function updateSubmission(
+  id: number,
+  payload: SubmissionPayload,
+): Promise<SubmissionResponse> {
+  const res = await fetch(`${BASE}/api/v1/submissions/by_id/${id}`, {
+    method: 'PATCH',
+    headers: organizerHeaders(),
+    body: JSON.stringify(payload),
+  })
+  if (res.status === 401) {
+    clearStaleOrganizerToken()
+    throw new Error('Session expired. Please log in again from the Organizer tab.')
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || `Update failed: ${res.status}`)
+  }
   return res.json()
 }
