@@ -23,15 +23,16 @@ export const useSubmissionStore = defineStore('submission', () => {
   // The current team's ingredient list being built
   const ingredients = ref<SubmissionIngredient[]>([])
 
-  // Add an ingredient — if already in the list, increment quantity instead
-  function addIngredient(ingredient: Ingredient) {
+  // Add an ingredient — if already in the list, add to quantity; otherwise add with given quantity
+  function addIngredient(ingredient: Ingredient, quantity = 1) {
+    const qty = Math.max(1, quantity)
     const existing = ingredients.value.find(
       (i) => i.ingredient.product_id === ingredient.product_id,
     )
     if (existing) {
-      existing.quantity += 1
+      existing.quantity += qty
     } else {
-      ingredients.value.push({ ingredient, quantity: 1 })
+      ingredients.value.push({ ingredient, quantity: qty })
     }
   }
 

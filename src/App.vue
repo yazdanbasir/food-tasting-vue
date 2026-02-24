@@ -5,9 +5,18 @@ import AppHeader from '@/components/AppHeader.vue'
 
 <template>
   <div class="h-screen flex flex-col overflow-hidden">
-    <AppHeader />
+    <div class="app-header-wrap">
+      <AppHeader />
+    </div>
     <main class="flex-1 min-h-0 overflow-hidden">
       <RouterView />
     </main>
   </div>
 </template>
+
+<style scoped>
+.app-header-wrap {
+  margin: 1rem;
+  flex: none;
+}
+</style>

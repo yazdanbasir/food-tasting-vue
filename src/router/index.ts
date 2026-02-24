@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ConfirmationView from '../views/ConfirmationView.vue'
-import OrganizerLoginView from '../views/OrganizerLoginView.vue'
 import OrganizerDashboardView from '../views/OrganizerDashboardView.vue'
 
 const router = createRouter({
@@ -16,11 +15,6 @@ const router = createRouter({
       path: '/confirmation/:accessCode',
       name: 'confirmation',
       component: ConfirmationView,
-    },
-    {
-      path: '/organizer/login',
-      name: 'organizer-login',
-      component: OrganizerLoginView,
     },
     {
       path: '/organizer',

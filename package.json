@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@rails/actioncable": "^8.1.200",
+    "lucide-vue-next": "^0.575.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.28",
     "vue-router": "^5.0.2"

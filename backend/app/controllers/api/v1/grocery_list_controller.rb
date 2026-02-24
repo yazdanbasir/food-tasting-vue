@@ -1,6 +1,6 @@
 class Api::V1::GroceryListController < ApplicationController
   include OrganizerAuthenticatable
-  skip_before_action :require_organizer_auth, only: [:show, :update]
+  skip_before_action :require_organizer_auth, only: [:show, :update, :create_item]
 
   # GET /api/v1/grocery_list
   def show
@@ -61,6 +61,21 @@ class Api::V1::GroceryListController < ApplicationController
     render json: { aisles: sorted_aisles, total_cents: total_cents }
   end
 
+  # POST /api/v1/grocery_list/items (organizer only — add product to master list)
+  def create_item
+    quantity = (params[:quantity].presence || 1).to_i
+    quantity = 1 if quantity < 1
+    ingredient = Ingredient.find(params[:ingredient_id])
+    submission = find_or_create_organizer_submission
+    si = submission.submission_ingredients.find_or_initialize_by(ingredient: ingredient)
+    si.quantity = si.quantity.to_i + quantity
+    si.save!
+    ActionCable.server.broadcast("notifications", { type: "grocery_list_updated" })
+    render json: { ingredient_id: ingredient.id, quantity: si.quantity }, status: :created
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Ingredient not found" }, status: :not_found
+  end
+
   # PATCH /api/v1/grocery_list/:ingredient_id
   def update
     ingredient = Ingredient.find(params[:ingredient_id])
@@ -92,5 +107,9 @@ class Api::V1::GroceryListController < ApplicationController
     render json: payload
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Ingredient not found" }, status: :not_found
+  end
+
+  def find_or_create_organizer_submission
+    Submission.find_or_create_by!(team_name: "Organizer", dish_name: "Extra items")
   end
 end

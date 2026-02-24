@@ -18,31 +18,25 @@ function addMember() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 min-h-0">
-    <!-- Row aligned with pill + 1rem: spacer then input (same as app bar styling) -->
-    <div class="flex items-center flex-none">
-      <div class="min-w-[11rem] flex-none" />
-      <input
-        v-model="newMember"
-        type="text"
-        placeholder="add a member, press enter..."
-        class="flex-1 bg-white rounded-full px-4 py-1 min-h-8 outline-none border-0 placeholder:text-gray-400"
-        @keydown.enter.prevent="addMember"
-      />
-    </div>
-    <!-- Members list: aligned with input bar, same styling as app (rounded-full, bg-white, min-h-8) -->
-    <div
-      v-if="members.length"
-      class="flex flex-col gap-2 overflow-y-auto min-h-0 pl-[11rem]"
-    >
+  <div class="members-wrap">
+    <input
+      v-model="newMember"
+      type="text"
+      placeholder="add members..."
+      class="members-input"
+      @keydown.enter.prevent="addMember"
+    />
+    <div v-if="members.length" class="members-list">
       <div
         v-for="member in members"
         :key="member"
-        class="flex items-center gap-2 bg-white rounded-full pl-4 pr-2 py-1 min-h-8 w-full max-w-md"
+        class="members-item"
       >
-        <span class="flex-1 min-w-0 truncate text-[15px]">{{ member }}</span>
+        <span class="members-item-name truncate">{{ member }}</span>
         <button
-          class="text-gray-400 hover:text-gray-700 leading-none transition-colors flex-none"
+          type="button"
+          class="members-item-remove"
+          aria-label="Remove member"
           @click="store.removeMember(member)"
         >
           ×
@@ -51,3 +45,71 @@ function addMember() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.members-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+  width: 100%;
+}
+
+.members-input {
+  width: 100%;
+  flex: none;
+  background: #fff;
+  border-radius: 9999px;
+  padding: 0.25rem 1rem;
+  min-height: 2rem;
+  outline: none;
+  border: none;
+  font-size: inherit;
+}
+
+.members-input::placeholder {
+  color: #9ca3af;
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.members-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fff;
+  border-radius: 9999px;
+  padding: 0.25rem 0.5rem 0.25rem 1rem;
+  min-height: 2rem;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.members-item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: inherit;
+}
+
+.members-item-remove {
+  flex: none;
+  padding: 0 0.25rem;
+  background: none;
+  border: none;
+  color: var(--color-lafayette-gray, #3c373c);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.members-item-remove:hover {
+  color: #000;
+}
+</style>

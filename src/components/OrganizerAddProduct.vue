@@ -1,23 +1,26 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useIngredientSearch } from '@/composables/useIngredientSearch'
-import { useSubmissionStore } from '@/stores/submission'
 import type { Ingredient } from '@/types/ingredient'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 
-const { query, results, isLoading, error, clear } = useIngredientSearch()
-const store = useSubmissionStore()
+const props = withDefaults(
+  defineProps<{ placeholder?: string; disabled?: boolean }>(),
+  { placeholder: "search for an ingredient...", disabled: false }
+)
 
+const emit = defineEmits<{ add: [ingredient: Ingredient, quantity: number] }>()
+
+const { query, results, isLoading, error, clear } = useIngredientSearch()
 const selectedIngredient = ref<Ingredient | null>(null)
 const quantity = ref(1)
 
-const showDropdown = computed(
-  () =>
-    isLoading.value ||
-    !!error.value ||
-    (query.value.length >= 2 && results.value.length === 0) ||
-    results.value.length > 0 ||
-    !!selectedIngredient.value
+const showDropdown = computed(() =>
+  isLoading.value ||
+  !!error.value ||
+  (query.value.length >= 2 && results.value.length === 0) ||
+  results.value.length > 0 ||
+  !!selectedIngredient.value
 )
 
 function select(ingredient: Ingredient) {
@@ -27,7 +30,7 @@ function select(ingredient: Ingredient) {
 
 function confirmAdd() {
   if (!selectedIngredient.value) return
-  store.addIngredient(selectedIngredient.value, quantity.value)
+  emit('add', selectedIngredient.value, quantity.value)
   selectedIngredient.value = null
   quantity.value = 1
   clear()
@@ -44,13 +47,13 @@ function changeQty(delta: number) {
 </script>
 
 <template>
-  <div class="search-wrap">
+  <div class="add-product-wrap">
     <input
       v-model="query"
       type="text"
-      placeholder="search Giant's inventory..."
+      :placeholder="placeholder"
       class="search-input"
-      :disabled="!!selectedIngredient"
+      :disabled="!!selectedIngredient || disabled"
       @keydown.escape="selectedIngredient ? cancelSelection() : clear()"
     />
 
@@ -91,7 +94,7 @@ function changeQty(delta: number) {
             <button type="button" class="add-product-cancel" @click="cancelSelection">
               cancel
             </button>
-            <button type="button" class="add-product-add" @click="confirmAdd">
+            <button type="button" class="add-product-add" :disabled="disabled" @click="confirmAdd">
               add
             </button>
           </div>
@@ -120,7 +123,7 @@ function changeQty(delta: number) {
 </template>
 
 <style scoped>
-.search-wrap {
+.add-product-wrap {
   position: relative;
   width: 100%;
 }
@@ -139,7 +142,6 @@ function changeQty(delta: number) {
 
 .search-input::placeholder {
   color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.7;
 }
 
 .search-input:disabled {

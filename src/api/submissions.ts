@@ -4,8 +4,12 @@ export interface SubmissionPayload {
   team_name: string
   dish_name: string
   notes?: string
+  country_code?: string
+  members?: string[]
   ingredients: { ingredient_id: number; quantity: number }[]
 }
+
+import type { IngredientDietary } from '@/types/ingredient'
 
 export interface SubmissionIngredientResponse {
   ingredient: {
@@ -16,6 +20,7 @@ export interface SubmissionIngredientResponse {
     aisle: string | null
     price_cents: number
     image_url: string | null
+    dietary: IngredientDietary
   }
   quantity: number
 }
@@ -26,6 +31,8 @@ export interface SubmissionResponse {
   team_name: string
   dish_name: string
   notes: string | null
+  country_code: string | null
+  members: string[]
   submitted_at: string
   ingredients: SubmissionIngredientResponse[]
 }
@@ -45,10 +52,8 @@ export async function createSubmission(
   return res.json()
 }
 
-export async function getAllSubmissions(token: string): Promise<SubmissionResponse[]> {
-  const res = await fetch(`${BASE}/api/v1/submissions`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+export async function getAllSubmissions(): Promise<SubmissionResponse[]> {
+  const res = await fetch(`${BASE}/api/v1/submissions`)
   if (!res.ok) throw new Error(`Failed to load submissions: ${res.status}`)
   return res.json()
 }

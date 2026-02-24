@@ -70,8 +70,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_23_030000) do
 
   create_table "submissions", force: :cascade do |t|
     t.string "access_code", null: false
+    t.string "country_code"
     t.datetime "created_at", null: false
     t.string "dish_name", null: false
+    t.text "members"
     t.text "notes"
     t.string "team_name", null: false
     t.datetime "updated_at", null: false

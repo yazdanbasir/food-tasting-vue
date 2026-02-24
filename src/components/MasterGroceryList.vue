@@ -4,38 +4,111 @@ import { useSubmissionStore } from '@/stores/submission'
 
 const store = useSubmissionStore()
 const { masterGroceryList, totalCents } = storeToRefs(store)
+
+function formatAisleTitle(aisle: string): string {
+  if (!aisle || aisle === 'Other' || aisle === 'Unknown') return 'Aisle Unknown'
+  return `Aisle ${aisle}`
+}
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 overflow-y-auto">
-    <div v-if="!Object.keys(masterGroceryList).length" class="text-sm text-gray-400">
+  <div class="master-grocery">
+    <div v-if="!Object.keys(masterGroceryList).length" class="master-grocery-empty">
       No ingredients across any submissions yet.
     </div>
 
-    <div v-for="(items, aisle) in masterGroceryList" :key="aisle">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
-        Aisle {{ aisle }}
-      </h3>
-      <ul class="space-y-1">
-        <li
-          v-for="item in items"
-          :key="item.ingredient.product_id"
-          class="flex items-center gap-2 text-sm"
-        >
-          <span class="flex-1 truncate">{{ item.ingredient.name }}</span>
-          <span class="text-gray-500 flex-none">× {{ item.totalQuantity }}</span>
-          <span class="w-16 text-right tabular-nums flex-none">
-            ${{ ((item.ingredient.price_cents * item.totalQuantity) / 100).toFixed(2) }}
-          </span>
-        </li>
-      </ul>
-    </div>
+    <template v-else>
+      <section v-for="(items, aisle) in masterGroceryList" :key="aisle" class="master-grocery-aisle">
+        <h3 class="master-grocery-aisle-title">{{ formatAisleTitle(aisle) }}</h3>
+        <ul class="master-grocery-list">
+          <li
+            v-for="item in items"
+            :key="item.ingredient.product_id"
+            class="master-grocery-row"
+          >
+            <span class="master-grocery-name truncate">{{ item.ingredient.name }}</span>
+            <span class="master-grocery-qty tabular-nums">× {{ item.totalQuantity }}</span>
+            <span class="master-grocery-price tabular-nums">
+              ${{ ((item.ingredient.price_cents * item.totalQuantity) / 100).toFixed(2) }}
+            </span>
+          </li>
+        </ul>
+      </section>
 
-    <div
-      v-if="Object.keys(masterGroceryList).length"
-      class="border-t border-gray-200 pt-2 text-sm font-semibold text-right tabular-nums"
-    >
-      Estimated Total: ${{ (totalCents / 100).toFixed(2) }}
-    </div>
+      <div class="master-grocery-total">
+        Estimated Total: ${{ (totalCents / 100).toFixed(2) }}
+      </div>
+    </template>
   </div>
 </template>
+
+<style scoped>
+.master-grocery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-30, 1.5rem);
+  overflow-y: auto;
+  font-size: var(--body-font-size, 1.125rem);
+}
+
+.master-grocery-empty {
+  font-size: 1rem;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.master-grocery-aisle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.master-grocery-aisle-title {
+  font-size: clamp(1rem, 1rem + ((1vw - 0.48rem) * 0.3), 1.125rem);
+  font-weight: 700;
+  color: var(--color-lafayette-gray, #3c373c);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.master-grocery-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.master-grocery-row {
+  display: grid;
+  grid-template-columns: 1fr auto 5rem;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 1rem;
+}
+
+.master-grocery-name {
+  min-width: 0;
+}
+
+.master-grocery-qty {
+  color: var(--color-lafayette-gray, #3c373c);
+  justify-self: center;
+}
+
+.master-grocery-price {
+  text-align: right;
+  justify-self: end;
+}
+
+.master-grocery-total {
+  padding-top: var(--spacing-30, 1.5rem);
+  border-top: 1px solid var(--color-lafayette-gray, #3c373c);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-lafayette-gray, #3c373c);
+  text-align: right;
+}
+</style>

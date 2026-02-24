@@ -1,5 +1,12 @@
 const BASE = import.meta.env.VITE_API_BASE_URL
 
+function organizerHeaders(): HeadersInit {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('organizer_token') : null
+  const headers: HeadersInit = { 'Content-Type': 'application/json' }
+  if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
 export interface GroceryItem {
   ingredient: {
     id: number
@@ -22,65 +29,65 @@ export interface GroceryListResponse {
   total_cents: number
 }
 
-export async function organizerLogin(
-  username: string,
-  password: string,
-): Promise<{ token: string; username: string }> {
-  const res = await fetch(`${BASE}/api/v1/organizer_session`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error || 'Login failed')
-  }
-  return res.json()
-}
-
-export async function organizerLogout(token: string): Promise<void> {
-  await fetch(`${BASE}/api/v1/organizer_session`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  })
-}
-
-export async function getGroceryList(token: string): Promise<GroceryListResponse> {
-  const res = await fetch(`${BASE}/api/v1/grocery_list`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+export async function getGroceryList(): Promise<GroceryListResponse> {
+  const res = await fetch(`${BASE}/api/v1/grocery_list`)
   if (!res.ok) throw new Error(`Failed to load grocery list: ${res.status}`)
   return res.json()
 }
 
-export async function checkGroceryItem(
-  token: string,
-  ingredientId: number,
-  checked: boolean,
-): Promise<void> {
+export async function checkGroceryItem(ingredientId: number, checked: boolean): Promise<void> {
   const res = await fetch(`${BASE}/api/v1/grocery_list/${ingredientId}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ checked }),
   })
   if (!res.ok) throw new Error(`Failed to update item: ${res.status}`)
 }
 
-export async function updateGroceryQuantity(
-  token: string,
-  ingredientId: number,
-  quantity: number,
-): Promise<void> {
+export async function updateGroceryQuantity(ingredientId: number, quantity: number): Promise<void> {
   const res = await fetch(`${BASE}/api/v1/grocery_list/${ingredientId}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity }),
   })
   if (!res.ok) throw new Error(`Failed to update quantity: ${res.status}`)
+}
+
+export async function addGroceryItem(ingredientId: number, quantity: number): Promise<void> {
+  const res = await fetch(`${BASE}/api/v1/grocery_list/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ingredient_id: ingredientId, quantity }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || `Failed to add item: ${res.status}`)
+  }
+}
+
+export async function addSubmissionIngredient(
+  submissionId: number,
+  ingredientId: number,
+  quantity: number,
+): Promise<void> {
+  const res = await fetch(`${BASE}/api/v1/submissions/by_id/${submissionId}/ingredients`, {
+    method: 'POST',
+    headers: organizerHeaders(),
+    body: JSON.stringify({ ingredient_id: ingredientId, quantity }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || `Failed to add ingredient: ${res.status}`)
+  }
+}
+
+export async function deleteSubmission(submissionId: number): Promise<void> {
+  const res = await fetch(`${BASE}/api/v1/submissions/by_id/${submissionId}`, {
+    method: 'DELETE',
+    headers: organizerHeaders(),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || `Failed to delete submission: ${res.status}`)
+  }
 }

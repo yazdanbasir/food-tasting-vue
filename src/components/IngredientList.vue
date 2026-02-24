@@ -2,15 +2,21 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import IngredientThumb from '@/components/IngredientThumb.vue'
 import { useSubmissionStore } from '@/stores/submission'
 import { createSubmission } from '@/api/submissions'
 
 const store = useSubmissionStore()
-const { ingredients, totalCents, canSubmit } = storeToRefs(store)
+const { ingredients, totalCents, canSubmit, countryCode, members } = storeToRefs(store)
 const router = useRouter()
 
 const isSubmitting = ref(false)
 const submitError = ref<string | null>(null)
+
+function changeQty(productId: string, delta: number) {
+  const item = ingredients.value.find((i) => i.ingredient.product_id === productId)
+  if (item) store.updateQuantity(productId, Math.max(1, item.quantity + delta))
+}
 
 async function handleSubmit() {
   if (!canSubmit.value || isSubmitting.value) return
@@ -23,6 +29,8 @@ async function handleSubmit() {
       team_name: store.teamName,
       dish_name: store.dishName,
       notes: '',
+      country_code: countryCode.value || '',
+      members: [...members.value],
       ingredients: ingredients.value.map((item) => ({
         ingredient_id: item.ingredient.id,
         quantity: item.quantity,
@@ -40,55 +48,53 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
+  <div class="ingredient-list">
     <!-- Empty state -->
-    <div v-if="!ingredients.length" class="text-sm text-gray-400 py-1">
+    <div v-if="!ingredients.length" class="ingredient-list-empty">
       No ingredients added yet. Search above to add items.
     </div>
 
     <!-- List -->
-    <ul v-else class="flex-1 overflow-y-auto divide-y divide-gray-200">
+    <ul v-else class="ingredient-list-ul">
       <li
         v-for="item in ingredients"
         :key="item.ingredient.product_id"
-        class="flex items-center gap-3 py-2"
+        class="ingredient-list-row"
       >
-        <img
-          v-if="item.ingredient.image_url"
-          :src="item.ingredient.image_url"
-          :alt="item.ingredient.name"
-          class="w-8 h-8 object-contain flex-none"
-        />
-        <div v-else class="w-8 h-8 flex-none bg-gray-100 rounded" />
+        <IngredientThumb :ingredient="item.ingredient" />
 
-        <div class="flex-1 min-w-0">
-          <div class="text-sm truncate">{{ item.ingredient.name }}</div>
-          <div class="text-xs text-gray-400">{{ item.ingredient.size }}</div>
+        <div class="ingredient-list-info">
+          <div class="ingredient-list-name truncate">{{ item.ingredient.name }}</div>
+          <div class="ingredient-list-size">{{ item.ingredient.size }}</div>
         </div>
 
-        <div class="flex items-center gap-2 flex-none">
-          <!-- Quantity -->
-          <input
-            type="number"
-            :value="item.quantity"
-            min="1"
-            class="w-14 border border-gray-300 rounded px-2 py-0.5 text-sm text-center bg-white"
-            @change="
-              store.updateQuantity(
-                item.ingredient.product_id,
-                Number(($event.target as HTMLInputElement).value),
-              )
-            "
-          />
-
-          <!-- Line total -->
-          <span class="text-sm w-16 text-right tabular-nums">
+        <div class="ingredient-list-actions">
+          <span class="ingredient-list-qty-controls">
+            <button
+              type="button"
+              class="ingredient-list-qty-btn"
+              aria-label="Decrease quantity"
+              @click="changeQty(item.ingredient.product_id, -1)"
+            >
+              −
+            </button>
+            <span class="tabular-nums ingredient-list-qty-num">{{ item.quantity }}</span>
+            <button
+              type="button"
+              class="ingredient-list-qty-btn"
+              aria-label="Increase quantity"
+              @click="changeQty(item.ingredient.product_id, 1)"
+            >
+              +
+            </button>
+          </span>
+          <span class="ingredient-list-price tabular-nums">
             ${{ ((item.ingredient.price_cents * item.quantity) / 100).toFixed(2) }}
           </span>
-
-          <!-- Remove -->
           <button
-            class="text-gray-300 hover:text-red-500 text-xl leading-none transition-colors"
+            type="button"
+            class="ingredient-list-remove"
+            aria-label="Remove ingredient"
             @click="store.removeIngredient(item.ingredient.product_id)"
           >
             ×
@@ -98,19 +104,197 @@ async function handleSubmit() {
     </ul>
 
     <!-- Total + Submit -->
-    <div v-if="ingredients.length" class="border-t border-gray-200 pt-2 mt-2 flex items-center gap-3">
+    <div v-if="ingredients.length" class="ingredient-list-footer">
       <button
+        type="button"
         :disabled="!canSubmit || isSubmitting"
-        class="rounded-full px-4 py-1 min-h-8 bg-black text-white transition-opacity"
-        :class="canSubmit && !isSubmitting ? 'opacity-100 cursor-pointer' : 'opacity-30 cursor-not-allowed'"
+        class="ingredient-list-submit"
+        :class="canSubmit && !isSubmitting ? 'ingredient-list-submit-enabled' : 'ingredient-list-submit-disabled'"
         @click="handleSubmit"
       >
         {{ isSubmitting ? 'submitting...' : 'submit' }}
       </button>
-      <span v-if="submitError" class="text-xs text-red-500 flex-1">{{ submitError }}</span>
-      <span v-else class="flex-1 text-sm font-medium text-right tabular-nums">
+      <span v-if="submitError" class="ingredient-list-error">{{ submitError }}</span>
+      <span v-else class="ingredient-list-total tabular-nums">
         Total: ${{ (totalCents / 100).toFixed(2) }}
       </span>
     </div>
   </div>
 </template>
+
+<style scoped>
+.ingredient-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: var(--body-font-size, 1.125rem);
+}
+
+.ingredient-list-empty {
+  font-size: 1rem;
+  color: var(--color-lafayette-gray, #3c373c);
+  padding: 0.25rem 0;
+}
+
+.ingredient-list-ul {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-lafayette-gray, #3c373c);
+}
+
+.ingredient-list-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-lafayette-gray, #3c373c);
+}
+
+.ingredient-list-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ingredient-list-name {
+  font-size: 1rem;
+}
+
+.ingredient-list-size {
+  font-size: 0.875rem;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.ingredient-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+}
+
+.ingredient-list-qty-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.ingredient-list-qty-btn {
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #fff;
+  color: #000;
+  border: 1px solid var(--color-lafayette-gray, #3c373c);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.ingredient-list-qty-btn:hover {
+  background: var(--color-lafayette-dark-blue, #006690);
+  color: #fff;
+  border-color: var(--color-lafayette-dark-blue, #006690);
+}
+
+.ingredient-list-qty-btn:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+.ingredient-list-qty-num {
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.ingredient-list-price {
+  width: 4rem;
+  text-align: right;
+  font-size: 1rem;
+}
+
+.ingredient-list-remove {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-lafayette-gray, #3c373c);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.ingredient-list-remove:hover {
+  color: var(--color-lafayette-red, #910029);
+}
+
+.ingredient-list-remove:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+.ingredient-list-footer {
+  border-top: 1px solid var(--color-lafayette-gray, #3c373c);
+  padding-top: 1rem;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ingredient-list-submit {
+  border-radius: 9999px;
+  padding: calc(0.667em + 2px) calc(1.333em + 2px);
+  min-height: 2.5rem;
+  border: none;
+  font-size: 1rem;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+
+.ingredient-list-submit-enabled {
+  background-color: var(--color-lafayette-red, #910029);
+  color: #fff;
+  cursor: pointer;
+  opacity: 1;
+}
+
+.ingredient-list-submit-enabled:hover {
+  background-color: var(--color-lafayette-dark-blue, #006690);
+}
+
+.ingredient-list-submit-enabled:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+.ingredient-list-submit-disabled {
+  background-color: var(--color-lafayette-gray, #3c373c);
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ingredient-list-error {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #b91c1c;
+}
+
+.ingredient-list-total {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: right;
+}
+</style>

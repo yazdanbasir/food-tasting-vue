@@ -1,14 +1,15 @@
 module Api
   module V1
     class IngredientsController < ApplicationController
-      SEARCH_LIMIT = 20
+      # Broad queries (e.g. "milk") can match many products; return enough to scroll and find the one you want
+      SEARCH_LIMIT = 500
 
       # GET /api/v1/ingredients?q=chicken
       # Returns empty array if query is missing or fewer than 2 characters
       def index
         return render json: [] if params[:q].blank? || params[:q].length < 2
 
-        ingredients = Ingredient.search(params[:q]).limit(SEARCH_LIMIT).order(:name)
+        ingredients = Ingredient.search(params[:q]).order_by_relevance(params[:q]).limit(SEARCH_LIMIT)
         render json: ingredients.map { |i| serialize(i) }
       end
 
