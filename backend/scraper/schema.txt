@@ -1,0 +1,28 @@
+CREATE TABLE products (
+  -- Core identity
+  prod_id        INTEGER PRIMARY KEY,
+  name           TEXT NOT NULL,
+  size           TEXT,
+  aisle          TEXT,
+  image_url      TEXT,
+
+  -- Dietary flags
+  is_alcohol     INTEGER DEFAULT 0,
+  gluten         INTEGER DEFAULT 0,
+  dairy          INTEGER DEFAULT 0,
+  egg            INTEGER DEFAULT 0,
+  peanut         INTEGER DEFAULT 0,
+  kosher         INTEGER DEFAULT 0,
+  vegan          INTEGER DEFAULT 0,
+  vegetarian     INTEGER DEFAULT 0,
+  lactose_free   INTEGER DEFAULT 0,
+  wheat_free     INTEGER DEFAULT 0,
+
+  -- Reference extras
+  root_cat_name          TEXT,
+  regular_price          REAL,
+  price                  REAL,
+  weighted_regular_price REAL,
+  unit_price             REAL,
+  unit_measure           TEXT
+);

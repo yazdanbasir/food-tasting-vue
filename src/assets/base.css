@@ -1,86 +1,63 @@
-/* color palette from <https://github.com/vuejs/theme> */
-:root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+@import "tailwindcss";
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
-
-  --vt-c-indigo: #2c3e50;
-
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
-
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+@theme {
+  --font-mono: 'Roboto Mono', monospace;
+  /* Lafayette maroon accent; hover = darker maroon for seamless feel */
+  --color-lafayette-red: #910029;
+  --color-lafayette-blue: #1da9d7;
+  --color-lafayette-dark-blue: #6d001f;
+  --color-lafayette-light-blue: #86ccff;
+  --color-lafayette-gray: #3c373c;
+  --color-lafayette-tan: #e8ba81;
+  --color-menu-gray: #e5e3e0;
+  --color-page-bg: #ffffff;
+  /* Spacing (fluid tokens from Lafayette) */
+  --spacing-30: clamp(1.5rem, 5vw, 2rem);
+  --spacing-40: clamp(1.8rem, 1.8rem + ((1vw - 0.48rem) * 2.885), 3rem);
+  --spacing-50: clamp(2.5rem, 8vw, 4.5rem);
+  --spacing-60: clamp(3.75rem, 10vw, 7rem);
+  /* Shadows */
+  --shadow-natural: 6px 6px 9px rgba(0, 0, 0, 0.2);
 }
 
-/* semantic color variables for this project */
-:root {
-  --color-background: var(--vt-c-white);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
-
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
-
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
-
-  --section-gap: 160px;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --color-background: var(--vt-c-black);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
-
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
-
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
+    --body-font-size: clamp(1.125rem, 1.125rem + ((1vw - 0.2rem) * 0.227), 1.25rem);
+    --color-lafayette-red: #910029;
+    --color-lafayette-blue: #1da9d7;
+    --color-lafayette-dark-blue: #6d001f;
+    --color-lafayette-gray: #3c373c;
+    --color-menu-gray: #e5e3e0;
+    --color-page-bg: #ffffff;
+    --spacing-30: clamp(1.5rem, 5vw, 2rem);
+    --spacing-40: clamp(1.8rem, 1.8rem + ((1vw - 0.48rem) * 2.885), 3rem);
+    --spacing-50: clamp(2.5rem, 8vw, 4.5rem);
+    --spacing-60: clamp(3.75rem, 10vw, 7rem);
+    --shadow-natural: 6px 6px 9px rgba(0, 0, 0, 0.2);
   }
-}
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
+  html,
+  body {
+    height: 100%;
+  }
 
-body {
-  min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  font-size: 15px;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  body {
+    background-color: var(--color-page-bg, #ffffff);
+    font-family: var(--font-mono);
+    font-size: var(--body-font-size);
+    line-height: 1.75rem;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #app {
+    height: 100%;
+  }
+
+  /* Remove default macOS/browser focus outline everywhere */
+  *:focus,
+  *:focus-visible {
+    outline: none;
+  }
 }

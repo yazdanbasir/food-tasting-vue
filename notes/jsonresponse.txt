@@ -1,0 +1,1553 @@
+{
+    "response": {
+        "regionContents": [
+            {
+                "region": "browse_aisles_top_category_bg_image",
+                "contents": [
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Baby - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.160-0500",
+                            "Rank": "2|i42hx3:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541029",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:55.752-0500",
+                            "id": "1081416",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2832",
+                            "key": "CS-541029",
+                            "Browse Aisles Shelf Category": "Baby",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998584:9F73Z.jpg",
+                                    "Content ID: Category Icon": "4892362:9JKFN.png",
+                                    "Content ID: Desktop": "2998583:ZYFDC.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gyf:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081260",
+                                    "Content ID: Aisle Card": "3653148:PSWQX.jpg",
+                                    "Test script field (migration)": "CS-540880",
+                                    "key": "CS-540880",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image HBA - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.360-0500",
+                            "Rank": "2|i42hzr:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541041",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:45.091-0500",
+                            "id": "1081428",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2933",
+                            "key": "CS-541041",
+                            "Browse Aisles Shelf Category": "Health & Beauty",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998588:O60S4.jpg",
+                                    "Content ID: Category Icon": "4892422:E8SYW.png",
+                                    "Content ID: Desktop": "2998587:J73FW.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h13:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081272",
+                                    "Content ID: Aisle Card": "3653160:YXEG8.jpg",
+                                    "Test script field (migration)": "CS-540892",
+                                    "key": "CS-540892",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Meat - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.117-0500",
+                            "Rank": "2|i42i07:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541043",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:50.548-0500",
+                            "id": "1081430",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2477",
+                            "key": "CS-541043",
+                            "Browse Aisles Shelf Category": "Meat",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998608:BJ1NL.jpg",
+                                    "Content ID: Category Icon": "4892442:1S4NE.png",
+                                    "Content ID: Desktop": "2998607:QYEYL.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h1j:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081274",
+                                    "Content ID: Aisle Card": "3653162:XALVM.jpg",
+                                    "Test script field (migration)": "CS-540894",
+                                    "key": "CS-540894",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Pet - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:15.402-0500",
+                            "Rank": "2|i42i0n:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541045",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:46.314-0500",
+                            "id": "1081432",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "1447",
+                            "key": "CS-541045",
+                            "Browse Aisles Shelf Category": "Pets",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998616:MKW1X.jpg",
+                                    "Content ID: Category Icon": "4892467:UFT1E.png",
+                                    "Content ID: Desktop": "2998615:D1XBI.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h1z:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081276",
+                                    "Content ID: Aisle Card": "3653165:O5BL2.jpg",
+                                    "Test script field (migration)": "CS-540896",
+                                    "key": "CS-540896",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Floral - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:15.869-0500",
+                            "Rank": "2|i42hz3:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541038",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:49.352-0500",
+                            "id": "1081425",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "1831",
+                            "key": "CS-541038",
+                            "Browse Aisles Shelf Category": "Floral & Garden",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "3034026:KQ1SP.jpg",
+                                    "Content ID: Category Icon": "4892407:R9U97.png",
+                                    "Content ID: Desktop": "3034025:C7C76.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h0f:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081269",
+                                    "Content ID: Aisle Card": "3653157:XWNDU.jpg",
+                                    "Test script field (migration)": "CS-540889",
+                                    "key": "CS-540889",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Office - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.693-0500",
+                            "Rank": "2|i42i0f:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541044",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:55.064-0500",
+                            "id": "1081431",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "1580",
+                            "key": "CS-541044",
+                            "Browse Aisles Shelf Category": "Home & Office",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998612:B7U45.jpg",
+                                    "Content ID: Category Icon": "4892427:38NXQ.png",
+                                    "Content ID: Desktop": "2998611:7OPTU.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h1r:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081275",
+                                    "Content ID: Aisle Card": "3653163:B1YNO.jpg",
+                                    "Test script field (migration)": "CS-540895",
+                                    "key": "CS-540895",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Breakfast - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:15.011-0500",
+                            "Rank": "2|i42hxz:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541033",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:43.815-0500",
+                            "id": "1081420",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2677",
+                            "key": "CS-541033",
+                            "Browse Aisles Shelf Category": "Breakfast",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998594:1FUIG.jpg",
+                                    "Content ID: Category Icon": "4892382:VXX4S.png",
+                                    "Content ID: Desktop": "2998593:SNA38.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gzb:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081264",
+                                    "Content ID: Aisle Card": "3653152:LMXPA.jpg",
+                                    "Test script field (migration)": "CS-540884",
+                                    "key": "CS-540884",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Produce - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.792-0500",
+                            "Rank": "2|i42i0v:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541046",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:45.714-0500",
+                            "id": "1081433",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "866",
+                            "key": "CS-541046",
+                            "Browse Aisles Shelf Category": "Produce",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998618:8NDES.jpg",
+                                    "Content ID: Category Icon": "4892472:QIAU5.png",
+                                    "Content ID: Desktop": "2998617:NSF5X.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h27:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081277",
+                                    "Content ID: Aisle Card": "3653166:MTYN8.jpg",
+                                    "Test script field (migration)": "CS-540897",
+                                    "key": "CS-540897",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Soups - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.627-0500",
+                            "Rank": "2|i42i1j:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541049",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:47.516-0500",
+                            "id": "1081436",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2029",
+                            "key": "CS-541049",
+                            "Browse Aisles Shelf Category": "Soups & Canned Goods",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998628:LU8M5.jpg",
+                                    "Content ID: Category Icon": "4892492:P1051.png",
+                                    "Content ID: Desktop": "2998627:HH7PY.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h2v:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081280",
+                                    "Content ID: Aisle Card": "3653169:3CYX3.jpg",
+                                    "Test script field (migration)": "CS-540900",
+                                    "key": "CS-540900",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Adult Beverages - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:15.255-0500",
+                            "Rank": "2|i42hwv:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541028",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:52.372-0500",
+                            "id": "1081415",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "300",
+                            "key": "CS-541028",
+                            "Browse Aisles Shelf Category": "Adult Beverages",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998582:YJ2LO.jpg",
+                                    "Content ID: Category Icon": "4892357:FNWWV.png",
+                                    "Content ID: Desktop": "2998581:VIHWN.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gy7:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081259",
+                                    "Content ID: Aisle Card": "3653147:PNS2X.jpg",
+                                    "Test script field (migration)": "CS-540879",
+                                    "key": "CS-540879",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Laundry - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:15.555-0500",
+                            "Rank": "2|i42hzz:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541042",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:48.120-0500",
+                            "id": "1081429",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "1483",
+                            "key": "CS-541042",
+                            "Browse Aisles Shelf Category": "Laundry, Paper & Cleaning",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998604:BRRSO.jpg",
+                                    "Content ID: Category Icon": "4892432:GW89F.png",
+                                    "Content ID: Desktop": "2998603:8UPFE.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h1b:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081273",
+                                    "Content ID: Aisle Card": "3653153:JYQY3.jpg",
+                                    "Test script field (migration)": "CS-540893",
+                                    "key": "CS-540893",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Deli - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:15.154-0500",
+                            "Rank": "2|i42hyv:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541037",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:52.972-0500",
+                            "id": "1081424",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2583",
+                            "key": "CS-541037",
+                            "Browse Aisles Shelf Category": "Deli & Prepared Food",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998600:SMVQG.jpg",
+                                    "Content ID: Category Icon": "4892402:12YEU.png",
+                                    "Content ID: Desktop": "2998599:FHNYJ.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h07:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081268",
+                                    "Content ID: Aisle Card": "3653156:3OWUP.jpg",
+                                    "Test script field (migration)": "CS-540888",
+                                    "key": "CS-540888",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Bread and Bakery - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.556-0500",
+                            "Rank": "2|i42hxr:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541032",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:56.457-0500",
+                            "id": "1081419",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2209",
+                            "key": "CS-541032",
+                            "Browse Aisles Shelf Category": "Bread & Bakery",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998592:3X36V.jpg",
+                                    "Content ID: Category Icon": "4892377:1NLTX.png",
+                                    "Content ID: Desktop": "2998591:VE6DJ.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gz3:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081263",
+                                    "Content ID: Aisle Card": "3653151:EY7YU.jpg",
+                                    "Test script field (migration)": "CS-540883",
+                                    "key": "CS-540883",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Dairy - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.428-0500",
+                            "Rank": "2|i42hyn:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541036",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:51.168-0500",
+                            "id": "1081423",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "1834",
+                            "key": "CS-541036",
+                            "Browse Aisles Shelf Category": "Dairy & Eggs",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998598:3K8ED.jpg",
+                                    "Content ID: Category Icon": "4892397:E8G4D.png",
+                                    "Content ID: Desktop": "2998597:79W9F.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gzz:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081267",
+                                    "Content ID: Aisle Card": "3653155:34Q5R.jpg",
+                                    "Test script field (migration)": "CS-540887",
+                                    "key": "CS-540887",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Frozen - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:15.079-0500",
+                            "Rank": "2|i42hzb:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541039",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:43.183-0500",
+                            "id": "1081426",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2883",
+                            "key": "CS-541039",
+                            "Browse Aisles Shelf Category": "Frozen",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998602:TE4O5.jpg",
+                                    "Content ID: Category Icon": "4892417:69SRD.png",
+                                    "Content ID: Desktop": "2998601:PY0O3.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h0n:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081270",
+                                    "Content ID: Aisle Card": "3653158:D8F9A.jpg",
+                                    "Test script field (migration)": "CS-540890",
+                                    "key": "CS-540890",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Candy & Chocolate - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.492-0500",
+                            "Rank": "2|i42hy7:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541034",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:46.904-0500",
+                            "id": "1081421",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "5311",
+                            "key": "CS-541034",
+                            "Browse Aisles Shelf Category": "Candy & Chocolate",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "3600548:MNLCU.jpg",
+                                    "Content ID: Category Icon": "4892387:5VR7N.png",
+                                    "Content ID: Desktop": "3600549:R3A06.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gzj:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081265",
+                                    "Content ID: Aisle Card": "3656362:CJUEG.jpg",
+                                    "Test script field (migration)": "CS-540885",
+                                    "key": "CS-540885",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Condiments - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.295-0500",
+                            "Rank": "2|i42hyf:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541035",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:48.752-0500",
+                            "id": "1081422",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "605",
+                            "key": "CS-541035",
+                            "Browse Aisles Shelf Category": "Condiments & Sauces",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998596:JIJFD.jpg",
+                                    "Content ID: Category Icon": "4892392:9E657.png",
+                                    "Content ID: Desktop": "2998595:T4J67.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gzr:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081266",
+                                    "Content ID: Aisle Card": "3653154:ZO4AB.jpg",
+                                    "Test script field (migration)": "CS-540886",
+                                    "key": "CS-540886",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Beverages - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.864-0500",
+                            "Rank": "2|i42hxj:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541031",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:53.649-0500",
+                            "id": "1081418",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2",
+                            "key": "CS-541031",
+                            "Browse Aisles Shelf Category": "Beverages",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998590:ZGL3E.jpg",
+                                    "Content ID: Category Icon": "4892372:T18TW.png",
+                                    "Content ID: Desktop": "2998589:8MOQR.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gyv:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081262",
+                                    "Content ID: Aisle Card": "3653150:6PPVA.jpg",
+                                    "Test script field (migration)": "CS-540882",
+                                    "key": "CS-540882",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Seafood - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:16.011-0500",
+                            "Rank": "2|i42i13:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541047",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:54.361-0500",
+                            "id": "1081434",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2541",
+                            "key": "CS-541047",
+                            "Browse Aisles Shelf Category": "Seafood",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998623:P9NAZ.jpg",
+                                    "Content ID: Category Icon": "4892482:O4NTL.png",
+                                    "Content ID: Desktop": "2998622:CUIL2.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h2f:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081278",
+                                    "Content ID: Aisle Card": "3653167:POVAW.jpg",
+                                    "Test script field (migration)": "CS-540898",
+                                    "key": "CS-540898",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Grains - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.226-0500",
+                            "Rank": "2|i42hzj:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541040",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:51.761-0500",
+                            "id": "1081427",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "1284",
+                            "key": "CS-541040",
+                            "Browse Aisles Shelf Category": "Rice, Pasta & Beans",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998620:U3TSJ.jpg",
+                                    "Content ID: Category Icon": "4892477:JH7BH.png",
+                                    "Content ID: Desktop": "2998619:JQ9VJ.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h0v:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081271",
+                                    "Content ID: Aisle Card": "3653164:PRJTM.jpg",
+                                    "Test script field (migration)": "CS-540891",
+                                    "key": "CS-540891",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Snacks - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:14.937-0500",
+                            "Rank": "2|i42i1b:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541048",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:49.959-0500",
+                            "id": "1081435",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "2332",
+                            "key": "CS-541048",
+                            "Browse Aisles Shelf Category": "Snacks",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "3600550:482TR.jpg",
+                                    "Content ID: Category Icon": "4892487:A81JN.png",
+                                    "Content ID: Desktop": "3600551:5FX1Q.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42h2n:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081279",
+                                    "Content ID: Aisle Card": "3653168:8F2DI.jpg",
+                                    "Test script field (migration)": "CS-540899",
+                                    "key": "CS-540899",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "map": {
+                            "Friendly Tracking Description": "BA BG Image Baking and Cooking - GNTC/MRTN v2",
+                            "moduleType": "Content: Header Background Image",
+                            "Approved": "2024-10-17T12:51:15.724-0500",
+                            "Rank": "2|i42hxb:",
+                            "Rank (Obsolete)": "9223372036854775807",
+                            "Test script field (migration)": "CS-541030",
+                            "Site_Location": "browse_aisles_top_category_bg_image",
+                            "Footer Included": "Yes",
+                            "Start Date": "2024-10-16",
+                            "Content_Active": "Yes",
+                            "End Date": "2029-12-31",
+                            "Development": "{}",
+                            "Sent to QA": "2024-10-17T12:50:44.476-0500",
+                            "id": "1081417",
+                            "StoreCodes": [],
+                            "Browse Aisles Shelf Category Id": "385",
+                            "key": "CS-541030",
+                            "Browse Aisles Shelf Category": "Baking & Cooking",
+                            "Device Type (Screen Size)": {
+                                "myArrayList": [
+                                    "Mobile",
+                                    "Desktop",
+                                    "Tablet"
+                                ]
+                            },
+                            "App Targeting": {
+                                "myArrayList": [
+                                    "Native",
+                                    "Web"
+                                ]
+                            },
+                            "scheduledContentData": {
+                                "map": {
+                                    "Content ID: Mobile": "2998586:9T5OM.jpg",
+                                    "Content ID: Category Icon": "4892367:RNQ8Q.png",
+                                    "Content ID: Desktop": "2998585:D2BCL.jpg",
+                                    "Development": "{}",
+                                    "Rank": "2|i42gyn:",
+                                    "Rank (Obsolete)": "9223372036854775807",
+                                    "id": "1081261",
+                                    "Content ID: Aisle Card": "3653149:D80XJ.jpg",
+                                    "Test script field (migration)": "CS-540881",
+                                    "key": "CS-540881",
+                                    "parts": {
+                                        "myArrayList": []
+                                    }
+                                }
+                            },
+                            "Customer Type": {
+                                "myArrayList": [
+                                    "Consumer",
+                                    "Merchant"
+                                ]
+                            },
+                            "Customer Status": {
+                                "myArrayList": [
+                                    "New Customer",
+                                    "Existing Customer"
+                                ]
+                            },
+                            "Opcos": {
+                                "myArrayList": [
+                                    "GNTC",
+                                    "MRTN"
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        ],
+        "keywords": null,
+        "resultCount": 22
+    }
+}

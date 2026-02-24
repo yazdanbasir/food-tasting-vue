@@ -1,0 +1,47 @@
+# fly.toml app configuration file generated for backend-aged-water-1020 on 2026-02-24T14:55:18-05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'backend-aged-water-1020'
+primary_region = 'iad'
+console_command = '/rails/bin/rails console'
+
+[build]
+
+[env]
+  FRONTEND_URL = ''
+  HTTP_PORT = '8080'
+  RAILS_ENV = 'production'
+  SOLID_QUEUE_IN_PUMA = 'true'
+
+[[mounts]]
+  source = 'storage'
+  destination = '/rails/storage'
+  initial_size = '1gb'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+  [[http_service.checks]]
+    interval = '10s'
+    timeout = '2s'
+    grace_period = '5s'
+    method = 'GET'
+    path = '/up'
+    protocol = 'http'
+    tls_skip_verify = false
+
+    [http_service.checks.headers]
+      X-Forwarded-Proto = 'https'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 512
