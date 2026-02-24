@@ -88,6 +88,7 @@ export const useSubmissionStore = defineStore('submission', () => {
 
   const canSubmit = computed(
     () =>
+      !!countryCode.value &&
       dishName.value.trim().length > 0 &&
       members.value.length > 0 &&
       ingredients.value.length > 0,
