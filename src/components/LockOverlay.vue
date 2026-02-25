@@ -5,21 +5,29 @@ import { useLockOverlay } from '@/composables/useLockOverlay'
 const { isLocked, verifyPassword, unlock } = useLockOverlay()
 
 const password = ref('')
+const error = ref<string | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
 
 async function onPasswordInput(e: Event) {
   const value = (e.target as HTMLInputElement).value
   password.value = value
+  error.value = null
   if (!value) return
   if (verifyPassword(value)) {
     password.value = ''
-    await unlock()
+    const result = await unlock(value)
+    if (result.ok) {
+      error.value = null
+    } else {
+      error.value = result.error
+    }
   }
 }
 
 watch(isLocked, (locked) => {
   if (locked) {
     password.value = ''
+    error.value = null
     requestAnimationFrame(() => {
       inputRef.value?.focus({ preventScroll: true })
     })
@@ -61,6 +69,7 @@ function onKeydown(e: KeyboardEvent) {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
+            <div v-if="error" class="lock-error">{{ error }}</div>
             <div class="lock-password-wrapper">
               <span v-if="!password.length" class="lock-password-placeholder">Enter password</span>
               <span v-else class="lock-password-dots">{{ '•'.repeat(password.length) }}</span>
@@ -84,6 +93,13 @@ function onKeydown(e: KeyboardEvent) {
 .lock-icon {
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.6;
+}
+
+.lock-error {
+  font-size: 0.9375rem;
+  color: #b91c1c;
+  text-align: center;
+  max-width: 280px;
 }
 
 .lock-overlay {

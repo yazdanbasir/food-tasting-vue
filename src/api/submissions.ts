@@ -1,17 +1,6 @@
-import { organizerHeaders } from '@/api/organizer'
+import { organizerHeaders, clearStaleOrganizerToken } from '@/api/organizer'
 
 const BASE = import.meta.env.VITE_API_BASE_URL
-
-function clearStaleOrganizerToken(): void {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('organizer_token')
-      localStorage.removeItem('organizer_username')
-    }
-  } catch {
-    // ignore
-  }
-}
 
 export interface SubmissionPayload {
   team_name: string
@@ -76,18 +65,21 @@ export async function updateSubmission(
   id: number,
   payload: SubmissionPayload,
 ): Promise<SubmissionResponse> {
+  const headers = organizerHeaders()
+  console.log('[Organizer Auth] updateSubmission:', id)
   const res = await fetch(`${BASE}/api/v1/submissions/by_id/${id}`, {
     method: 'PATCH',
-    headers: organizerHeaders(),
+    headers,
     body: JSON.stringify(payload),
   })
+  const body = await res.json().catch(() => ({}))
   if (res.status === 401) {
+    console.error('[Organizer Auth] updateSubmission 401 Unauthorized - backend rejected token or no token sent. Body:', body)
     clearStaleOrganizerToken()
     throw new Error('Session expired. Please log in again from the Organizer tab.')
   }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
     throw new Error((body as { error?: string }).error || `Update failed: ${res.status}`)
   }
-  return res.json()
+  return body as SubmissionResponse
 }

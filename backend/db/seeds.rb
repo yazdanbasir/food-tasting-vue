@@ -4,8 +4,8 @@
 
 # Default organizer account (change password in production!)
 Organizer.find_or_create_by!(username: "organizer") do |org|
-  org.password = "changeme123"
-  org.password_confirmation = "changeme123"
+  org.password = "disney1994"
+  org.password_confirmation = "disney1994"
 end
 
-puts "Seeded organizer account: username=organizer, password=changeme123"
+puts "Seeded organizer account: username=organizer, password=disney1994"

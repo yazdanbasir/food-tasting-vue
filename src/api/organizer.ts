@@ -1,10 +1,25 @@
 const BASE = import.meta.env.VITE_API_BASE_URL
 
+const LOG_PREFIX = '[Organizer Auth]'
+
 export function organizerHeaders(): HeadersInit {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('organizer_token') : null
+  console.log(LOG_PREFIX, 'organizerHeaders:', token ? `token present (${token.slice(0, 8)}...)` : 'NO TOKEN')
   const headers = new Headers({ 'Content-Type': 'application/json' })
   if (token) headers.set('Authorization', `Bearer ${token}`)
   return headers
+}
+
+/** Clear stale organizer token (e.g. after 401). Does not re-lock the overlay. */
+export function clearStaleOrganizerToken(): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('organizer_token')
+      localStorage.removeItem('organizer_username')
+    }
+  } catch {
+    // ignore
+  }
 }
 
 /** Check if the current client has an organizer token (e.g. before update). */
@@ -17,16 +32,20 @@ export async function organizerLogin(
   username: string,
   password: string,
 ): Promise<{ token: string; username: string }> {
+  console.log(LOG_PREFIX, 'organizerLogin: POST', `${BASE}/api/v1/organizer_session`, { username })
   const res = await fetch(`${BASE}/api/v1/organizer_session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   })
+  const body = await res.json().catch(() => ({}))
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
+    console.error(LOG_PREFIX, 'organizerLogin FAILED:', res.status, body)
     throw new Error((body as { error?: string }).error || 'Login failed')
   }
-  return res.json()
+  const result = body as { token: string; username: string }
+  console.log(LOG_PREFIX, 'organizerLogin SUCCESS:', { username: result.username, tokenPrefix: result.token?.slice(0, 8) + '...' })
+  return result
 }
 
 export interface GroceryItem {
@@ -125,12 +144,20 @@ export async function updateSubmissionIngredientQuantity(
 }
 
 export async function deleteSubmission(submissionId: number): Promise<void> {
+  const headers = organizerHeaders()
+  console.log(LOG_PREFIX, 'deleteSubmission:', submissionId)
   const res = await fetch(`${BASE}/api/v1/submissions/by_id/${submissionId}`, {
     method: 'DELETE',
-    headers: organizerHeaders(),
+    headers,
   })
+  const body = await res.json().catch(() => ({}))
+  if (res.status === 401) {
+    console.error(LOG_PREFIX, 'deleteSubmission 401 Unauthorized - backend rejected token or no token sent. Body:', body)
+    clearStaleOrganizerToken()
+    throw new Error('Session expired. Please log in again from the Organizer tab.')
+  }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
     throw new Error((body as { error?: string }).error || `Failed to delete submission: ${res.status}`)
   }
+  console.log(LOG_PREFIX, 'deleteSubmission SUCCESS:', submissionId)
 }
