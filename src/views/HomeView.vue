@@ -25,6 +25,15 @@ const membersText = computed({
       .filter(Boolean)
   },
 })
+
+const showGrocerySection = computed(() =>
+  Boolean(store.countryCode) &&
+  Boolean(store.dishName.trim()) &&
+  members.value.length > 0 &&
+  Boolean(store.phoneNumber.trim()) &&
+  (store.hasCookingPlace === 'no' ||
+    (store.hasCookingPlace === 'yes' && Boolean(store.cookingLocation.trim())))
+)
 </script>
 
 <template>
@@ -100,7 +109,7 @@ const membersText = computed({
         </div>
       </div>
 
-      <div class="home-main">
+      <div v-if="showGrocerySection" class="home-main">
         <Suspense>
           <template #default>
             <div class="form-section-ingredients">
