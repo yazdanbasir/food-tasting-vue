@@ -1,5 +1,7 @@
 import { ref } from 'vue'
 import { organizerLogin } from '@/api/organizer'
+import { lookupSubmissionByPhone } from '@/api/submissions'
+import type { SubmissionResponse } from '@/api/submissions'
 
 const STORAGE_KEY = 'organizer_unlocked'
 const CORRECT_PASSWORD = 'disney1994'
@@ -37,5 +39,18 @@ export function useLockOverlay() {
     }
   }
 
-  return { isLocked, verifyPassword, unlock }
+  /** Look up a submission by phone number. Returns the submission on success or an error string. */
+  async function lookupByPhone(
+    phone: string,
+  ): Promise<{ ok: true; submission: SubmissionResponse } | { ok: false; error: string }> {
+    try {
+      const { submission } = await lookupSubmissionByPhone(phone)
+      return { ok: true, submission }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'No submission found for that phone number'
+      return { ok: false, error: msg }
+    }
+  }
+
+  return { isLocked, verifyPassword, unlock, lookupByPhone }
 }

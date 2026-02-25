@@ -1,6 +1,6 @@
 class Api::V1::SubmissionsController < ApplicationController
   include OrganizerAuthenticatable
-  skip_before_action :require_organizer_auth, only: [:create, :index]
+  skip_before_action :require_organizer_auth, only: [:create, :index, :lookup, :update]
 
   # POST /api/v1/submissions
   def create
@@ -139,6 +139,33 @@ class Api::V1::SubmissionsController < ApplicationController
   def index
     @submissions = Submission.includes(submission_ingredients: :ingredient).order(created_at: :desc)
     render json: @submissions.map { |s| submission_json(s) }
+  end
+
+  # GET /api/v1/submissions/lookup?phone=<phone> (public)
+  # Finds a submission by phone number. Matches on the last 10 digits of both sides so
+  # country-code prefixes (e.g. +1, 1) are transparent to the comparison.
+  def lookup
+    raw = params[:phone].to_s
+    digits = raw.gsub(/\D/, '')
+    Rails.logger.info "[lookup] raw=#{raw.inspect} digits=#{digits.inspect}"
+    return render json: { error: "Phone required" }, status: :unprocessable_entity if digits.blank?
+
+    input_tail = digits.last(10)
+    Rails.logger.info "[lookup] input_tail=#{input_tail.inspect} (length #{input_tail.length})"
+    return render json: { error: "Phone required" }, status: :unprocessable_entity if input_tail.length < 7
+
+    submission = Submission.includes(submission_ingredients: :ingredient).all.find do |s|
+      stored = s.phone_number.to_s.gsub(/\D/, '')
+      stored_tail = stored.last(10)
+      match = stored.length >= 7 && stored_tail == input_tail
+      Rails.logger.info "[lookup] submission id=#{s.id} phone_number=#{s.phone_number.inspect} stored_digits=#{stored.inspect} stored_tail=#{stored_tail.inspect} match=#{match}"
+      match
+    end
+
+    return render json: { error: "No submission found for that phone number" }, status: :not_found unless submission
+
+    Rails.logger.info "[lookup] FOUND submission id=#{submission.id}"
+    render json: { submission: submission_json(submission) }
   end
 
   private

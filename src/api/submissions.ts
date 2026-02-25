@@ -59,6 +59,18 @@ export async function createSubmission(
   return res.json()
 }
 
+export async function lookupSubmissionByPhone(
+  phone: string,
+): Promise<{ submission: SubmissionResponse }> {
+  const res = await fetch(`${BASE}/api/v1/submissions/lookup?phone=${encodeURIComponent(phone)}`)
+  if (res.status === 404 || res.status === 422) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || 'Submission not found')
+  }
+  if (!res.ok) throw new Error(`Lookup failed: ${res.status}`)
+  return res.json()
+}
+
 export async function getAllSubmissions(): Promise<SubmissionResponse[]> {
   const res = await fetch(`${BASE}/api/v1/submissions`)
   if (!res.ok) throw new Error(`Failed to load submissions: ${res.status}`)

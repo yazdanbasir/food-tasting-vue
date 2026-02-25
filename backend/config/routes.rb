@@ -10,6 +10,7 @@ Rails.application.routes.draw do
         get "all", on: :collection
       end
       resources :submissions, only: [ :create, :index ]
+      get "submissions/lookup", to: "submissions#lookup"
       patch "submissions/by_id/:id", to: "submissions#update"
       delete "submissions/by_id/:id", to: "submissions#destroy"
       resource :organizer_session, only: [ :create, :destroy ]

@@ -2,38 +2,58 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLockOverlay } from '@/composables/useLockOverlay'
+import { useSubmissionStore } from '@/stores/submission'
 import '@/styles/form-section.css'
 
 const router = useRouter()
-const { isLocked, verifyPassword, unlock } = useLockOverlay()
+const { isLocked, verifyPassword, unlock, lookupByPhone } = useLockOverlay()
+const submissionStore = useSubmissionStore()
 
-const password = ref('')
+const input = ref('')
 const error = ref<string | null>(null)
+const isLookingUp = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
 
-async function onPasswordInput(e: Event) {
+async function onInput(e: Event) {
   const value = (e.target as HTMLInputElement).value
-  password.value = value
+  input.value = value
   error.value = null
   if (!value) return
+
+  // Password match → unlock organizer immediately
   if (verifyPassword(value)) {
-    password.value = ''
+    input.value = ''
     const result = await unlock(value)
-    if (result.ok) {
-      error.value = null
-    } else {
-      error.value = result.error
-    }
+    if (!result.ok) error.value = result.error
+    return
+  }
+
+  // Phone lookup → auto-trigger as soon as 10+ digits are entered
+  const digitCount = value.replace(/\D/g, '').length
+  if (digitCount >= 10) {
+    await performLookup(value)
+  }
+}
+
+async function performLookup(value: string) {
+  if (isLookingUp.value) return
+  isLookingUp.value = true
+  error.value = null
+  const result = await lookupByPhone(value)
+  isLookingUp.value = false
+  if (result.ok) {
+    submissionStore.loadForEdit(result.submission, false)
+    router.push('/')
+  } else {
+    error.value = result.error
   }
 }
 
 watch(isLocked, (locked) => {
   if (locked) {
-    password.value = ''
+    input.value = ''
     error.value = null
-    requestAnimationFrame(() => {
-      inputRef.value?.focus({ preventScroll: true })
-    })
+    requestAnimationFrame(() => inputRef.value?.focus({ preventScroll: true }))
   }
 })
 
@@ -42,10 +62,6 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault()
     inputRef.value?.focus()
   }
-}
-
-function goBack() {
-  router.push('/')
 }
 </script>
 
@@ -64,6 +80,7 @@ function goBack() {
           @keydown.tab.prevent="onKeydown"
         >
           <div class="flex flex-col items-center gap-4">
+
             <svg
               class="w-6 h-6 lock-icon"
               width="24"
@@ -76,27 +93,32 @@ function goBack() {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
+
             <div v-if="error" class="lock-error">{{ error }}</div>
+            <div v-else-if="isLookingUp" class="lock-searching">Searching...</div>
+
             <div class="lock-password-wrapper">
-              <span v-if="!password.length" class="lock-password-placeholder">Enter password</span>
-              <span v-else class="lock-password-dots">{{ '•'.repeat(password.length) }}</span>
+              <span v-if="!input.length" class="lock-password-placeholder">Enter password or phone number</span>
+              <span v-else class="lock-password-dots">{{ '•'.repeat(input.length) }}</span>
               <input
                 ref="inputRef"
-                v-model="password"
+                v-model="input"
                 type="text"
                 autocomplete="off"
                 class="lock-password-input"
-                @input="onPasswordInput"
+                @input="onInput"
               />
             </div>
+
             <div class="lock-back-block">
-              <button type="button" class="btn-pill-primary lock-back-btn" aria-label="Take me back" @click="goBack">
+              <button type="button" class="btn-pill-primary lock-back-btn" aria-label="Take me back" @click="router.push('/')">
                 <svg class="lock-back-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
               </button>
               <span class="lock-back-caption">(I made a mistake. I shouldn't be here. Take me back!)</span>
             </div>
+
           </div>
         </div>
       </Transition>
@@ -115,6 +137,12 @@ function goBack() {
   color: #b91c1c;
   text-align: center;
   max-width: 280px;
+}
+
+.lock-searching {
+  font-size: 0.9375rem;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.6;
 }
 
 .lock-overlay {
@@ -139,9 +167,10 @@ function goBack() {
 
 .lock-password-placeholder {
   position: absolute;
-  font-size: 1.25rem;
+  font-size: 1rem;
   color: rgba(60, 55, 60, 0.4);
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .lock-password-dots {
