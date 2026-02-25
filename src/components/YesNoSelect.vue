@@ -9,7 +9,7 @@ const dropdownRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
 
 const selectedLabel = computed(() => {
-  if (!hasCookingPlace.value) return 'do you have a place to cook?'
+  if (!hasCookingPlace.value) return 'do you have a kitchen'
   return hasCookingPlace.value === 'yes' ? 'Yes' : 'No'
 })
 

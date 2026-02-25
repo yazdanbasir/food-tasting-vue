@@ -29,56 +29,57 @@ const membersText = computed({
 
 <template>
   <div class="home-view">
+    <section class="home-header" aria-label="Submission form header">
+      <h1 class="home-title">Grocery Submission Form</h1>
+    </section>
+
+    <!-- <h2 class="home-section-title">Dish Details</h2> -->
+    <div class="home-dish-bar form-section-top-bar">
+      <div class="home-dish-bar-inner">
+        <div class="form-section-pill form-section-pill-label">Dish Details</div>
+        <div class="form-section-pill home-dish-pill">
+          <CountrySelect />
+        </div>
+        <div class="form-section-pill home-dish-pill">
+          <input
+            v-model="store.dishName"
+            type="text"
+            placeholder="dish name"
+            class="form-section-pill-input pill-input-center"
+          />
+        </div>
+        <div class="form-section-pill home-dish-pill">
+          <input
+            v-model="membersText"
+            type="text"
+            placeholder="who's on your team?"
+            class="form-section-pill-input pill-input-center"
+          />
+        </div>
+        <div class="form-section-pill home-dish-pill">
+          <input
+            v-model="store.phoneNumber"
+            type="text"
+            placeholder="phone number"
+            class="form-section-pill-input pill-input-center"
+          />
+        </div>
+        <div class="form-section-pill home-dish-pill">
+          <YesNoSelect />
+        </div>
+        <div v-if="store.hasCookingPlace === 'yes'" class="form-section-pill home-dish-pill">
+          <input
+            v-model="store.cookingLocation"
+            type="text"
+            placeholder="where? (building + floor)"
+            class="form-section-pill-input pill-input-center"
+          />
+        </div>
+      </div>
+    </div>
+
     <div class="home-layout">
       <div class="home-left">
-        <section class="home-header" aria-label="Submission form header">
-          <h1 class="home-title">Grocery Submission Form</h1>
-        </section>
-
-        <h2 class="home-section-title">Dish Details</h2>
-        <div class="home-meta-bar form-section-top-bar">
-          <div class="home-meta-bar-inner">
-            <div class="form-section-pill home-meta-pill">
-              <CountrySelect />
-            </div>
-            <div class="form-section-pill home-meta-pill">
-              <input
-                v-model="store.dishName"
-                type="text"
-                placeholder="what dish are you making?"
-                class="form-section-pill-input pill-input-center"
-              />
-            </div>
-            <div class="form-section-pill home-meta-pill">
-              <input
-                v-model="membersText"
-                type="text"
-                placeholder="who's on your team?"
-                class="form-section-pill-input pill-input-center"
-              />
-            </div>
-            <div class="form-section-pill home-meta-pill">
-              <input
-                v-model="store.phoneNumber"
-                type="text"
-                placeholder="phone number"
-                class="form-section-pill-input pill-input-center"
-              />
-            </div>
-            <div class="form-section-pill home-meta-pill">
-              <YesNoSelect />
-            </div>
-            <div v-if="store.hasCookingPlace === 'yes'" class="form-section-pill home-meta-pill">
-              <input
-                v-model="store.cookingLocation"
-                type="text"
-                placeholder="where? (building + floor)"
-                class="form-section-pill-input pill-input-center"
-              />
-            </div>
-          </div>
-        </div>
-
         <h2 class="home-section-title">Important Reminders!</h2>
         <div class="home-meta-bar form-section-top-bar home-reminders-bar">
           <div class="home-meta-bar-inner">
@@ -126,6 +127,7 @@ const membersText = computed({
   height: 100%;
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
   padding: 0 1rem 1rem 1rem;
   font-size: 1.25rem;
   overflow: hidden;
@@ -137,6 +139,45 @@ const membersText = computed({
   color: var(--color-lafayette-gray, #3c373c);
   font-weight: 700;
   margin: 0 0 0.25rem 0;
+}
+
+.home-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  background: var(--color-menu-gray, #e5e3e0);
+  border-radius: 1rem;
+  padding: 0.75rem 1.5rem;
+  min-height: 2.5rem;
+}
+
+.home-header .home-title {
+  margin: 0;
+  color: #000;
+}
+
+/* Dish details bar: full width, horizontal pill row */
+.home-dish-bar {
+  flex: none;
+  width: 100%;
+  background: var(--color-menu-gray, #e5e3e0);
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  box-sizing: border-box;
+}
+
+.home-dish-bar-inner {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.home-dish-pill {
+  flex: 1 1 auto;
+  min-width: 9rem;
+  box-sizing: border-box;
 }
 
 .home-layout {
@@ -159,32 +200,13 @@ const membersText = computed({
   overflow: hidden;
 }
 
-.home-header {
-  flex: none;
-  display: flex;
-  align-items: center;
-  background: var(--color-menu-gray, #e5e3e0);
-  border-radius: 1rem;
-  padding: 0.75rem 1.5rem;
-  min-height: 2.5rem;
-}
-
-.home-header .home-title {
-  margin: 0;
-  color: #000;
-}
-
 .home-section-title {
   font-size: 1.5rem;
   font-weight: 400;
   color: var(--color-lafayette-gray, #3c373c);
-  margin: 1rem 0 0.125rem 0;
+  margin: 0.25rem 0 0.125rem 0;
   line-height: 1.3;
   text-align: center;
-}
-
-.home-section-title + .home-meta-bar {
-  margin-top: -0.25rem;
 }
 
 .home-meta-bar {
@@ -200,12 +222,6 @@ const membersText = computed({
   flex-direction: column;
   align-items: stretch;
   gap: 0.75rem;
-}
-
-.home-meta-pill {
-  flex: none;
-  width: 100%;
-  box-sizing: border-box;
 }
 
 .home-reminders-bar {
