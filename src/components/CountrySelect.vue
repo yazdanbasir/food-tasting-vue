@@ -20,10 +20,7 @@ const selectedLabel = computed(() => {
 const filteredCountries = computed(() => {
   const q = countrySearchQuery.value.trim().toLowerCase()
   if (!q) return COUNTRIES
-  return COUNTRIES.filter(
-    (c) =>
-      c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
-  )
+  return COUNTRIES.filter((c) => c.name.toLowerCase().startsWith(q))
 })
 
 watch(open, async (isOpen) => {

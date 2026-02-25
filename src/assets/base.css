@@ -36,7 +36,11 @@
     --shadow-natural: 6px 6px 9px rgba(0, 0, 0, 0.2);
   }
 
-  html,
+  html {
+    font-size: 85%;
+    height: 100%;
+  }
+
   body {
     height: 100%;
   }
