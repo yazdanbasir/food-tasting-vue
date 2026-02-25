@@ -41,7 +41,6 @@ export interface SubmissionIngredientResponse {
 
 export interface SubmissionResponse {
   id: number
-  access_code: string
   team_name: string
   dish_name: string
   notes: string | null
@@ -54,7 +53,7 @@ export interface SubmissionResponse {
 
 export async function createSubmission(
   payload: SubmissionPayload,
-): Promise<{ access_code: string; submission: SubmissionResponse }> {
+): Promise<{ submission: SubmissionResponse }> {
   const res = await fetch(`${BASE}/api/v1/submissions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

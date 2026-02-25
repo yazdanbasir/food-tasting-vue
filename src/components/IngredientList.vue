@@ -49,13 +49,13 @@ async function handleSubmit() {
         submitError.value = 'Please log in from the Organizer tab to update a submission.'
         return
       }
-      const result = await updateSubmission(editingId, payload)
+      await updateSubmission(editingId, payload)
       store.clearEdit()
-      router.push(`/confirmation/${result.access_code}`)
+      router.push('/confirmation')
     } else {
-      const result = await createSubmission(payload)
+      await createSubmission(payload)
       store.reset()
-      router.push(`/confirmation/${result.access_code}`)
+      router.push('/confirmation')
     }
   } catch (err) {
     submitError.value = err instanceof Error ? err.message : 'Submission failed'

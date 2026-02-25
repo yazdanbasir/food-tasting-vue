@@ -1,6 +1,6 @@
 class Api::V1::SubmissionsController < ApplicationController
   include OrganizerAuthenticatable
-  skip_before_action :require_organizer_auth, only: [:create, :show, :index]
+  skip_before_action :require_organizer_auth, only: [:create, :index]
 
   # POST /api/v1/submissions
   def create
@@ -34,22 +34,11 @@ class Api::V1::SubmissionsController < ApplicationController
       timestamp: @submission.created_at
     })
 
-    render json: {
-      access_code: @submission.access_code,
-      submission: submission_json(@submission)
-    }, status: :created
+    render json: { submission: submission_json(@submission) }, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Ingredient not found" }, status: :not_found
-  end
-
-  # GET /api/v1/submissions/:access_code
-  def show
-    @submission = Submission.find_by!(access_code: params[:access_code])
-    render json: submission_json(@submission)
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: "Submission not found" }, status: :not_found
   end
 
   # POST /api/v1/submissions/by_id/:submission_id/ingredients (organizer only)
@@ -151,7 +140,6 @@ class Api::V1::SubmissionsController < ApplicationController
   def submission_json(submission)
     {
       id: submission.id,
-      access_code: submission.access_code,
       team_name: submission.team_name,
       dish_name: submission.dish_name,
       notes: submission.notes,

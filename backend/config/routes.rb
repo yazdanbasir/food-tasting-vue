@@ -9,7 +9,7 @@ Rails.application.routes.draw do
       resources :ingredients, only: [ :index, :show ] do
         get "all", on: :collection
       end
-      resources :submissions, only: [ :create, :show, :index ], param: :access_code
+      resources :submissions, only: [ :create, :index ]
       patch "submissions/by_id/:id", to: "submissions#update"
       delete "submissions/by_id/:id", to: "submissions#destroy"
       resource :organizer_session, only: [ :create, :destroy ]

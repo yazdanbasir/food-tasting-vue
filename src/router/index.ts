@@ -12,7 +12,7 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/confirmation/:accessCode',
+      path: '/confirmation',
       name: 'confirmation',
       component: ConfirmationView,
     },

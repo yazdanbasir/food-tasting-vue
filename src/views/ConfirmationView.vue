@@ -1,22 +1,15 @@
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 
-const route = useRoute()
 const router = useRouter()
-const accessCode = route.params.accessCode as string
 </script>
 
 <template>
   <div class="confirmation-page">
     <div class="confirmation-card">
       <div class="text-center">
-        <div class="confirmation-label">submission received</div>
-        <div class="confirmation-code">{{ accessCode }}</div>
+        <div class="confirmation-label">Thank you for your submission.</div>
       </div>
-
-      <p class="confirmation-message">
-        Save this code. You'll need it to look up or edit your submission later.
-      </p>
 
       <button type="button" class="confirmation-btn" @click="router.push('/')">
         submit another
@@ -51,23 +44,8 @@ const accessCode = route.params.accessCode as string
 }
 
 .confirmation-label {
-  font-size: 1rem;
+  font-size: 1.125rem;
   color: var(--color-lafayette-gray, #3c373c);
-  margin-bottom: 0.5rem;
-}
-
-.confirmation-code {
-  font-size: clamp(1.75rem, 4vw, 1.875rem);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #000;
-}
-
-.confirmation-message {
-  font-size: 1rem;
-  color: var(--color-lafayette-gray, #3c373c);
-  text-align: center;
-  line-height: 1.6;
 }
 
 .confirmation-btn {
