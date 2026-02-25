@@ -80,13 +80,14 @@ const membersText = computed({
         </div>
 
         <h2 class="home-section-title">Important Reminders!</h2>
-        <div class="home-meta-bar form-section-top-bar">
+        <div class="home-meta-bar form-section-top-bar home-reminders-bar">
           <div class="home-meta-bar-inner">
             <div class="home-reminders-list-wrap">
               <ul class="home-reminders-list">
                 <li>Use this form to request groceries you need to make your dish. Remember, you will be making 2-3 large trays that should be able to serve 250-300 people attending the event.</li>
-                <li>Please SEARCH for products very thoroughly. Read the QUANTITIES and size very carefully too!</li>
+                <li>Please <strong>SEARCH</strong> for products very thoroughly. Read the <strong>QUANTITIES</strong> and size very carefully too!</li>
                 <li>If you can't find something, don't worry. You can add those items to separate list</li>
+                <li>Please remain available on <strong>DATE</strong> around <strong>TIME</strong> so we can call you while we are shopping in case we need clarification.</li>
               </ul>
             </div>
           </div>
@@ -154,6 +155,8 @@ const membersText = computed({
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .home-header {
@@ -205,10 +208,29 @@ const membersText = computed({
   box-sizing: border-box;
 }
 
+.home-reminders-bar {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.home-reminders-bar .home-meta-bar-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .home-reminders-list-wrap {
   contain: inline-size;
   width: 100%;
   box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .home-reminders-list {
