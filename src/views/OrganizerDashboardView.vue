@@ -5,11 +5,9 @@ import { useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
-import IngredientSearch from '@/components/IngredientSearch.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
-import { getGroceryList, checkGroceryItem, updateGroceryQuantity, addGroceryItem, addSubmissionIngredient, updateSubmissionIngredientQuantity, deleteSubmission, type GroceryListResponse, type GroceryItem } from '@/api/organizer'
-import OrganizerAddProduct from '@/components/OrganizerAddProduct.vue'
+import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, type GroceryListResponse, type GroceryItem } from '@/api/organizer'
 import LockOverlay from '@/components/LockOverlay.vue'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
 import { useSubmissionStore } from '@/stores/submission'
@@ -62,7 +60,6 @@ function toggleSubmissionExpanded(id: number) {
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const addProductError = ref<string | null>(null)
-const addProductLoading = ref(false)
 
 // Action Cable consumer
 const cable = createConsumer(`${import.meta.env.VITE_API_BASE_URL.replace(/^http/, 'ws')}/cable`)
@@ -148,32 +145,6 @@ async function changeQuantity(item: GroceryItem, delta: number) {
     await updateGroceryQuantity(item.ingredient.id, newQty)
   } catch {
     item.total_quantity = prev
-  }
-}
-
-async function handleAddToGrocery(ingredient: Ingredient, quantity: number) {
-  addProductError.value = null
-  addProductLoading.value = true
-  try {
-    await addGroceryItem(ingredient.id, quantity)
-    await loadGroceryList()
-  } catch (err) {
-    addProductError.value = err instanceof Error ? err.message : 'Failed to add item'
-  } finally {
-    addProductLoading.value = false
-  }
-}
-
-async function handleAddToSubmission(submissionId: number, ingredient: Ingredient, quantity: number) {
-  addProductError.value = null
-  addProductLoading.value = true
-  try {
-    await addSubmissionIngredient(submissionId, ingredient.id, quantity)
-    await loadSubmissions()
-  } catch (err) {
-    addProductError.value = err instanceof Error ? err.message : 'Failed to add ingredient'
-  } finally {
-    addProductLoading.value = false
   }
 }
 
@@ -303,15 +274,6 @@ const totalCents = computed(() => {
 
             <div v-if="expandedSubmissions.has(sub.id)" class="submission-detail">
               <div class="form-section-ingredients submission-detail-ingredients">
-                <div class="form-section-top-bar-inner">
-                  <div class="form-section-pill form-section-pill-label">Items in this dish</div>
-                  <div class="form-section-pill form-section-pill-search">
-                    <IngredientSearch
-                      :hide-price="true"
-                      :add-callback="(ing, qty) => handleAddToSubmission(sub.id, ing, qty)"
-                    />
-                  </div>
-                </div>
                 <div class="submission-detail-list">
                   <IngredientRow
                     v-for="item in sub.ingredients"
@@ -353,14 +315,6 @@ const totalCents = computed(() => {
 
       <!-- Grocery List Tab -->
       <div v-else-if="activeTab === 'grocery' && groceryList">
-        <div class="grocery-add-product">
-          <OrganizerAddProduct
-            placeholder="add product to grocery list..."
-            :disabled="addProductLoading"
-            @add="handleAddToGrocery"
-          />
-        </div>
-        <div v-if="addProductError" class="dashboard-error add-product-err">{{ addProductError }}</div>
         <div class="grocery-sections">
           <section v-for="(items, aisle) in groceryList.aisles" :key="aisle" class="grocery-aisle">
             <h2 class="grocery-aisle-title">{{ formatAisleTitle(aisle) }}</h2>
@@ -576,6 +530,11 @@ const totalCents = computed(() => {
 .submission-dish-pill .form-section-pill-input {
   width: auto;
   min-width: 4ch;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .submission-dish-text {
@@ -594,6 +553,11 @@ const totalCents = computed(() => {
 .submission-members-pill .form-section-pill-input {
   width: auto;
   min-width: 4ch;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .submission-members-text {
@@ -768,10 +732,6 @@ const totalCents = computed(() => {
   align-items: center;
   font-size: 1.125rem;
   font-weight: 600;
-}
-
-.grocery-add-product {
-  margin-bottom: 1rem;
 }
 
 .add-product-err {

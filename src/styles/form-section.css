@@ -64,7 +64,8 @@
 }
 
 .form-section-pill-input::placeholder {
-  color: #000;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
 }
 
 /* Ingredients section container */

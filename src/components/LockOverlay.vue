@@ -7,13 +7,13 @@ const { isLocked, verifyPassword, unlock } = useLockOverlay()
 const password = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 
-function onPasswordInput(e: Event) {
+async function onPasswordInput(e: Event) {
   const value = (e.target as HTMLInputElement).value
   password.value = value
   if (!value) return
   if (verifyPassword(value)) {
     password.value = ''
-    unlock()
+    await unlock()
   }
 }
 

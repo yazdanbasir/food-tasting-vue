@@ -10,6 +10,25 @@ const { dishName } = storeToRefs(useSubmissionStore())
     v-model="dishName"
     type="text"
     placeholder="dish name..."
-    class="w-full bg-white rounded-full px-4 py-1 min-h-8 outline-none border-0 placeholder:text-gray-400"
+    class="dish-name-input"
   />
 </template>
+
+<style scoped>
+.dish-name-input {
+  width: 100%;
+  background: #fff;
+  border-radius: 9999px;
+  padding: 0.25rem 1rem;
+  min-height: 2.5rem;
+  outline: none;
+  border: none;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.dish-name-input::placeholder {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
+}
+</style>

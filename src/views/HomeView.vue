@@ -30,7 +30,7 @@ const membersText = computed({
   <div class="home-view">
     <div class="home-top-row">
       <section class="home-top-left" aria-label="Submission form header">
-        <h1 class="home-title">Ingredient Submission Form</h1>
+        <h1 class="home-title">Grocery Submission Form</h1>
       </section>
       <div class="home-top-bar form-section-top-bar">
         <div class="form-section-top-bar-inner">
@@ -41,16 +41,16 @@ const membersText = computed({
             <input
               v-model="store.dishName"
               type="text"
-              placeholder="dish name..."
-              class="form-section-pill-input"
+              placeholder="what dish are you making?"
+              class="form-section-pill-input pill-input-center"
             />
           </div>
           <div class="form-section-pill">
             <input
               v-model="membersText"
               type="text"
-              placeholder="members..."
-              class="form-section-pill-input"
+              placeholder="who's on your team?"
+              class="form-section-pill-input pill-input-center"
             />
           </div>
         </div>
@@ -63,7 +63,7 @@ const membersText = computed({
           <template #default>
             <div class="form-section-ingredients">
               <div class="form-section-top-bar-inner">
-                <div class="form-section-pill form-section-pill-label">Which ingredients do you need?</div>
+                <div class="form-section-pill form-section-pill-label">What groceries do you need?</div>
                 <div class="form-section-pill form-section-pill-search">
                   <IngredientSearch :hide-price="true" />
                 </div>
@@ -158,6 +158,11 @@ const membersText = computed({
 .ingredients-section-fallback {
   flex: 1;
   min-height: 0;
+}
+
+.pill-input-center {
+  text-align: center;
+  line-height: 2.5rem;
 }
 
 </style>

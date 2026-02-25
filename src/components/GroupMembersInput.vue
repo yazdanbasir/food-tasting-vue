@@ -74,7 +74,8 @@ function addMember() {
 }
 
 .members-input::placeholder {
-  color: #9ca3af;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
 }
 
 .members-list {
