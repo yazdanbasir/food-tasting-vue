@@ -9,6 +9,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   const dishName = ref('')
   const countryCode = ref('')
   const members = ref<string[]>([])
+  const phoneNumber = ref('')
 
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
@@ -103,6 +104,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     dishName.value = ''
     countryCode.value = ''
     members.value = []
+    phoneNumber.value = ''
     ingredients.value = []
   }
 
@@ -136,6 +138,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     dishName,
     countryCode,
     members,
+    phoneNumber,
     editingSubmissionId,
     addMember,
     removeMember,

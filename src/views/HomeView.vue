@@ -58,7 +58,7 @@ const membersText = computed({
             </div>
             <div class="form-section-pill home-meta-pill">
               <input
-                v-model="membersText"
+                v-model="store.phoneNumber"
                 type="text"
                 placeholder="phone number"
                 class="form-section-pill-input pill-input-center"
