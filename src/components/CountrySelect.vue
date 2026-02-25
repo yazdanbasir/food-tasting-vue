@@ -62,6 +62,7 @@ onUnmounted(() => {
       ref="buttonRef"
       type="button"
       class="country-select-btn"
+      :class="{ 'country-select-btn--placeholder': !countryCode }"
       aria-haspopup="listbox"
       :aria-expanded="open"
       @click="toggle"
@@ -129,6 +130,11 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   outline: none;
+}
+
+.country-select-btn--placeholder {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
 }
 
 .country-select-btn:hover {
