@@ -2,22 +2,11 @@
 import { RouterLink, useRoute } from 'vue-router'
 
 const route = useRoute()
-// Runtime path so Vite doesn't resolve at build time (file may not exist yet)
-const lafayetteLogoSrc = '/lafayette-logo.png'
 </script>
 
 <template>
   <header class="app-header">
-    <!-- Left: Lafayette logo (add public/lafayette-logo.png to show) -->
-    <div class="app-header-left">
-      <img
-        :src="lafayetteLogoSrc"
-        alt="Lafayette"
-        class="app-header-logo"
-        @error="($event.target as HTMLImageElement).style.display = 'none'"
-      />
-    </div>
-
+    <div class="app-header-spacer" aria-hidden="true"></div>
     <!-- Center: ISA logo + event name -->
     <div class="app-header-center">
       <img src="/isa-logo.png" alt="ISA" class="app-header-isa" />
@@ -59,18 +48,9 @@ const lafayetteLogoSrc = '/lafayette-logo.png'
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
-.app-header-left {
-  display: flex;
-  align-items: center;
-  min-width: 0;
+.app-header-spacer {
   flex: 1;
-  justify-content: flex-start;
-}
-
-.app-header-logo {
-  height: 2rem;
-  object-fit: contain;
-  object-position: left;
+  min-width: 0;
 }
 
 .app-header-center {

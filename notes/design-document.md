@@ -348,9 +348,8 @@ Converted the React UI reference (`ui-reference/`) into Vue 3 SFCs. Static layou
 
 | File | Change |
 |---|---|
-| `src/components/AppHeader.vue` | Header with Lafayette logo (left) + ISA logo (right). Props: `lafayetteSrc`, `isaSrc`. |
+| `src/components/AppHeader.vue` | Header with ISA logo and event name (center) + Form/Submissions links (right). |
 | `src/components/AppPanel.vue` | Generic panel used for every section. Props: `title`, `variant`, `collapsible`, `expanded`. Emits `toggle`. Default slot for body content. |
-| `src/assets/logos/lafayette-logo.png` | Copied from `ui-reference/public/` |
 | `src/assets/logos/ISA-logo.png` | Copied from `ui-reference/public/` |
 | `index.html` | Added Roboto Mono font (Google Fonts), updated page title |
 | `src/assets/base.css` | Full-height `html/body/#app`, Roboto Mono as default body font, removed Vue default background/color |

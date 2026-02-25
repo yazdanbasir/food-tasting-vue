@@ -133,13 +133,12 @@ This means you can re-run the scraper before each event, drop the new DB into `b
 
 **Component architecture:**
 
-- `AppHeader.vue` — header with Lafayette logo (left) and ISA logo (right). Props: `lafayetteSrc`, `isaSrc`.
+- `AppHeader.vue` — header with ISA logo and event name (center) and Form/Submissions links (right).
 - `AppPanel.vue` — generic panel used for all five sections. Props: `title`, `variant`, `collapsible`, `expanded`. Emits `toggle`. Accepts a default slot for body content. The `variant` prop controls which CSS flex rules apply and maps to the exact class structure from the reference.
 
 **Files modified:**
 - `src/components/AppHeader.vue` — new
 - `src/components/AppPanel.vue` — new
-- `src/assets/logos/lafayette-logo.png` — copied from `ui-reference/public/`
 - `src/assets/logos/ISA-logo.png` — copied from `ui-reference/public/`
 - `index.html` — added Roboto Mono Google Fonts link, updated page title
 - `src/assets/base.css` — full-height `html/body/#app`, Roboto Mono as default font, removed Vue boilerplate background/color
