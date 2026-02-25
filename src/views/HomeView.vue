@@ -34,6 +34,7 @@ const membersText = computed({
           <h1 class="home-title">Grocery Submission Form</h1>
         </section>
 
+        <h2 class="home-section-title">Dish Details</h2>
         <div class="home-meta-bar form-section-top-bar">
           <div class="home-meta-bar-inner">
             <div class="form-section-pill home-meta-pill">
@@ -56,6 +57,11 @@ const membersText = computed({
               />
             </div>
           </div>
+        </div>
+
+        <h2 class="home-section-title">Important Reminders!</h2>
+        <div class="home-meta-bar form-section-top-bar">
+          <div class="home-meta-bar-inner"></div>
         </div>
       </div>
 
@@ -119,7 +125,7 @@ const membersText = computed({
   min-width: 14rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .home-header {
@@ -135,6 +141,19 @@ const membersText = computed({
 .home-header .home-title {
   margin: 0;
   color: #000;
+}
+
+.home-section-title {
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--color-lafayette-gray, #3c373c);
+  margin: 1rem 0 0.125rem 0;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.home-section-title + .home-meta-bar {
+  margin-top: -0.25rem;
 }
 
 .home-meta-bar {
