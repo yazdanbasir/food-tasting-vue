@@ -28,42 +28,43 @@ const membersText = computed({
 
 <template>
   <div class="home-view">
-    <div class="home-top-row">
-      <section class="home-top-left" aria-label="Submission form header">
-        <h1 class="home-title">Grocery Submission Form</h1>
-      </section>
-      <div class="home-top-bar form-section-top-bar">
-        <div class="form-section-top-bar-inner">
-          <div class="form-section-pill">
-            <CountrySelect />
-          </div>
-          <div class="form-section-pill">
-            <input
-              v-model="store.dishName"
-              type="text"
-              placeholder="what dish are you making?"
-              class="form-section-pill-input pill-input-center"
-            />
-          </div>
-          <div class="form-section-pill">
-            <input
-              v-model="membersText"
-              type="text"
-              placeholder="who's on your team?"
-              class="form-section-pill-input pill-input-center"
-            />
+    <div class="home-layout">
+      <div class="home-left">
+        <section class="home-header" aria-label="Submission form header">
+          <h1 class="home-title">Grocery Submission Form</h1>
+        </section>
+
+        <div class="home-meta-bar form-section-top-bar">
+          <div class="home-meta-bar-inner">
+            <div class="form-section-pill home-meta-pill">
+              <CountrySelect />
+            </div>
+            <div class="form-section-pill home-meta-pill">
+              <input
+                v-model="store.dishName"
+                type="text"
+                placeholder="what dish are you making?"
+                class="form-section-pill-input pill-input-center"
+              />
+            </div>
+            <div class="form-section-pill home-meta-pill">
+              <input
+                v-model="membersText"
+                type="text"
+                placeholder="who's on your team?"
+                class="form-section-pill-input pill-input-center"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="home-layout">
       <div class="home-main">
         <Suspense>
           <template #default>
             <div class="form-section-ingredients">
               <div class="form-section-top-bar-inner">
-                <div class="form-section-pill form-section-pill-label">What groceries do you need?</div>
+                <div class="form-section-pill form-section-pill-label">Grocery List</div>
                 <div class="form-section-pill form-section-pill-search">
                   <IngredientSearch :hide-price="true" />
                 </div>
@@ -103,18 +104,26 @@ const membersText = computed({
   margin: 0 0 0.25rem 0;
 }
 
-.home-top-row {
-  flex: none;
+.home-layout {
+  flex: 1;
   display: flex;
-  align-items: stretch;
+  flex-direction: row;
   gap: 1rem;
-  margin-bottom: 1rem;
+  overflow: hidden;
+  min-height: 0;
 }
 
-.home-top-left {
+.home-left {
   flex: 0 0 auto;
   width: fit-content;
   min-width: 14rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.home-header {
+  flex: none;
   display: flex;
   align-items: center;
   background: var(--color-menu-gray, #e5e3e0);
@@ -123,26 +132,30 @@ const membersText = computed({
   min-height: 2.5rem;
 }
 
-.home-top-left .home-title {
+.home-header .home-title {
   margin: 0;
   color: #000;
 }
 
-.home-top-bar {
-  flex: 1;
-  min-width: 0;
+.home-meta-bar {
+  flex: none;
+  width: 100%;
   background: var(--color-menu-gray, #e5e3e0);
   border-radius: 1rem;
   padding: 0.75rem 1rem;
 }
 
-.home-layout {
-  flex: 1;
+.home-meta-bar-inner {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  overflow: hidden;
-  min-height: 0;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.home-meta-pill {
+  flex: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .home-main {
