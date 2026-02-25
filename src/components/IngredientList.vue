@@ -45,9 +45,14 @@ async function handleSubmit() {
     const editingId = store.editingSubmissionId
     if (editingId != null) {
       const result = await updateSubmission(editingId, payload)
+      const asOrganizer = store.editingAsOrganizer
       store.clearEdit()
-      store.setLastSubmitted(result)
-      router.push('/confirmation')
+      if (asOrganizer) {
+        router.push('/organizer')
+      } else {
+        store.setLastSubmitted(result)
+        router.push('/confirmation')
+      }
     } else {
       const { submission } = await createSubmission(payload)
       store.reset()

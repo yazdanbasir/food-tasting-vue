@@ -14,6 +14,9 @@ export const useSubmissionStore = defineStore('submission', () => {
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
 
+  /** True when editing from organizer (Dishes tab); false when editing from confirmation (user flow) */
+  const editingAsOrganizer = ref(false)
+
   /** Submission just created; used on confirmation page for "Edit Submission" */
   const lastSubmittedSubmission = ref<SubmissionResponse | null>(null)
 
@@ -121,8 +124,9 @@ export const useSubmissionStore = defineStore('submission', () => {
     }
   }
 
-  function loadForEdit(sub: SubmissionResponse) {
+  function loadForEdit(sub: SubmissionResponse, asOrganizer = false) {
     editingSubmissionId.value = sub.id
+    editingAsOrganizer.value = asOrganizer
     dishName.value = sub.dish_name
     countryCode.value = sub.country_code ?? ''
     members.value = [...(sub.members || [])]
@@ -135,6 +139,7 @@ export const useSubmissionStore = defineStore('submission', () => {
 
   function clearEdit() {
     editingSubmissionId.value = null
+    editingAsOrganizer.value = false
     reset()
   }
 
@@ -149,6 +154,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     members,
     phoneNumber,
     editingSubmissionId,
+    editingAsOrganizer,
     addMember,
     removeMember,
     ingredients,

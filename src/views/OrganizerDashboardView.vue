@@ -176,7 +176,7 @@ function countryLabel(code: string | null): string {
 }
 
 function handleEditSubmission(sub: SubmissionResponse) {
-  submissionStore.loadForEdit(sub)
+  submissionStore.loadForEdit(sub, true)
   router.push('/')
 }
 
