@@ -38,7 +38,7 @@ class IngredientSerializer
 
   def dietary_hash
     return {} if @variant == :grocery_list
-    return {} if @source.respond_to?(:[]) && !@source.key?(:is_alcohol) && !@source.key?("is_alcohol")
+    return {} if @source.respond_to?(:key?) && !@source.key?(:is_alcohol) && !@source.key?("is_alcohol")
 
     {
       dietary: DIETARY_KEYS.index_with { |k| @source.respond_to?(:[]) ? (get(k) || false) : @source.public_send(k) }
