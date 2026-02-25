@@ -187,7 +187,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   min-width: 18rem;
-  max-height: 28rem;
+  max-height: 38rem;
   overflow-y: auto;
   background: #fff;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
