@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useLockOverlay } from '@/composables/useLockOverlay'
+import '@/styles/form-section.css'
 
+const router = useRouter()
 const { isLocked, verifyPassword, unlock } = useLockOverlay()
 
 const password = ref('')
@@ -39,6 +42,10 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault()
     inputRef.value?.focus()
   }
+}
+
+function goBack() {
+  router.push('/')
 }
 </script>
 
@@ -81,6 +88,14 @@ function onKeydown(e: KeyboardEvent) {
                 class="lock-password-input"
                 @input="onPasswordInput"
               />
+            </div>
+            <div class="lock-back-block">
+              <button type="button" class="btn-pill-primary lock-back-btn" aria-label="Take me back" @click="goBack">
+                <svg class="lock-back-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span class="lock-back-caption">(I made a mistake. I shouldn't be here. Take me back!)</span>
             </div>
           </div>
         </div>
@@ -169,5 +184,37 @@ function onKeydown(e: KeyboardEvent) {
 .lock-fade-enter-from,
 .lock-fade-leave-to {
   opacity: 0;
+}
+
+.lock-back-block {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lock-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.lock-back-arrow {
+  flex-shrink: 0;
+}
+
+.lock-back-caption {
+  padding-top: 0.375rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.6;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.3;
 }
 </style>
