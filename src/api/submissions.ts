@@ -19,6 +19,7 @@ export interface SubmissionPayload {
   notes?: string
   country_code?: string
   members?: string[]
+  phone_number?: string
   ingredients: { ingredient_id: number; quantity: number }[]
 }
 
@@ -46,6 +47,7 @@ export interface SubmissionResponse {
   notes: string | null
   country_code: string | null
   members: string[]
+  phone_number?: string | null
   submitted_at: string
   ingredients: SubmissionIngredientResponse[]
 }

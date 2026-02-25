@@ -260,6 +260,12 @@ const totalCents = computed(() => {
                       :class="{ 'submission-members-placeholder': !(sub.members || []).length }"
                     >{{ (sub.members || []).length ? (sub.members || []).join(', ') : 'members...' }}</span>
                   </div>
+                  <div class="form-section-pill submission-phone-pill">
+                    <span
+                      class="form-section-pill-input submission-phone-text"
+                      :class="{ 'submission-phone-placeholder': !(sub.phone_number || '').trim() }"
+                    >{{ (sub.phone_number || '').trim() || 'phone...' }}</span>
+                  </div>
                 </div>
               </div>
               <div class="submission-meta">
@@ -565,6 +571,31 @@ const totalCents = computed(() => {
 }
 
 .submission-members-placeholder {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.8;
+}
+
+.submission-bar .submission-phone-pill {
+  flex: none;
+  width: fit-content;
+  min-width: 0;
+}
+
+.submission-phone-pill .form-section-pill-input {
+  width: auto;
+  min-width: 4ch;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.submission-phone-text {
+  white-space: nowrap;
+}
+
+.submission-phone-placeholder {
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.8;
 }

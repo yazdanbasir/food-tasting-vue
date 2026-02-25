@@ -35,6 +35,7 @@ async function handleSubmit() {
     notes: '',
     country_code: countryCode.value || '',
     members: [...members.value],
+    phone_number: store.phoneNumber?.trim() || undefined,
     ingredients: ingredients.value.map((item) => ({
       ingredient_id: item.ingredient.id,
       quantity: item.quantity,

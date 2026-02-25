@@ -122,6 +122,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     dishName.value = sub.dish_name
     countryCode.value = sub.country_code ?? ''
     members.value = [...(sub.members || [])]
+    phoneNumber.value = sub.phone_number ?? ''
     ingredients.value = sub.ingredients.map((item) => ({
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
