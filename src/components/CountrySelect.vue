@@ -120,7 +120,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 9999px;
   background: transparent;
-  color: inherit;
+  color: #3c373c !important;
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -133,7 +133,7 @@ onUnmounted(() => {
 }
 
 .country-select-btn--placeholder {
-  color: var(--color-lafayette-gray, #3c373c);
+  color: #3c373c !important;
   opacity: 0.7;
 }
 
@@ -161,6 +161,7 @@ onUnmounted(() => {
   max-height: 36rem;
   overflow-y: auto;
   background: #fff;
+  color: #3c373c;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   border-radius: 0.75rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -201,6 +202,7 @@ onUnmounted(() => {
   padding: 0.5rem 1rem;
   border: none;
   background: none;
+  color: #3c373c !important;
   font: inherit;
   text-align: left;
   cursor: pointer;

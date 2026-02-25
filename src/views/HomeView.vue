@@ -45,10 +45,11 @@ const membersText = computed({
             v-model="store.dishName"
             type="text"
             placeholder="dish name"
+            size="11"
             class="form-section-pill-input pill-input-center"
           />
         </div>
-        <div class="form-section-pill home-dish-pill">
+        <div class="form-section-pill home-dish-pill home-dish-pill-grow">
           <input
             v-model="membersText"
             type="text"
@@ -61,6 +62,7 @@ const membersText = computed({
             v-model="store.phoneNumber"
             type="text"
             placeholder="phone number"
+            size="14"
             class="form-section-pill-input pill-input-center"
           />
         </div>
@@ -72,6 +74,7 @@ const membersText = computed({
             v-model="store.cookingLocation"
             type="text"
             placeholder="where? (building + floor)"
+            size="27"
             class="form-section-pill-input pill-input-center"
           />
         </div>
@@ -175,9 +178,12 @@ const membersText = computed({
 }
 
 .home-dish-pill {
-  flex: 1 1 auto;
-  min-width: 9rem;
+  flex: 0 0 auto;
   box-sizing: border-box;
+}
+
+.home-dish-pill-grow {
+  flex: 1 1 auto;
 }
 
 .home-layout {
@@ -192,7 +198,7 @@ const membersText = computed({
 .home-left {
   flex: 0 0 auto;
   width: fit-content;
-  min-width: 14rem;
+  min-width: 24.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
