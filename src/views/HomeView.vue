@@ -61,7 +61,15 @@ const membersText = computed({
 
         <h2 class="home-section-title">Important Reminders!</h2>
         <div class="home-meta-bar form-section-top-bar">
-          <div class="home-meta-bar-inner"></div>
+          <div class="home-meta-bar-inner">
+            <div class="home-reminders-list-wrap">
+              <ul class="home-reminders-list">
+                <li>Use this form to request groceries you need to make your dish. Remember, you will be making 2-3 large trays that should be able to serve 250-300 people attending the event.</li>
+                <li>Please SEARCH for products very thoroughly. Read the QUANTITIES and size very carefully too!</li>
+                <li>If you can't find something, don't worry. You can add those items to separate list</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -175,6 +183,31 @@ const membersText = computed({
   flex: none;
   width: 100%;
   box-sizing: border-box;
+}
+
+.home-reminders-list-wrap {
+  contain: inline-size;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.home-reminders-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.32;
+  list-style-type: disc;
+  list-style-position: outside;
+  font-size: 0.95em;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
+}
+
+.home-reminders-list li {
+  margin-bottom: 0.75em;
+}
+
+.home-reminders-list li:last-child {
+  margin-bottom: 0;
 }
 
 .home-main {
