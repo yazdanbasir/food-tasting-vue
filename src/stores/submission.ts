@@ -14,6 +14,9 @@ export const useSubmissionStore = defineStore('submission', () => {
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
 
+  /** Submission just created; used on confirmation page for "Edit Submission" */
+  const lastSubmittedSubmission = ref<SubmissionResponse | null>(null)
+
   function addMember(name: string) {
     const trimmed = name.trim()
     if (trimmed && !members.value.includes(trimmed)) {
@@ -134,6 +137,10 @@ export const useSubmissionStore = defineStore('submission', () => {
     reset()
   }
 
+  function setLastSubmitted(sub: SubmissionResponse | null) {
+    lastSubmittedSubmission.value = sub
+  }
+
   return {
     teamName,
     dishName,
@@ -153,5 +160,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     reset,
     loadForEdit,
     clearEdit,
+    lastSubmittedSubmission,
+    setLastSubmitted,
   }
 })

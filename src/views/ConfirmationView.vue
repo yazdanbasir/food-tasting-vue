@@ -1,7 +1,25 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useSubmissionStore } from '@/stores/submission'
 
 const router = useRouter()
+const store = useSubmissionStore()
+const { lastSubmittedSubmission } = storeToRefs(store)
+
+function handleImDone() {
+  store.setLastSubmitted(null)
+  store.reset()
+  router.push('/')
+}
+
+function handleEditSubmission() {
+  const sub = lastSubmittedSubmission.value
+  if (!sub) return
+  store.loadForEdit(sub)
+  store.setLastSubmitted(null)
+  router.push('/')
+}
 </script>
 
 <template>
@@ -11,9 +29,19 @@ const router = useRouter()
         <div class="confirmation-label">Thank you for your submission.</div>
       </div>
 
-      <button type="button" class="confirmation-btn" @click="router.push('/')">
-        submit another
-      </button>
+      <div class="confirmation-actions">
+        <button type="button" class="confirmation-btn confirmation-btn-primary" @click="handleImDone">
+          I'm Done
+        </button>
+        <button
+          v-if="lastSubmittedSubmission"
+          type="button"
+          class="confirmation-btn confirmation-btn-secondary"
+          @click="handleEditSubmission"
+        >
+          Edit Submission
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -48,20 +76,39 @@ const router = useRouter()
   color: var(--color-lafayette-gray, #3c373c);
 }
 
+.confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
 .confirmation-btn {
   border-radius: 9999px;
   padding: calc(0.667em + 2px) calc(1.333em + 2px);
   min-height: 2.5rem;
-  background-color: var(--color-lafayette-red, #910029);
-  color: #fff;
   border: none;
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
-.confirmation-btn:hover {
+.confirmation-btn-primary {
+  background-color: var(--color-lafayette-red, #910029);
+  color: #fff;
+}
+
+.confirmation-btn-primary:hover {
   background-color: var(--color-lafayette-dark-blue, #006690);
+}
+
+.confirmation-btn-secondary {
+  background-color: var(--color-lafayette-gray, #3c373c);
+  color: #fff;
+}
+
+.confirmation-btn-secondary:hover {
+  background-color: #2a262a;
 }
 
 .confirmation-btn:focus-visible {

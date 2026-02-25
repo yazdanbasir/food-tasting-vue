@@ -1,6 +1,6 @@
 class Api::V1::SubmissionsController < ApplicationController
   include OrganizerAuthenticatable
-  skip_before_action :require_organizer_auth, only: [:create, :index]
+  skip_before_action :require_organizer_auth, only: [:create, :index, :update]
 
   # POST /api/v1/submissions
   def create

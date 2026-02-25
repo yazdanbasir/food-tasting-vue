@@ -6,7 +6,6 @@ import { storeToRefs } from 'pinia'
 import IngredientRow from '@/components/IngredientRow.vue'
 import { useSubmissionStore } from '@/stores/submission'
 import { createSubmission, updateSubmission } from '@/api/submissions'
-import { hasOrganizerToken } from '@/api/organizer'
 
 const store = useSubmissionStore()
 const { ingredients, canSubmit, countryCode, members } = storeToRefs(store)
@@ -45,16 +44,14 @@ async function handleSubmit() {
   try {
     const editingId = store.editingSubmissionId
     if (editingId != null) {
-      if (!hasOrganizerToken()) {
-        submitError.value = 'Please log in from the Organizer tab to update a submission.'
-        return
-      }
-      await updateSubmission(editingId, payload)
+      const result = await updateSubmission(editingId, payload)
       store.clearEdit()
+      store.setLastSubmitted(result)
       router.push('/confirmation')
     } else {
-      await createSubmission(payload)
+      const { submission } = await createSubmission(payload)
       store.reset()
+      store.setLastSubmitted(submission)
       router.push('/confirmation')
     }
   } catch (err) {
