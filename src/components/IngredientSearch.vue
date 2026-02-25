@@ -19,46 +19,26 @@ const { query, results, isLoading, error, clear } = useIngredientSearch()
 const store = useSubmissionStore()
 
 const searchWrapRef = ref<HTMLElement | null>(null)
-const selectedIngredient = ref<Ingredient | null>(null)
-const quantity = ref(1)
 
 const showDropdown = computed(
   () =>
     isLoading.value ||
     !!error.value ||
     (query.value.length >= 2 && results.value.length === 0) ||
-    results.value.length > 0 ||
-    !!selectedIngredient.value
+    results.value.length > 0
 )
 
 function closeDropdown() {
-  selectedIngredient.value = null
-  quantity.value = 1
   clear()
 }
 
-function select(ingredient: Ingredient) {
-  selectedIngredient.value = ingredient
-  quantity.value = 1
-}
-
-function confirmAdd() {
-  if (!selectedIngredient.value) return
+function addAndClose(ingredient: Ingredient) {
   if (props.addCallback) {
-    props.addCallback(selectedIngredient.value, quantity.value)
+    props.addCallback(ingredient, 1)
   } else {
-    store.addIngredient(selectedIngredient.value, quantity.value)
+    store.addIngredient(ingredient, 1)
   }
   closeDropdown()
-}
-
-function cancelSelection() {
-  selectedIngredient.value = null
-  quantity.value = 1
-}
-
-function changeQty(delta: number) {
-  quantity.value = Math.max(1, quantity.value + delta)
 }
 
 function handleClickOutside(e: MouseEvent) {
@@ -82,62 +62,22 @@ onUnmounted(() => {
       type="text"
       placeholder="search Giant's inventory..."
       class="search-input"
-      :disabled="!!selectedIngredient"
-      @keydown.escape="selectedIngredient ? cancelSelection() : clear()"
+      @keydown.escape="clear()"
     />
 
     <div v-if="showDropdown" class="search-dropdown">
       <div v-if="isLoading" class="search-dropdown-msg">searching...</div>
       <div v-else-if="error" class="search-dropdown-msg search-dropdown-error">{{ error }}</div>
-      <div v-else-if="query.length >= 2 && results.length === 0 && !selectedIngredient" class="search-dropdown-msg">
+      <div v-else-if="query.length >= 2 && results.length === 0" class="search-dropdown-msg">
         no results for "{{ query }}"
       </div>
-
-      <template v-else-if="selectedIngredient">
-        <div class="add-product-selected">
-          <IngredientThumb :ingredient="selectedIngredient" />
-          <div class="add-product-selected-info min-w-0">
-            <span class="truncate">{{ selectedIngredient.name }}</span>
-            <span class="add-product-size">{{ selectedIngredient.size }}</span>
-          </div>
-          <div class="add-product-qty">
-            <span class="qty-controls">
-              <button
-                type="button"
-                class="qty-btn"
-                aria-label="Decrease quantity"
-                @click="changeQty(-1)"
-              >
-                −
-              </button>
-              <span class="tabular-nums qty-num">{{ quantity }}</span>
-              <button
-                type="button"
-                class="qty-btn"
-                aria-label="Increase quantity"
-                @click="changeQty(1)"
-              >
-                +
-              </button>
-            </span>
-          </div>
-          <div class="add-product-actions">
-            <button type="button" class="add-product-cancel" @click="cancelSelection">
-              cancel
-            </button>
-            <button type="button" class="add-product-add" @click="confirmAdd">
-              add
-            </button>
-          </div>
-        </div>
-      </template>
 
       <ul v-else-if="results.length" class="search-results">
         <li
           v-for="ingredient in results"
           :key="ingredient.product_id"
           class="search-result-item"
-          @mousedown.prevent="select(ingredient)"
+          @mousedown.prevent="addAndClose(ingredient)"
         >
           <IngredientThumb :ingredient="ingredient" />
           <div class="search-result-info">
@@ -176,10 +116,6 @@ onUnmounted(() => {
   opacity: 0.7;
 }
 
-.search-input:disabled {
-  opacity: 0.9;
-}
-
 /* Results box: same styling as country dropdown */
 .search-dropdown {
   position: absolute;
@@ -206,67 +142,6 @@ onUnmounted(() => {
 
 .search-dropdown-error {
   color: #b91c1c;
-}
-
-.add-product-selected {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  flex-wrap: wrap;
-}
-
-.add-product-selected-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.add-product-size {
-  font-size: 1.0625rem;
-  color: var(--color-lafayette-gray, #3c373c);
-}
-
-.add-product-qty {
-  display: inline-flex;
-  align-items: center;
-}
-
-.add-product-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.add-product-cancel,
-.add-product-add {
-  padding: 0.375rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 1.0625rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.add-product-cancel {
-  background: #fff;
-  color: var(--color-lafayette-gray, #3c373c);
-  border: 1px solid var(--color-lafayette-gray, #3c373c);
-}
-
-.add-product-cancel:hover {
-  background: var(--color-menu-gray, #e5e3e0);
-}
-
-.add-product-add {
-  background: var(--color-lafayette-red, #910029);
-  color: #fff;
-}
-
-.add-product-add:hover {
-  background: var(--color-lafayette-dark-blue, #006690);
 }
 
 .search-results {
