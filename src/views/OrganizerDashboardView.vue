@@ -266,6 +266,18 @@ const totalCents = computed(() => {
                       :class="{ 'submission-phone-placeholder': !(sub.phone_number || '').trim() }"
                     >{{ (sub.phone_number || '').trim() || 'phone...' }}</span>
                   </div>
+                  <div class="form-section-pill submission-cooking-pill">
+                    <span
+                      class="form-section-pill-input submission-cooking-text"
+                      :class="{ 'submission-cooking-placeholder': !sub.has_cooking_place }"
+                    >{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Kitchen ✅' : 'Kitchen ❌') : 'kitchen...' }}</span>
+                  </div>
+                  <div v-if="sub.has_cooking_place === 'yes'" class="form-section-pill submission-location-pill">
+                    <span
+                      class="form-section-pill-input submission-location-text"
+                      :class="{ 'submission-location-placeholder': !(sub.cooking_location || '').trim() }"
+                    >{{ (sub.cooking_location || '').trim() || 'location...' }}</span>
+                  </div>
                 </div>
               </div>
               <div class="submission-meta">
@@ -596,6 +608,35 @@ const totalCents = computed(() => {
 }
 
 .submission-phone-placeholder {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.8;
+}
+
+.submission-bar .submission-cooking-pill,
+.submission-bar .submission-location-pill {
+  flex: none;
+  width: fit-content;
+  min-width: 0;
+}
+
+.submission-cooking-pill .form-section-pill-input,
+.submission-location-pill .form-section-pill-input {
+  width: auto;
+  min-width: 4ch;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.submission-cooking-text,
+.submission-location-text {
+  white-space: nowrap;
+}
+
+.submission-cooking-placeholder,
+.submission-location-placeholder {
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.8;
 }

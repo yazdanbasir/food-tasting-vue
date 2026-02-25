@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_25_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_25_100000) do
   create_table "grocery_checkins", force: :cascade do |t|
     t.boolean "checked", default: false, null: false
     t.datetime "checked_at"
@@ -69,9 +69,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_000000) do
   end
 
   create_table "submissions", force: :cascade do |t|
+    t.string "cooking_location"
     t.string "country_code"
     t.datetime "created_at", null: false
     t.string "dish_name", null: false
+    t.string "has_cooking_place"
     t.text "members"
     t.text "notes"
     t.string "phone_number"

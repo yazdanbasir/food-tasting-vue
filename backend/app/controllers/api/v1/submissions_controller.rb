@@ -12,7 +12,9 @@ class Api::V1::SubmissionsController < ApplicationController
       notes: params[:notes],
       country_code: raw_country.presence,
       members: raw_members.is_a?(Array) ? raw_members : nil,
-      phone_number: params[:phone_number].presence
+      phone_number: params[:phone_number].presence,
+      has_cooking_place: params[:has_cooking_place].presence,
+      cooking_location: params[:cooking_location].presence
     }
     @submission = Submission.new(attrs)
 
@@ -85,7 +87,9 @@ class Api::V1::SubmissionsController < ApplicationController
       notes: params[:notes],
       country_code: raw_country.presence,
       members: raw_members.is_a?(Array) ? raw_members : submission.members,
-      phone_number: params[:phone_number].presence
+      phone_number: params[:phone_number].presence,
+      has_cooking_place: params[:has_cooking_place].presence,
+      cooking_location: params[:cooking_location].presence
     )
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
@@ -148,6 +152,8 @@ class Api::V1::SubmissionsController < ApplicationController
       country_code: submission.country_code,
       members: submission.members.is_a?(Array) ? submission.members : [],
       phone_number: submission.phone_number,
+      has_cooking_place: submission.has_cooking_place,
+      cooking_location: submission.cooking_location,
       submitted_at: submission.created_at,
       ingredients: submission.submission_ingredients.map do |si|
         {

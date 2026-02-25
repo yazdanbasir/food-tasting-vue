@@ -35,6 +35,8 @@ async function handleSubmit() {
     country_code: countryCode.value || '',
     members: [...members.value],
     phone_number: store.phoneNumber?.trim() || undefined,
+    has_cooking_place: store.hasCookingPlace || undefined,
+    cooking_location: store.hasCookingPlace === 'yes' ? store.cookingLocation?.trim() || undefined : undefined,
     ingredients: ingredients.value.map((item) => ({
       ingredient_id: item.ingredient.id,
       quantity: item.quantity,

@@ -3,6 +3,7 @@ import '@/styles/form-section.css'
 import { computed, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
 import CountrySelect from '@/components/CountrySelect.vue'
+import YesNoSelect from '@/components/YesNoSelect.vue'
 import { useSubmissionStore } from '@/stores/submission'
 
 const IngredientSearch = defineAsyncComponent(
@@ -61,6 +62,17 @@ const membersText = computed({
                 v-model="store.phoneNumber"
                 type="text"
                 placeholder="phone number"
+                class="form-section-pill-input pill-input-center"
+              />
+            </div>
+            <div class="form-section-pill home-meta-pill">
+              <YesNoSelect />
+            </div>
+            <div v-if="store.hasCookingPlace === 'yes'" class="form-section-pill home-meta-pill">
+              <input
+                v-model="store.cookingLocation"
+                type="text"
+                placeholder="where? (building + floor)"
                 class="form-section-pill-input pill-input-center"
               />
             </div>

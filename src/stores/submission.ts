@@ -10,6 +10,8 @@ export const useSubmissionStore = defineStore('submission', () => {
   const countryCode = ref('')
   const members = ref<string[]>([])
   const phoneNumber = ref('')
+  const hasCookingPlace = ref<'yes' | 'no' | ''>('')
+  const cookingLocation = ref('')
 
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
@@ -103,6 +105,8 @@ export const useSubmissionStore = defineStore('submission', () => {
       dishName.value.trim().length > 0 &&
       members.value.length > 0 &&
       phoneNumber.value.trim().length > 0 &&
+      hasCookingPlace.value !== '' &&
+      (hasCookingPlace.value !== 'yes' || cookingLocation.value.trim().length > 0) &&
       ingredients.value.length > 0,
   )
 
@@ -112,6 +116,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     countryCode.value = ''
     members.value = []
     phoneNumber.value = ''
+    hasCookingPlace.value = ''
+    cookingLocation.value = ''
     ingredients.value = []
   }
 
@@ -131,6 +137,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     countryCode.value = sub.country_code ?? ''
     members.value = [...(sub.members || [])]
     phoneNumber.value = sub.phone_number ?? ''
+    hasCookingPlace.value = (sub.has_cooking_place as 'yes' | 'no' | '') ?? ''
+    cookingLocation.value = sub.cooking_location ?? ''
     ingredients.value = sub.ingredients.map((item) => ({
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
@@ -153,6 +161,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     countryCode,
     members,
     phoneNumber,
+    hasCookingPlace,
+    cookingLocation,
     editingSubmissionId,
     editingAsOrganizer,
     addMember,
