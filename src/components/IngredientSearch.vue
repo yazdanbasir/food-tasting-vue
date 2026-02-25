@@ -15,7 +15,7 @@ const props = withDefaults(
   { hidePrice: false, addCallback: undefined }
 )
 
-const { query, results, isLoading, error, clear } = useIngredientSearch()
+const { query, results, isLoading, error, clear, selectedCategory, availableCategories, setCategory } = useIngredientSearch()
 const store = useSubmissionStore()
 
 const searchWrapRef = ref<HTMLElement | null>(null)
@@ -66,6 +66,21 @@ onUnmounted(() => {
     />
 
     <div v-if="showDropdown" class="search-dropdown">
+      <div v-if="availableCategories.length > 1" class="search-category-bar">
+        <button
+          class="search-category-pill"
+          :class="{ 'search-category-pill-active': !selectedCategory }"
+          @mousedown.prevent="setCategory(null)"
+        >All</button>
+        <button
+          v-for="cat in availableCategories"
+          :key="cat"
+          class="search-category-pill"
+          :class="{ 'search-category-pill-active': selectedCategory === cat }"
+          @mousedown.prevent="setCategory(cat)"
+        >{{ cat }}</button>
+      </div>
+
       <div v-if="isLoading" class="search-dropdown-msg">searching...</div>
       <div v-else-if="error" class="search-dropdown-msg search-dropdown-error">{{ error }}</div>
       <div v-else-if="query.length >= 2 && results.length === 0" class="search-dropdown-msg">
@@ -124,13 +139,14 @@ onUnmounted(() => {
   right: 0;
   min-width: 18rem;
   max-height: 38rem;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #fff;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   border-radius: 0.75rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 50;
-  padding: 0.25rem 0;
   outline: none;
 }
 
@@ -144,10 +160,47 @@ onUnmounted(() => {
   color: #b91c1c;
 }
 
+.search-category-bar {
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  padding: 0.5rem 1rem 0.375rem;
+  flex-shrink: 0;
+  scrollbar-width: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.search-category-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.search-category-pill {
+  border-radius: 9999px;
+  padding: 0.1875rem 0.75rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  border: 1px solid var(--color-lafayette-gray, #3c373c);
+  background: #fff;
+  color: var(--color-lafayette-gray, #3c373c);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.search-category-pill-active {
+  background: var(--color-lafayette-red, #910029);
+  color: #fff;
+  border-color: var(--color-lafayette-red, #910029);
+}
+
 .search-results {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0.25rem 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 

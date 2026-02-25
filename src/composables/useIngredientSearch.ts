@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { searchIngredients } from '@/api/ingredients'
 import { useIngredientCacheStore } from '@/stores/ingredientCache'
 import type { Ingredient } from '@/types/ingredient'
@@ -30,20 +30,40 @@ function searchLocal(query: string, all: Ingredient[]): Ingredient[] {
 
 export function useIngredientSearch() {
   const query = ref('')
-  const results = ref<Ingredient[]>([])
+  const rawResults = ref<Ingredient[]>([])
+  const selectedCategory = ref<string | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
   const cache = useIngredientCacheStore()
+
+  const availableCategories = computed(() => {
+    const cats = new Set<string>()
+    for (const i of rawResults.value) {
+      if (i.category) cats.add(i.category)
+    }
+    return [...cats].sort()
+  })
+
+  const results = computed(() =>
+    selectedCategory.value
+      ? rawResults.value.filter((i) => i.category === selectedCategory.value)
+      : rawResults.value
+  )
+
+  function setCategory(cat: string | null) {
+    selectedCategory.value = cat
+  }
 
   let debounceTimer: ReturnType<typeof setTimeout>
 
   function runSearch(val: string) {
     clearTimeout(debounceTimer)
     error.value = null
+    selectedCategory.value = null
 
     if (val.length < 2) {
-      results.value = []
+      rawResults.value = []
       isLoading.value = false
       return
     }
@@ -51,8 +71,8 @@ export function useIngredientSearch() {
     if (cache.loaded) {
       console.log(`[search] local for "${val}", cache has ${cache.all.length} items`)
       isLoading.value = false
-      results.value = searchLocal(val, cache.all)
-      console.log(`[search] local found ${results.value.length}`)
+      rawResults.value = searchLocal(val, cache.all)
+      console.log(`[search] local found ${rawResults.value.length}`)
       return
     }
 
@@ -62,12 +82,12 @@ export function useIngredientSearch() {
       isLoading.value = true
       try {
         console.log(`[search] API call for "${val}"`)
-        results.value = await searchIngredients(val)
-        console.log(`[search] API returned ${results.value.length}`)
+        rawResults.value = await searchIngredients(val)
+        console.log(`[search] API returned ${rawResults.value.length}`)
       } catch (err) {
         console.error('[search] API FAILED', err)
         error.value = 'Search failed. Is the server running?'
-        results.value = []
+        rawResults.value = []
       } finally {
         isLoading.value = false
       }
@@ -86,9 +106,10 @@ export function useIngredientSearch() {
 
   function clear() {
     query.value = ''
-    results.value = []
+    rawResults.value = []
+    selectedCategory.value = null
     error.value = null
   }
 
-  return { query, results, isLoading, error, clear }
+  return { query, results, isLoading, error, clear, selectedCategory, availableCategories, setCategory }
 }
