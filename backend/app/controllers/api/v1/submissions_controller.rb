@@ -11,7 +11,8 @@ class Api::V1::SubmissionsController < ApplicationController
       team_name: params[:team_name],
       notes: params[:notes],
       country_code: raw_country.presence,
-      members: raw_members.is_a?(Array) ? raw_members : nil
+      members: raw_members.is_a?(Array) ? raw_members : nil,
+      phone_number: params[:phone_number].presence
     }
     @submission = Submission.new(attrs)
 
@@ -83,7 +84,8 @@ class Api::V1::SubmissionsController < ApplicationController
       team_name: params[:team_name],
       notes: params[:notes],
       country_code: raw_country.presence,
-      members: raw_members.is_a?(Array) ? raw_members : submission.members
+      members: raw_members.is_a?(Array) ? raw_members : submission.members,
+      phone_number: params[:phone_number].presence
     )
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
@@ -145,6 +147,7 @@ class Api::V1::SubmissionsController < ApplicationController
       notes: submission.notes,
       country_code: submission.country_code,
       members: submission.members.is_a?(Array) ? submission.members : [],
+      phone_number: submission.phone_number,
       submitted_at: submission.created_at,
       ingredients: submission.submission_ingredients.map do |si|
         {
