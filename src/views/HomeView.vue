@@ -29,15 +29,17 @@ const membersText = computed({
 
 <template>
   <div class="home-view">
-    <section class="home-header" aria-label="Submission form header">
-      <h1 class="home-title">Grocery Submission Form</h1>
+    <section class="home-header form-section-top-bar" aria-label="Submission form header">
+      <div class="home-header-inner form-section-top-bar-inner">
+        <h1 class="form-section-pill form-section-pill-label">Grocery Submission Form</h1>
+      </div>
     </section>
 
     <!-- <h2 class="home-section-title">Dish Details</h2> -->
     <div class="home-dish-bar form-section-top-bar">
       <div class="home-dish-bar-inner">
         <div class="form-section-pill form-section-pill-label">Dish Details</div>
-        <div class="form-section-pill home-dish-pill">
+        <div class="form-section-pill home-dish-pill home-dish-pill-country">
           <CountrySelect />
         </div>
         <div class="form-section-pill home-dish-pill">
@@ -83,9 +85,9 @@ const membersText = computed({
 
     <div class="home-layout">
       <div class="home-left">
-        <h2 class="home-section-title">Important Reminders!</h2>
         <div class="home-meta-bar form-section-top-bar home-reminders-bar">
           <div class="home-meta-bar-inner">
+            <div class="form-section-pill form-section-pill-label">Important Reminders</div>
             <div class="home-reminders-list-wrap">
               <ul class="home-reminders-list">
                 <li>Use this form to request groceries you need to make your dish. Remember, you will be making 2-3 large trays that should be able to serve 250-300 people attending the event.</li>
@@ -125,38 +127,35 @@ const membersText = computed({
 </template>
 
 <style scoped>
-/* Single spacing unit (1rem) for left, right, bottom; no extra top since title is in top row */
+/* 1rem gap between all sections (matches gap below maroon header) */
 .home-view {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
   padding: 0 1rem 1rem 1rem;
   font-size: 1.25rem;
   overflow: hidden;
 }
 
-.home-title {
-  font-size: clamp(1.5rem, 1.5rem + ((1vw - 0.48rem) * 4), 1.625rem);
-  line-height: 1.3;
-  color: var(--color-lafayette-gray, #3c373c);
-  font-weight: 700;
-  margin: 0 0 0.25rem 0;
-}
-
 .home-header {
   flex: none;
-  display: flex;
-  align-items: center;
+  width: 100%;
   background: var(--color-menu-gray, #e5e3e0);
   border-radius: 1rem;
-  padding: 0.75rem 1.5rem;
-  min-height: 2.5rem;
+  padding: 0.75rem 1rem;
+  box-sizing: border-box;
 }
 
-.home-header .home-title {
+.home-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.home-header .form-section-pill-label {
   margin: 0;
-  color: #000;
 }
 
 /* Dish details bar: full width, horizontal pill row */
@@ -186,6 +185,10 @@ const membersText = computed({
   flex: 1 1 auto;
 }
 
+.home-dish-pill-country {
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
 .home-layout {
   flex: 1;
   display: flex;
@@ -201,7 +204,7 @@ const membersText = computed({
   min-width: 24.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
   min-height: 0;
   overflow: hidden;
 }
