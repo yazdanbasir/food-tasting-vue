@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import '@/styles/form-section.css'
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import CountrySelect from '@/components/CountrySelect.vue'
 import YesNoSelect from '@/components/YesNoSelect.vue'
@@ -34,6 +34,11 @@ const showGrocerySection = computed(() =>
   (store.hasCookingPlace === 'no' ||
     (store.hasCookingPlace === 'yes' && Boolean(store.cookingLocation.trim())))
 )
+
+const remindersExpanded = ref(true)
+watch(showGrocerySection, (show) => {
+  if (show) remindersExpanded.value = false
+})
 </script>
 
 <template>
@@ -44,15 +49,35 @@ const showGrocerySection = computed(() =>
       </div>
     </section>
 
-    <section class="home-reminders-section form-section-top-bar" aria-label="Important reminders">
-      <div class="home-reminders-section-scroll">
-        <div class="home-reminders-section-inner form-section-top-bar-inner">
-          <div class="form-section-pill form-section-pill-label">Important Reminders</div>
+    <section
+      class="home-reminders-section form-section-top-bar"
+      aria-label="Important reminders"
+      :class="{ 'home-reminders-section-collapsed': !remindersExpanded }"
+    >
+      <div class="home-reminders-section-inner form-section-top-bar-inner">
+        <button
+          type="button"
+          class="form-section-pill form-section-pill-label home-reminders-toggle"
+          :aria-expanded="remindersExpanded"
+          @click="remindersExpanded = !remindersExpanded"
+        >
+          Important Reminders
+          <span
+            class="home-reminders-chevron"
+            :class="{ 'home-reminders-chevron-open': remindersExpanded }"
+            aria-hidden="true"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </span>
+        </button>
+        <div v-show="remindersExpanded" class="home-reminders-section-scroll">
           <ul class="home-reminders-list">
-            <li><span class="home-reminders-line">Use this form to request groceries you need to make your dish. Remember, you will be making 2-3 large trays that should be able to serve 250-300 people attending the event.</span></li>
+            <li><span class="home-reminders-line">Use this form to request groceries you need to make your dish. Remember, you will be making 2-3 large trays that should be able to serve 250-300 small portions for everyone attending the event</span></li>
             <li><span class="home-reminders-line">Please <strong>SEARCH</strong> for products very thoroughly. Read the <strong>QUANTITIES</strong> and size very carefully too!</span></li>
             <li><span class="home-reminders-line">If you can't find something, don't worry. You can add those items to separate list</span></li>
-            <li><span class="home-reminders-line">Please remain available on <strong>DATE</strong> around <strong>TIME</strong> so we can call you while we are shopping in case we need clarification.</span></li>
+            <li><span class="home-reminders-line">Please remain available on <strong>DATE</strong> around <strong>TIME</strong> so we can call you while we are shopping in case we need clarification</span></li>
             <li><span class="home-reminders-line">If you need to edit your submission, click Submissions in the top right and enter your phone number</span></li>
           </ul>
         </div>
@@ -214,7 +239,7 @@ const showGrocerySection = computed(() =>
   text-align: center;
 }
 
-/* Important Reminders section — same style as form bars, below Grocery Submission Form */
+/* Important Reminders section — collapsible; when collapsed shows title pill like Grocery Submission Form */
 .home-reminders-section {
   flex: none;
   width: 100%;
@@ -226,10 +251,33 @@ const showGrocerySection = computed(() =>
   overflow: hidden;
 }
 
-.home-reminders-section-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 1.5em; /* one line of space so scroll bar sits below last bullet */
+.home-reminders-toggle {
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+  transition: opacity 0.15s;
+}
+
+.home-reminders-toggle:hover {
+  opacity: 0.9;
+}
+
+.home-reminders-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.home-reminders-chevron {
+  display: inline-flex;
+  margin-left: 0.65rem;
+  color: #fff;
+  transition: transform 0.2s;
+}
+
+.home-reminders-chevron-open {
+  transform: rotate(180deg);
 }
 
 .home-reminders-section-inner {
@@ -240,6 +288,12 @@ const showGrocerySection = computed(() =>
   min-width: 0;
 }
 
+.home-reminders-section-scroll {
+  flex: 1 1 100%;
+  min-width: 0;
+  overflow: visible;
+}
+
 .home-reminders-section .home-reminders-list {
   flex: 1 1 100%;
   display: block;
@@ -248,22 +302,22 @@ const showGrocerySection = computed(() =>
   line-height: 1.4;
   list-style-type: disc;
   list-style-position: outside;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.9;
   text-align: left;
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: 0;
 }
 
 .home-reminders-section .home-reminders-list li {
-  margin-bottom: 0.25em;
+  margin-bottom: 0.5em;
   line-height: 1.4;
   display: list-item;
 }
 
 .home-reminders-section .home-reminders-line {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .home-reminders-section .home-reminders-list li:last-child {
