@@ -11,6 +11,8 @@ export interface SubmissionPayload {
   phone_number?: string
   has_cooking_place?: string
   cooking_location?: string
+  found_all_ingredients?: string
+  needs_utensils?: string
   ingredients: { ingredient_id: number; quantity: number }[]
 }
 
@@ -40,6 +42,8 @@ export interface SubmissionResponse {
   phone_number?: string | null
   has_cooking_place?: string | null
   cooking_location?: string | null
+  found_all_ingredients?: string | null
+  needs_utensils?: string | null
   submitted_at: string
   ingredients: SubmissionIngredientResponse[]
 }

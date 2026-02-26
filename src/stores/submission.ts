@@ -12,6 +12,8 @@ export const useSubmissionStore = defineStore('submission', () => {
   const phoneNumber = ref('')
   const hasCookingPlace = ref<'yes' | 'no' | ''>('')
   const cookingLocation = ref('')
+  const foundAllIngredients = ref<'yes' | 'no' | ''>('')
+  const needsUtensils = ref<'yes' | 'no' | ''>('')
 
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
@@ -99,15 +101,22 @@ export const useSubmissionStore = defineStore('submission', () => {
     )
   })
 
-  const canSubmit = computed(
+  const canAdvancePage1 = computed(
     () =>
       !!countryCode.value &&
       dishName.value.trim().length > 0 &&
       members.value.length > 0 &&
       phoneNumber.value.trim().length > 0 &&
-      hasCookingPlace.value !== '' &&
-      (hasCookingPlace.value !== 'yes' || cookingLocation.value.trim().length > 0) &&
       ingredients.value.length > 0,
+  )
+
+  const canSubmit = computed(
+    () =>
+      canAdvancePage1.value &&
+      foundAllIngredients.value !== '' &&
+      hasCookingPlace.value !== '' &&
+      (hasCookingPlace.value !== 'no' || cookingLocation.value.trim().length > 0) &&
+      needsUtensils.value !== '',
   )
 
   function reset() {
@@ -118,6 +127,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     phoneNumber.value = ''
     hasCookingPlace.value = ''
     cookingLocation.value = ''
+    foundAllIngredients.value = ''
+    needsUtensils.value = ''
     ingredients.value = []
   }
 
@@ -139,6 +150,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     phoneNumber.value = sub.phone_number ?? ''
     hasCookingPlace.value = (sub.has_cooking_place as 'yes' | 'no' | '') ?? ''
     cookingLocation.value = sub.cooking_location ?? ''
+    foundAllIngredients.value = (sub.found_all_ingredients as 'yes' | 'no' | '') ?? ''
+    needsUtensils.value = (sub.needs_utensils as 'yes' | 'no' | '') ?? ''
     ingredients.value = sub.ingredients.map((item) => ({
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
@@ -163,6 +176,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     phoneNumber,
     hasCookingPlace,
     cookingLocation,
+    foundAllIngredients,
+    needsUtensils,
     editingSubmissionId,
     editingAsOrganizer,
     addMember,
@@ -170,6 +185,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     ingredients,
     totalCents,
     masterGroceryList,
+    canAdvancePage1,
     canSubmit,
     addIngredient,
     removeIngredient,

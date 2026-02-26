@@ -1,16 +1,22 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useSubmissionStore } from '@/stores/submission'
 
-const { hasCookingPlace } = storeToRefs(useSubmissionStore())
+const props = defineProps<{
+  modelValue: 'yes' | 'no' | ''
+  placeholder: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: 'yes' | 'no'): void
+}>()
+
 const open = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
 
 const selectedLabel = computed(() => {
-  if (!hasCookingPlace.value) return 'do you have a kitchen'
-  return hasCookingPlace.value === 'yes' ? 'Yes' : 'No'
+  if (!props.modelValue) return props.placeholder
+  return props.modelValue === 'yes' ? 'Yes' : 'No'
 })
 
 function toggle() {
@@ -18,7 +24,7 @@ function toggle() {
 }
 
 function select(value: 'yes' | 'no') {
-  hasCookingPlace.value = value
+  emit('update:modelValue', value)
   open.value = false
 }
 
@@ -45,7 +51,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
       ref="buttonRef"
       type="button"
       class="yes-no-select-btn"
-      :class="{ 'yes-no-select-btn--placeholder': !hasCookingPlace }"
+      :class="{ 'yes-no-select-btn--placeholder': !modelValue }"
       aria-haspopup="listbox"
       :aria-expanded="open"
       @click="toggle"
@@ -66,7 +72,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
         type="button"
         role="option"
         class="yes-no-select-option"
-        :aria-selected="hasCookingPlace === option.value"
+        :aria-selected="modelValue === option.value"
         @click="select(option.value as 'yes' | 'no')"
       >
         {{ option.label }}

@@ -15,7 +15,9 @@ class Api::V1::SubmissionsController < ApplicationController
       members: raw_members.is_a?(Array) ? raw_members : nil,
       phone_number: params[:phone_number].presence,
       has_cooking_place: params[:has_cooking_place].presence,
-      cooking_location: params[:cooking_location].presence
+      cooking_location: params[:cooking_location].presence,
+      found_all_ingredients: params[:found_all_ingredients].presence,
+      needs_utensils: params[:needs_utensils].presence
     }
     @submission = Submission.new(attrs)
 
@@ -108,7 +110,9 @@ class Api::V1::SubmissionsController < ApplicationController
       members: raw_members.is_a?(Array) ? raw_members : submission.members,
       phone_number: params[:phone_number].presence,
       has_cooking_place: params[:has_cooking_place].presence,
-      cooking_location: params[:cooking_location].presence
+      cooking_location: params[:cooking_location].presence,
+      found_all_ingredients: params[:found_all_ingredients].presence,
+      needs_utensils: params[:needs_utensils].presence
     )
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
@@ -222,6 +226,8 @@ class Api::V1::SubmissionsController < ApplicationController
       phone_number: submission.phone_number,
       has_cooking_place: submission.has_cooking_place,
       cooking_location: submission.cooking_location,
+      found_all_ingredients: submission.found_all_ingredients,
+      needs_utensils: submission.needs_utensils,
       submitted_at: submission.created_at,
       ingredients: submission.submission_ingredients.map do |si|
         {

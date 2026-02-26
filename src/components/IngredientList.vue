@@ -1,18 +1,11 @@
 <script setup lang="ts">
 import '@/styles/form-section.css'
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import IngredientRow from '@/components/IngredientRow.vue'
 import { useSubmissionStore } from '@/stores/submission'
-import { createSubmission, updateSubmission } from '@/api/submissions'
 
 const store = useSubmissionStore()
-const { ingredients, canSubmit, countryCode, members } = storeToRefs(store)
-const router = useRouter()
-
-const isSubmitting = ref(false)
-const submitError = ref<string | null>(null)
+const { ingredients } = storeToRefs(store)
 
 function changeQty(productId: string, delta: number) {
   const item = ingredients.value.find((i) => i.ingredient.product_id === productId)
@@ -20,52 +13,6 @@ function changeQty(productId: string, delta: number) {
   const newQty = item.quantity + delta
   if (newQty < 1) store.removeIngredient(productId)
   else store.updateQuantity(productId, newQty)
-}
-
-async function handleSubmit() {
-  if (!canSubmit.value || isSubmitting.value) return
-
-  isSubmitting.value = true
-  submitError.value = null
-
-  const payload = {
-    team_name: store.teamName,
-    dish_name: store.dishName,
-    notes: '',
-    country_code: countryCode.value || '',
-    members: [...members.value],
-    phone_number: store.phoneNumber?.trim() || undefined,
-    has_cooking_place: store.hasCookingPlace || undefined,
-    cooking_location: store.hasCookingPlace === 'yes' ? store.cookingLocation?.trim() || undefined : undefined,
-    ingredients: ingredients.value.map((item) => ({
-      ingredient_id: item.ingredient.id,
-      quantity: item.quantity,
-    })),
-  }
-
-  try {
-    const editingId = store.editingSubmissionId
-    if (editingId != null) {
-      const result = await updateSubmission(editingId, payload)
-      const asOrganizer = store.editingAsOrganizer
-      store.clearEdit()
-      if (asOrganizer) {
-        router.push('/organizer')
-      } else {
-        store.setLastSubmitted(result)
-        router.push('/confirmation')
-      }
-    } else {
-      const { submission } = await createSubmission(payload)
-      store.reset()
-      store.setLastSubmitted(submission)
-      router.push('/confirmation')
-    }
-  } catch (err) {
-    submitError.value = err instanceof Error ? err.message : 'Submission failed'
-  } finally {
-    isSubmitting.value = false
-  }
 }
 </script>
 
@@ -91,19 +38,6 @@ async function handleSubmit() {
         />
       </li>
     </ul>
-
-    <!-- Submit -->
-    <div v-if="ingredients.length" class="ingredient-list-footer">
-      <span v-if="submitError" class="ingredient-list-error">{{ submitError }}</span>
-      <button
-        type="button"
-        :disabled="!canSubmit || isSubmitting"
-        class="btn-pill-primary"
-        @click="handleSubmit"
-      >
-        {{ isSubmitting ? (store.editingSubmissionId != null ? 'Updating...' : 'Submitting...') : (store.editingSubmissionId != null ? 'Update' : 'Submit') }}
-      </button>
-    </div>
   </div>
 </template>
 
@@ -140,28 +74,5 @@ async function handleSubmit() {
 
 .ingredient-list-li {
   list-style: none;
-}
-
-.ingredient-list-footer {
-  border-top: 1px solid #e0e0e0;
-  padding-top: 1rem;
-  margin-top: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex: none;
-}
-
-.ingredient-list-footer .ingredient-list-error {
-  flex: 1;
-}
-
-.ingredient-list-footer .btn-pill-primary {
-  margin-left: auto;
-}
-
-.ingredient-list-error {
-  font-size: 1rem;
-  color: #b91c1c;
 }
 </style>
