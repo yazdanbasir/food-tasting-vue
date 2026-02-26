@@ -1,5 +1,6 @@
 class Api::V1::GroceryListController < ApplicationController
   include OrganizerAuthenticatable
+  include Notifiable
   skip_before_action :require_organizer_auth, only: [:show, :update, :create_item]
 
   # GET /api/v1/grocery_list
@@ -74,7 +75,11 @@ class Api::V1::GroceryListController < ApplicationController
     si = submission.submission_ingredients.find_or_initialize_by(ingredient: ingredient)
     si.quantity = si.quantity.to_i + quantity
     si.save!
-    ActionCable.server.broadcast("notifications", { type: "grocery_list_updated" })
+    create_and_broadcast_notification(
+      event_type: "grocery_item_added",
+      title: "GROCERY \u2014 ITEM ADDED",
+      message: ingredient.name
+    )
     render json: { ingredient_id: ingredient.id, quantity: si.quantity }, status: :created
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Ingredient not found" }, status: :not_found
@@ -106,6 +111,16 @@ class Api::V1::GroceryListController < ApplicationController
       checked_at: checkin.checked_at,
       quantity_override: checkin.quantity_override
     }
+
+    if params.key?(:checked)
+      if params[:checked]
+        create_and_broadcast_notification(event_type: "grocery_item_checked",   title: "GROCERY \u2014 CHECKED",     message: ingredient.name)
+      else
+        create_and_broadcast_notification(event_type: "grocery_item_unchecked", title: "GROCERY \u2014 UNCHECKED",   message: ingredient.name)
+      end
+    elsif params.key?(:quantity)
+      create_and_broadcast_notification(event_type: "grocery_qty_changed",      title: "GROCERY \u2014 QTY UPDATED", message: ingredient.name)
+    end
 
     ActionCable.server.broadcast("grocery_list", payload)
     render json: payload

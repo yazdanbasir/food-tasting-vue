@@ -11,10 +11,13 @@ import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissi
 import LockOverlay from '@/components/LockOverlay.vue'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
 import { useSubmissionStore } from '@/stores/submission'
+import { useNotificationStore } from '@/stores/notifications'
+import type { NotificationItem } from '@/api/notifications'
 import type { Ingredient, IngredientDietary } from '@/types/ingredient'
 
 const router = useRouter()
 const submissionStore = useSubmissionStore()
+const notifStore = useNotificationStore()
 
 /** Map API ingredient to frontend Ingredient for IngredientRow */
 function toIngredient(raw: SubmissionResponse['ingredients'][0]['ingredient']): Ingredient {
@@ -46,7 +49,7 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 }
 
 
-const activeTab = ref<'submissions' | 'grocery'>('submissions')
+const activeTab = ref<'submissions' | 'grocery' | 'notifications'>('submissions')
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
 const expandedSubmissions = ref<Set<number>>(new Set())
@@ -67,6 +70,7 @@ let grocerySubscription: ReturnType<typeof cable.subscriptions.create> | null = 
 
 onMounted(async () => {
   await loadSubmissions()
+  notifStore.load()
 
   // Subscribe to real-time grocery list updates
   grocerySubscription = cable.subscriptions.create('GroceryListChannel', {
@@ -86,9 +90,10 @@ onMounted(async () => {
 
   // Subscribe to submission notifications
   cable.subscriptions.create('NotificationsChannel', {
-    received() {
+    received(data: { notification?: NotificationItem }) {
       loadSubmissions()
       if (groceryList.value) loadGroceryList()
+      if (data.notification) notifStore.addFromCable(data.notification)
     },
   })
 })
@@ -125,6 +130,26 @@ async function switchToGrocery() {
   activeTab.value = 'grocery'
   addProductError.value = null
   if (!groceryList.value) await loadGroceryList()
+}
+
+function switchToNotifications() {
+  activeTab.value = 'notifications'
+  addProductError.value = null
+  notifStore.load()
+}
+
+function notifRelativeTime(dateStr: string): string {
+  const diffSec = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  if (diffSec < 60) return 'just now'
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
+  return `${Math.floor(diffSec / 86400)}d ago`
+}
+
+function notifDotColor(eventType: string): string {
+  if (eventType === 'new_submission' || eventType === 'grocery_item_added') return '#059669'
+  if (eventType === 'submission_deleted' || eventType === 'ingredient_removed') return '#dc2626'
+  return '#006690'
 }
 
 async function toggleCheck(item: GroceryItem) {
@@ -221,6 +246,15 @@ const totalCents = computed(() => {
           @click="switchToGrocery"
         >
           Grocery List
+        </button>
+        <button
+          type="button"
+          class="dashboard-subtab"
+          :class="activeTab === 'notifications' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+          @click="switchToNotifications"
+        >
+          Notifications
+          <span v-if="notifStore.unreadCount > 0" class="dashboard-notif-badge">{{ notifStore.unreadCount > 9 ? '9+' : notifStore.unreadCount }}</span>
         </button>
       </div>
     </div>
@@ -391,6 +425,34 @@ const totalCents = computed(() => {
           <span class="tabular-nums">${{ (totalCents / 100).toFixed(2) }}</span>
         </div>
       </div>
+
+      <!-- Notifications Tab -->
+      <div v-else-if="activeTab === 'notifications'">
+        <div v-if="!notifStore.notifications.length" class="dashboard-empty">No notifications yet.</div>
+        <div v-else>
+          <div v-if="notifStore.unreadCount > 0" class="notif-tab-actions">
+            <button type="button" class="btn-pill-secondary" @click="notifStore.markAllRead()">Mark all read</button>
+          </div>
+          <div class="submissions-list">
+            <div
+              v-for="n in notifStore.notifications"
+              :key="n.id"
+              class="submission-card notif-card"
+              :class="{ 'notif-card-read': n.read }"
+              :style="{ borderLeftColor: notifDotColor(n.event_type) }"
+            >
+              <div class="notif-card-row">
+                <div class="notif-card-dot" :style="{ background: notifDotColor(n.event_type) }" />
+                <div class="notif-card-body">
+                  <div class="notif-card-title">{{ n.title }}</div>
+                  <div v-if="n.message" class="notif-card-message">{{ n.message }}</div>
+                </div>
+                <div class="notif-card-time">{{ notifRelativeTime(n.created_at) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   </LockOverlay>
@@ -401,25 +463,28 @@ const totalCents = computed(() => {
   font-size: var(--body-font-size, 1.125rem);
 }
 
-/* Subtab bar: same pill style as main nav but smaller, clearly secondary */
+/* Subtab bar: mini header — maroon pill bar */
 .dashboard-subtab-bar {
   flex: none;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--color-border, #e5e5e5);
-  background: rgba(255, 255, 255, 0.6);
+  align-self: flex-start;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--color-lafayette-red, #910029);
+  border-radius: 1rem;
+  margin: 0.75rem 0 0.75rem 1rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
 .dashboard-subtab-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .dashboard-subtab {
   border-radius: 9999px;
-  padding: 0.375rem 1.125rem;
-  min-height: 2.25rem;
-  font-size: 0.9375rem;
+  padding: 0.5rem 1.5rem;
+  min-height: 2.75rem;
+  font-size: 1.25rem;
   font-weight: 500;
   transition: background-color 0.15s, color 0.15s;
   cursor: pointer;
@@ -432,7 +497,7 @@ const totalCents = computed(() => {
 .dashboard-subtab-active {
   background-color: #fff;
   color: var(--color-lafayette-red, #910029);
-  border-color: var(--color-lafayette-red, #910029);
+  border-color: #fff;
 }
 
 .dashboard-subtab-active:hover {
@@ -441,22 +506,22 @@ const totalCents = computed(() => {
 }
 
 .dashboard-subtab-active:focus-visible {
-  outline: 2px solid var(--color-lafayette-red, #910029);
+  outline: 2px solid #fff;
   outline-offset: 2px;
 }
 
 .dashboard-subtab-inactive {
   background-color: transparent;
-  color: var(--color-lafayette-gray, #3c373c);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .dashboard-subtab-inactive:hover {
-  background-color: rgba(145, 0, 41, 0.08);
-  color: var(--color-lafayette-red, #910029);
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
 
 .dashboard-subtab-inactive:focus-visible {
-  outline: 2px solid var(--color-lafayette-gray, #3c373c);
+  outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: 2px;
 }
 
@@ -808,5 +873,95 @@ const totalCents = computed(() => {
 
 .add-product-err {
   margin-top: 0.5rem;
+}
+
+/* Notifications tab: badge on tab button */
+@keyframes notif-badge-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(253, 211, 77, 0.7); }
+  50%       { transform: scale(1.08); box-shadow: 0 0 0 5px rgba(253, 211, 77, 0); }
+}
+
+.dashboard-notif-badge {
+  margin-left: 0.625rem;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  background: #fcd34d;
+  color: #1c1917;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.375rem;
+  line-height: 1;
+  animation: notif-badge-pulse 2s ease-in-out infinite;
+}
+
+.dashboard-subtab-active .dashboard-notif-badge {
+  background: #fcd34d;
+  color: #1c1917;
+  box-shadow: none;
+  animation: none;
+}
+
+
+/* Notifications tab: mark-all action row */
+.notif-tab-actions {
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Notification cards */
+.notif-card {
+  border-left: 3px solid transparent;
+}
+
+.notif-card-read {
+  opacity: 0.55;
+}
+
+.notif-card-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem 1.25rem;
+}
+
+.notif-card-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  margin-top: 0.4rem;
+}
+
+.notif-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-lafayette-gray, #3c373c);
+  line-height: 1.3;
+}
+
+.notif-card-message {
+  font-size: 0.9375rem;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.65;
+  margin-top: 0.125rem;
+  line-height: 1.3;
+}
+
+.notif-card-time {
+  font-size: 0.875rem;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.45;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
 }
 </style>

@@ -1,5 +1,6 @@
 class Api::V1::SubmissionsController < ApplicationController
   include OrganizerAuthenticatable
+  include Notifiable
   skip_before_action :require_organizer_auth, only: [:create, :index, :lookup, :update]
 
   # POST /api/v1/submissions
@@ -30,12 +31,13 @@ class Api::V1::SubmissionsController < ApplicationController
       end
     end
 
-    ActionCable.server.broadcast("notifications", {
-      type: "new_submission",
-      team_name: @submission.team_name,
-      dish_name: @submission.dish_name,
-      timestamp: @submission.created_at
-    })
+    n = @submission.submission_ingredients.count
+    members_str = (@submission.members || []).any? ? (@submission.members || []).join(', ') : 'Unknown'
+    create_and_broadcast_notification(
+      event_type: "new_submission",
+      title: "SUBMISSION \u2014 #{@submission.dish_name}",
+      message: "by #{members_str} \u00b7 #{n} ingredient#{n == 1 ? '' : 's'}"
+    )
 
     render json: { submission: submission_json(@submission) }, status: :created
   rescue ActiveRecord::RecordInvalid => e
@@ -53,6 +55,11 @@ class Api::V1::SubmissionsController < ApplicationController
     si = submission.submission_ingredients.find_or_initialize_by(ingredient: ingredient)
     si.quantity = si.quantity.to_i + quantity
     si.save!
+    create_and_broadcast_notification(
+      event_type: "ingredient_added",
+      title: "EDIT \u2014 #{submission.dish_name}",
+      message: "1 item added \u00b7 #{ingredient.name}"
+    )
     render json: submission_json(submission.reload), status: :ok
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Submission or ingredient not found" }, status: :not_found
@@ -66,11 +73,23 @@ class Api::V1::SubmissionsController < ApplicationController
     quantity = (params[:quantity].presence || 0).to_i
     if quantity < 1
       si.destroy!
-      render json: submission_json(submission.reload), status: :ok
     else
       si.update!(quantity: quantity)
-      render json: submission_json(submission.reload), status: :ok
     end
+    if quantity < 1
+      create_and_broadcast_notification(
+        event_type: "ingredient_removed",
+        title: "EDIT \u2014 #{submission.dish_name}",
+        message: "1 item removed \u00b7 #{ingredient.name}"
+      )
+    else
+      create_and_broadcast_notification(
+        event_type: "ingredient_updated",
+        title: "EDIT \u2014 #{submission.dish_name}",
+        message: "Qty updated \u00b7 #{ingredient.name}"
+      )
+    end
+    render json: submission_json(submission.reload), status: :ok
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Submission or ingredient not found" }, status: :not_found
   end
@@ -94,6 +113,16 @@ class Api::V1::SubmissionsController < ApplicationController
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
 
+    # Soft organizer detection — update skips require_organizer_auth but token may still be present
+    token = request.headers["Authorization"]&.sub(/\ABearer /, "")
+    is_organizer = token.present? && Organizer.exists?(token: token)
+
+    # Compute ingredient diff before transaction
+    current_ids = submission.submission_ingredients.pluck(:ingredient_id).to_set
+    desired_ids = desired.keys.to_set
+    added_count   = (desired_ids - current_ids).size
+    removed_count = (current_ids - desired_ids).size
+
     Submission.transaction do
       submission.save!
       current_by_ingredient = submission.submission_ingredients.index_by(&:ingredient_id)
@@ -113,11 +142,16 @@ class Api::V1::SubmissionsController < ApplicationController
       end
     end
 
-    ActionCable.server.broadcast("notifications", {
-      type: "submission_updated",
-      submission_id: submission.id,
-      timestamp: submission.updated_at
-    })
+    parts = []
+    parts << "#{added_count} item#{added_count == 1 ? '' : 's'} added"     if added_count > 0
+    parts << "#{removed_count} item#{removed_count == 1 ? '' : 's'} removed" if removed_count > 0
+    change_str   = parts.any? ? parts.join(', ') : "Details updated"
+    editor_label = is_organizer ? "Organizer" : (submission.members || []).first.presence || "User"
+    create_and_broadcast_notification(
+      event_type: is_organizer ? "submission_updated_organizer" : "submission_updated_user",
+      title: "EDIT \u2014 #{submission.dish_name}",
+      message: "by #{editor_label} \u00b7 #{change_str}"
+    )
 
     render json: submission_json(submission.reload), status: :ok
   rescue ActiveRecord::RecordInvalid => e
@@ -129,7 +163,14 @@ class Api::V1::SubmissionsController < ApplicationController
   # DELETE /api/v1/submissions/by_id/:id (organizer only)
   def destroy
     submission = Submission.find(params[:id])
+    dish = submission.dish_name
+    members_str = (submission.members || []).any? ? (submission.members || []).join(', ') : 'Unknown'
     submission.destroy!
+    create_and_broadcast_notification(
+      event_type: "submission_deleted",
+      title: "DELETION \u2014 #{dish}",
+      message: "by #{members_str}"
+    )
     head :no_content
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Submission not found" }, status: :not_found

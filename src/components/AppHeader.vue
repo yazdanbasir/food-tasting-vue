@@ -13,7 +13,7 @@ const route = useRoute()
       <span class="app-header-event">ISA Food Tasting</span>
     </div>
 
-    <!-- Right: Form + Submissions -->
+    <!-- Right: nav links -->
     <div class="app-header-right">
       <RouterLink
         to="/"
