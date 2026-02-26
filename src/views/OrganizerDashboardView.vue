@@ -258,7 +258,7 @@ const totalCents = computed(() => {
           :class="activeTab === 'kitchen' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
           @click="switchToKitchen"
         >
-          Kitchen & Utensils Allocation
+          Kitchens & Utensils
         </button>
         <button
           type="button"

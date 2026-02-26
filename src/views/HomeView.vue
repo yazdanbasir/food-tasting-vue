@@ -155,6 +155,7 @@ async function handleSubmit() {
               <li><span class="home-reminders-line">If you can't find something, don't worry. You can add those items to separate list</span></li>
               <li><span class="home-reminders-line">Please remain available on <strong>DATE</strong> around <strong>TIME</strong> so we can call you while we are shopping in case we need clarification</span></li>
               <li><span class="home-reminders-line">If you need to edit your submission, click Submissions in the top right and enter your phone number</span></li>
+              <li><span class="home-reminders-line">We will provide basic equipment on the day of the event - gloves, trays, serving utensils, heating units - so please don't request those. Anything else you may need, feel free to add (pots, pans, strainers, ladles etc)</span></li>
             </ul>
           </div>
         </div>
