@@ -98,7 +98,10 @@ function onKeydown(e: KeyboardEvent) {
             <div v-else-if="isLookingUp" class="lock-searching">Searching...</div>
 
             <div class="lock-password-wrapper">
-              <div class="lock-password-text-layer">
+              <div
+                class="lock-password-text-layer"
+                :class="{ 'lock-password-text-layer-typing': input.length }"
+              >
                 <span
                   v-if="!input.length"
                   class="lock-password-placeholder"
@@ -182,6 +185,11 @@ function onKeydown(e: KeyboardEvent) {
   justify-content: center;
   padding: 0 24px;
   pointer-events: none;
+}
+
+/* When typing, align dots to the left to match input/caret */
+.lock-password-text-layer-typing {
+  justify-content: flex-start;
 }
 
 .lock-password-placeholder,

@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useSubmissionStore } from '@/stores/submission'
+import '@/styles/form-section.css'
 
 const router = useRouter()
 const store = useSubmissionStore()
@@ -23,20 +24,38 @@ function handleEditSubmission() {
 </script>
 
 <template>
-  <div class="confirmation-page">
-    <div class="confirmation-card">
-      <div class="confirmation-label">Thank you for your submission.</div>
+  <div class="confirmation-overlay">
+    <div class="confirmation-inner">
+      <svg
+        class="confirmation-success-icon"
+        width="48"
+        height="48"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M8 12l3 3 6-6" />
+      </svg>
+      <div class="confirmation-message-bar">
+        <div class="confirmation-message-text">Thank you for your submission.</div>
+      </div>
+
       <div class="confirmation-actions">
-        <button type="button" class="confirmation-btn confirmation-btn-primary" @click="handleImDone">
-          I'm Done
-        </button>
         <button
           v-if="lastSubmittedSubmission"
           type="button"
-          class="confirmation-btn confirmation-btn-secondary"
+          class="btn-pill-secondary confirmation-btn"
           @click="handleEditSubmission"
         >
-          Edit Submission
+          Edit Form
+        </button>
+        <button type="button" class="btn-pill-primary confirmation-btn" @click="handleImDone">
+          Close
         </button>
       </div>
     </div>
@@ -44,92 +63,78 @@ function handleEditSubmission() {
 </template>
 
 <style scoped>
-/* Match lock overlay: blurred backdrop and centered content */
-.confirmation-page {
-  height: 100%;
+/* Match LockOverlay.vue: same overlay and inner layout (flex flex-col items-center gap-4) */
+.confirmation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 1.5rem;
   background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(8px) brightness(0.97);
-  -webkit-backdrop-filter: blur(8px) brightness(0.97);
+  backdrop-filter: blur(8px) brightness(0.7);
+  -webkit-backdrop-filter: blur(8px) brightness(0.7);
+  pointer-events: auto;
 }
 
-/* Match lock overlay card: white, border, radius, shadow */
-.confirmation-card {
-  background: #fff;
-  border: 1px solid var(--color-lafayette-gray, #3c373c);
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 2rem 2.5rem;
+.confirmation-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
-  max-width: 28rem;
-  width: 100%;
+  gap: 1rem;
 }
 
-.confirmation-label {
-  font-size: 1.25rem;
-  color: var(--color-lafayette-gray, #3c373c);
+/* Same role as LockOverlay lock icon: above the box, same size; green for success */
+.confirmation-success-icon {
+  flex-shrink: 0;
+  color: #16a34a;
+  opacity: 0.9;
+}
+
+/* Same alignment/size as lock password bar; flat box (no shadow) so it reads as message, not input */
+.confirmation-message-bar {
+  position: relative;
+  display: inline-flex;
+  min-height: 60px;
+  min-width: 460px;
+  width: max-content;
+  padding: 0 24px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-lafayette-gray, #3c373c);
+  background: #fff;
+  border-radius: 12px;
+}
+
+.confirmation-message-text {
+  font-size: 1.5rem;
+  color: #000;
   text-align: center;
+  line-height: 1.3;
 }
 
-/* Buttons side by side; match header nav pill style */
+/* Match LockOverlay.vue .lock-back-block + .lock-back-btn: same button styling */
 .confirmation-actions {
+  margin-top: 0.25rem;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  width: 100%;
 }
 
-/* Reuse header nav button look: pill, same padding/size/transition */
 .confirmation-btn {
-  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.5rem 1.5rem;
-  min-height: 2.75rem;
-  font-size: 1.25rem;
-  font-weight: 500;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
-  cursor: pointer;
-  flex: none;
+  min-width: 3rem;
+  min-height: 3rem;
 }
 
-/* Primary = header bar color: red fill, white text */
-.confirmation-btn-primary {
-  background-color: var(--color-lafayette-red, #910029);
-  color: #fff;
-  border: none;
-}
-
-.confirmation-btn-primary:hover {
-  background-color: var(--color-lafayette-dark-blue, #006690);
-  color: #fff;
-}
-
-.confirmation-btn-primary:focus-visible {
+.confirmation-btn:focus,
+.confirmation-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(145, 0, 41, 0.12);
-}
-
-/* Secondary = inactive-style on light card: transparent, red border/text */
-.confirmation-btn-secondary {
-  background-color: transparent;
-  color: var(--color-lafayette-red, #910029);
-  border: 2px solid var(--color-lafayette-red, #910029);
-}
-
-.confirmation-btn-secondary:hover {
-  background-color: rgba(145, 0, 41, 0.08);
-  color: var(--color-lafayette-red, #910029);
-}
-
-.confirmation-btn-secondary:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(145, 0, 41, 0.12);
+  box-shadow: none;
 }
 </style>
