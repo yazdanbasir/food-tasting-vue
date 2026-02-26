@@ -333,12 +333,12 @@ const totalCents = computed(() => {
                     <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.cooking_location || '').trim() }">{{ (sub.cooking_location || '').trim() || '—' }}</span>
                   </div>
                   <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Other ingredients</span>
-                    <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'All found ✅' : 'Missing ❌' }}</span>
+                    <span class="submission-detail-meta-label">Ingredients</span>
+                    <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'All Found ✅' : 'Missing Items ⚠️' }}</span>
                   </div>
                   <div v-if="sub.needs_utensils" class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Utensils</span>
-                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needed ✅' : 'Not needed ❌' }}</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needs Utensils ⚠️' : 'No Utensils ✅' }}</span>
                   </div>
                 </div>
               </div>
