@@ -49,7 +49,7 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 }
 
 
-const activeTab = ref<'submissions' | 'grocery' | 'notifications'>('submissions')
+const activeTab = ref<'submissions' | 'grocery' | 'notifications' | 'kitchen' | 'supplies'>('submissions')
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
 const expandedSubmissions = ref<Set<number>>(new Set())
@@ -136,6 +136,16 @@ function switchToNotifications() {
   activeTab.value = 'notifications'
   addProductError.value = null
   notifStore.load()
+}
+
+function switchToKitchen() {
+  activeTab.value = 'kitchen'
+  addProductError.value = null
+}
+
+function switchToSupplies() {
+  activeTab.value = 'supplies'
+  addProductError.value = null
 }
 
 function notifRelativeTime(dateStr: string): string {
@@ -255,6 +265,22 @@ const totalCents = computed(() => {
         >
           Notifications
           <span v-if="notifStore.unreadCount > 0" class="dashboard-notif-badge">{{ notifStore.unreadCount > 9 ? '9+' : notifStore.unreadCount }}</span>
+        </button>
+        <button
+          type="button"
+          class="dashboard-subtab"
+          :class="activeTab === 'kitchen' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+          @click="switchToKitchen"
+        >
+          Kitchen Assignments
+        </button>
+        <button
+          type="button"
+          class="dashboard-subtab"
+          :class="activeTab === 'supplies' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+          @click="switchToSupplies"
+        >
+          Supplies/Utensils
         </button>
       </div>
     </div>
@@ -424,6 +450,16 @@ const totalCents = computed(() => {
           <span>Estimated total</span>
           <span class="tabular-nums">${{ (totalCents / 100).toFixed(2) }}</span>
         </div>
+      </div>
+
+      <!-- Kitchen Assignments Tab -->
+      <div v-else-if="activeTab === 'kitchen'">
+        <div class="dashboard-empty">Kitchen Assignments — coming soon.</div>
+      </div>
+
+      <!-- Supplies/Utensils Tab -->
+      <div v-else-if="activeTab === 'supplies'">
+        <div class="dashboard-empty">Supplies/Utensils — coming soon.</div>
       </div>
 
       <!-- Notifications Tab -->

@@ -53,6 +53,7 @@ const showGrocerySection = computed(() =>
             <li><span class="home-reminders-line">Please <strong>SEARCH</strong> for products very thoroughly. Read the <strong>QUANTITIES</strong> and size very carefully too!</span></li>
             <li><span class="home-reminders-line">If you can't find something, don't worry. You can add those items to separate list</span></li>
             <li><span class="home-reminders-line">Please remain available on <strong>DATE</strong> around <strong>TIME</strong> so we can call you while we are shopping in case we need clarification.</span></li>
+            <li><span class="home-reminders-line">If you need to edit your submission, click Submissions in the top right and enter your phone number</span></li>
           </ul>
         </div>
       </div>
@@ -228,6 +229,7 @@ const showGrocerySection = computed(() =>
 .home-reminders-section-scroll {
   overflow-x: auto;
   overflow-y: hidden;
+  padding-bottom: 1.5em; /* one line of space so scroll bar sits below last bullet */
 }
 
 .home-reminders-section-inner {

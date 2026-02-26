@@ -82,9 +82,9 @@ function onKeydown(e: KeyboardEvent) {
           <div class="flex flex-col items-center gap-4">
 
             <svg
-              class="w-6 h-6 lock-icon"
-              width="24"
-              height="24"
+              class="lock-icon lock-overlay-icon"
+              width="32"
+              height="32"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -98,8 +98,13 @@ function onKeydown(e: KeyboardEvent) {
             <div v-else-if="isLookingUp" class="lock-searching">Searching...</div>
 
             <div class="lock-password-wrapper">
-              <span v-if="!input.length" class="lock-password-placeholder">Enter password or phone number</span>
-              <span v-else class="lock-password-dots">{{ '•'.repeat(input.length) }}</span>
+              <div class="lock-password-text-layer">
+                <span
+                  v-if="!input.length"
+                  class="lock-password-placeholder"
+                >Enter password or phone number</span>
+                <span v-else class="lock-password-dots">{{ '•'.repeat(input.length) }}</span>
+              </div>
               <input
                 ref="inputRef"
                 v-model="input"
@@ -112,7 +117,7 @@ function onKeydown(e: KeyboardEvent) {
 
             <div class="lock-back-block">
               <button type="button" class="btn-pill-primary lock-back-btn" aria-label="Take me back" @click="router.push('/')">
-                <svg class="lock-back-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg class="lock-back-arrow lock-overlay-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
               </button>
@@ -127,6 +132,10 @@ function onKeydown(e: KeyboardEvent) {
 </template>
 
 <style scoped>
+.lock-overlay-icon {
+  flex-shrink: 0;
+}
+
 .lock-icon {
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.6;
@@ -136,7 +145,7 @@ function onKeydown(e: KeyboardEvent) {
   font-size: 0.9375rem;
   color: #b91c1c;
   text-align: center;
-  max-width: 280px;
+  max-width: 400px;
 }
 
 .lock-searching {
@@ -154,56 +163,73 @@ function onKeydown(e: KeyboardEvent) {
 
 .lock-password-wrapper {
   position: relative;
-  width: 280px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
+  display: inline-flex;
+  min-height: 60px;
+  min-width: 460px;
+  width: max-content;
+  padding: 0 24px;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   background: #fff;
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.lock-password-placeholder {
+.lock-password-text-layer {
   position: absolute;
-  font-size: 1rem;
-  color: rgba(60, 55, 60, 0.4);
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
   pointer-events: none;
+}
+
+.lock-password-placeholder,
+.lock-password-dots {
+  display: inline-block;
   white-space: nowrap;
+  pointer-events: none;
+}
+
+.lock-password-placeholder {
+  font-size: 1.5rem;
+  color: rgba(60, 55, 60, 0.4);
 }
 
 .lock-password-dots {
-  position: absolute;
-  font-size: 1.75rem;
+  font-size: 2rem;
   letter-spacing: 0.15em;
   color: var(--color-lafayette-gray, #3c373c);
-  pointer-events: none;
 }
 
 .lock-password-input {
   position: absolute;
   inset: 0;
   width: 100%;
-  padding: 0 16px;
+  padding: 0 24px;
   border: none;
-  border-radius: 10px;
-  font-size: 1.75rem;
+  border-radius: 12px;
+  font-size: 2rem;
   letter-spacing: 0.15em;
   font-family: inherit;
   color: transparent;
   background: transparent;
   caret-color: var(--color-lafayette-gray, #3c373c);
   outline: none;
-}
-
-.lock-password-input:focus {
   box-shadow: none;
 }
 
+.lock-password-input:focus,
+.lock-password-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* No focus ring on the bar (remove macOS/browser highlight and our red ring) */
 .lock-password-wrapper:focus-within {
-  border-color: var(--color-lafayette-red, #910029);
-  box-shadow: 0 0 0 3px rgba(145, 0, 41, 0.12);
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: var(--color-lafayette-gray, #3c373c);
 }
 
 .lock-fade-enter-active,
@@ -228,8 +254,14 @@ function onKeydown(e: KeyboardEvent) {
   align-items: center;
   justify-content: center;
   padding: 0.5rem;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  min-width: 3rem;
+  min-height: 3rem;
+}
+
+.lock-back-btn:focus,
+.lock-back-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .lock-back-arrow {
