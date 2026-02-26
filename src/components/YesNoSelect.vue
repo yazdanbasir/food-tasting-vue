@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps<{
   modelValue: 'yes' | 'no' | ''
@@ -13,11 +13,6 @@ const emit = defineEmits<{
 const open = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
-
-const selectedLabel = computed(() => {
-  if (!props.modelValue) return props.placeholder
-  return props.modelValue === 'yes' ? 'Yes' : 'No'
-})
 
 function toggle() {
   open.value = !open.value
@@ -56,7 +51,11 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
       :aria-expanded="open"
       @click="toggle"
     >
-      {{ selectedLabel }}
+      <template v-if="modelValue">
+        <span class="yes-no-question-label">{{ placeholder }}</span>
+        <span class="yes-no-answer-label">{{ modelValue === 'yes' ? 'Yes' : 'No' }}</span>
+      </template>
+      <template v-else>{{ placeholder }}</template>
       <span class="yes-no-select-chevron" aria-hidden="true">{{ open ? '▲' : '▼' }}</span>
     </button>
     <div
@@ -85,11 +84,12 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .yes-no-select-wrap {
   position: relative;
   display: inline-block;
-  width: max-content;
+  width: 100%;
   min-width: 0;
 }
 
 .yes-no-select-btn {
+  width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -120,6 +120,17 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   opacity: 0.85;
 }
 
+.yes-no-question-label {
+  opacity: 0.55;
+  font-weight: 400;
+  margin-right: 0.3em;
+}
+
+.yes-no-answer-label {
+  font-weight: 700;
+  margin-right: 0.15em;
+}
+
 .yes-no-select-chevron {
   flex-shrink: 0;
   font-size: 0.65em;
@@ -130,7 +141,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   position: absolute;
   top: calc(100% + 0.25rem);
   left: 0;
-  min-width: 8rem;
+  min-width: 100%;
   background: #fff;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   border-radius: 0.75rem;

@@ -115,7 +115,7 @@ export const useSubmissionStore = defineStore('submission', () => {
       canAdvancePage1.value &&
       foundAllIngredients.value !== '' &&
       hasCookingPlace.value !== '' &&
-      (hasCookingPlace.value !== 'no' || cookingLocation.value.trim().length > 0) &&
+      (hasCookingPlace.value !== 'yes' || cookingLocation.value.trim().length > 0) &&
       needsUtensils.value !== '',
   )
 

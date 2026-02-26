@@ -49,7 +49,7 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 }
 
 
-const activeTab = ref<'submissions' | 'grocery' | 'notifications' | 'kitchen' | 'supplies'>('submissions')
+const activeTab = ref<'submissions' | 'grocery' | 'notifications' | 'kitchen'>('submissions')
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
 const expandedSubmissions = ref<Set<number>>(new Set())
@@ -140,11 +140,6 @@ function switchToNotifications() {
 
 function switchToKitchen() {
   activeTab.value = 'kitchen'
-  addProductError.value = null
-}
-
-function switchToSupplies() {
-  activeTab.value = 'supplies'
   addProductError.value = null
 }
 
@@ -247,7 +242,7 @@ const totalCents = computed(() => {
           :class="activeTab === 'submissions' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
           @click="activeTab = 'submissions'; addProductError = null"
         >
-          Dishes
+          Submissions
         </button>
         <button
           type="button"
@@ -260,27 +255,19 @@ const totalCents = computed(() => {
         <button
           type="button"
           class="dashboard-subtab"
+          :class="activeTab === 'kitchen' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+          @click="switchToKitchen"
+        >
+          Kitchen & Utensils Allocation
+        </button>
+        <button
+          type="button"
+          class="dashboard-subtab"
           :class="activeTab === 'notifications' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
           @click="switchToNotifications"
         >
           Notifications
           <span v-if="notifStore.unreadCount > 0" class="dashboard-notif-badge">{{ notifStore.unreadCount > 9 ? '9+' : notifStore.unreadCount }}</span>
-        </button>
-        <button
-          type="button"
-          class="dashboard-subtab"
-          :class="activeTab === 'kitchen' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="switchToKitchen"
-        >
-          Kitchen Assignments
-        </button>
-        <button
-          type="button"
-          class="dashboard-subtab"
-          :class="activeTab === 'supplies' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="switchToSupplies"
-        >
-          Supplies/Utensils
         </button>
       </div>
     </div>
@@ -314,30 +301,6 @@ const totalCents = computed(() => {
                   <div class="form-section-pill submission-dish-pill">
                     <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name || 'dish name...' }}</span>
                   </div>
-                  <div class="form-section-pill submission-members-pill">
-                    <span
-                      class="form-section-pill-input submission-members-text"
-                      :class="{ 'submission-members-placeholder': !(sub.members || []).length }"
-                    >{{ (sub.members || []).length ? (sub.members || []).join(', ') : 'members...' }}</span>
-                  </div>
-                  <div class="form-section-pill submission-phone-pill">
-                    <span
-                      class="form-section-pill-input submission-phone-text"
-                      :class="{ 'submission-phone-placeholder': !(sub.phone_number || '').trim() }"
-                    >{{ (sub.phone_number || '').trim() || 'phone...' }}</span>
-                  </div>
-                  <div class="form-section-pill submission-cooking-pill">
-                    <span
-                      class="form-section-pill-input submission-cooking-text"
-                      :class="{ 'submission-cooking-placeholder': !sub.has_cooking_place }"
-                    >{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Kitchen ✅' : 'Kitchen ❌') : 'kitchen...' }}</span>
-                  </div>
-                  <div v-if="sub.has_cooking_place === 'yes'" class="form-section-pill submission-location-pill">
-                    <span
-                      class="form-section-pill-input submission-location-text"
-                      :class="{ 'submission-location-placeholder': !(sub.cooking_location || '').trim() }"
-                    >{{ (sub.cooking_location || '').trim() || 'location...' }}</span>
-                  </div>
                 </div>
               </div>
               <div class="submission-meta">
@@ -351,6 +314,34 @@ const totalCents = computed(() => {
             </button>
 
             <div v-if="expandedSubmissions.has(sub.id)" class="submission-detail">
+              <div class="submission-detail-meta">
+                <div class="submission-detail-meta-grid">
+                  <div class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Members</span>
+                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.members || []).length }">{{ (sub.members || []).length ? (sub.members || []).join(', ') : '—' }}</span>
+                  </div>
+                  <div class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Phone</span>
+                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.phone_number || '').trim() }">{{ (sub.phone_number || '').trim() || '—' }}</span>
+                  </div>
+                  <div class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Kitchen</span>
+                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.has_cooking_place }">{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Yes ✅' : 'No ❌') : '—' }}</span>
+                  </div>
+                  <div v-if="sub.has_cooking_place === 'no'" class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Cooking location</span>
+                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.cooking_location || '').trim() }">{{ (sub.cooking_location || '').trim() || '—' }}</span>
+                  </div>
+                  <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Other ingredients</span>
+                    <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'All found ✅' : 'Missing ❌' }}</span>
+                  </div>
+                  <div v-if="sub.needs_utensils" class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Utensils</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needed ✅' : 'Not needed ❌' }}</span>
+                  </div>
+                </div>
+              </div>
               <div class="form-section-ingredients submission-detail-ingredients">
                 <div class="submission-detail-list">
                   <IngredientRow
@@ -452,14 +443,9 @@ const totalCents = computed(() => {
         </div>
       </div>
 
-      <!-- Kitchen Assignments Tab -->
+      <!-- Kitchen & Utensils Allocation Tab -->
       <div v-else-if="activeTab === 'kitchen'">
-        <div class="dashboard-empty">Kitchen Assignments — coming soon.</div>
-      </div>
-
-      <!-- Supplies/Utensils Tab -->
-      <div v-else-if="activeTab === 'supplies'">
-        <div class="dashboard-empty">Supplies/Utensils — coming soon.</div>
+        <div class="dashboard-empty">Kitchen & Utensils Allocation — coming soon.</div>
       </div>
 
       <!-- Notifications Tab -->
@@ -541,11 +527,6 @@ const totalCents = computed(() => {
   color: var(--color-lafayette-red, #910029);
 }
 
-.dashboard-subtab-active:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-}
-
 .dashboard-subtab-inactive {
   background-color: transparent;
   color: rgba(255, 255, 255, 0.88);
@@ -555,12 +536,6 @@ const totalCents = computed(() => {
   background-color: rgba(255, 255, 255, 0.18);
   color: #fff;
 }
-
-.dashboard-subtab-inactive:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.7);
-  outline-offset: 2px;
-}
-
 
 .dashboard-body {
   flex: 1;
@@ -576,6 +551,17 @@ const totalCents = computed(() => {
 
 .dashboard-error {
   color: #b91c1c;
+}
+
+/* Remove macOS/default focus outlines from all focusable elements on this page */
+.dashboard button:focus,
+.dashboard button:focus-visible,
+.dashboard input:focus,
+.dashboard input:focus-visible,
+.dashboard label:focus,
+.dashboard label:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 /* Submissions: card + grid row */
@@ -608,11 +594,6 @@ const totalCents = computed(() => {
 
 .submission-row:hover {
   opacity: 0.85;
-}
-
-.submission-row:focus-visible {
-  outline: 2px solid #000;
-  outline-offset: 2px;
 }
 
 .submission-bar {
@@ -662,86 +643,6 @@ const totalCents = computed(() => {
   white-space: nowrap;
 }
 
-/* Members pill: same as form (one pill, comma-separated text), auto-fit width */
-.submission-bar .submission-members-pill {
-  flex: none;
-  width: fit-content;
-  min-width: 0;
-}
-
-.submission-members-pill .form-section-pill-input {
-  width: auto;
-  min-width: 4ch;
-  min-height: 2.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.submission-members-text {
-  white-space: nowrap;
-}
-
-.submission-members-placeholder {
-  color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.8;
-}
-
-.submission-bar .submission-phone-pill {
-  flex: none;
-  width: fit-content;
-  min-width: 0;
-}
-
-.submission-phone-pill .form-section-pill-input {
-  width: auto;
-  min-width: 4ch;
-  min-height: 2.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.submission-phone-text {
-  white-space: nowrap;
-}
-
-.submission-phone-placeholder {
-  color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.8;
-}
-
-.submission-bar .submission-cooking-pill,
-.submission-bar .submission-location-pill {
-  flex: none;
-  width: fit-content;
-  min-width: 0;
-}
-
-.submission-cooking-pill .form-section-pill-input,
-.submission-location-pill .form-section-pill-input {
-  width: auto;
-  min-width: 4ch;
-  min-height: 2.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.submission-cooking-text,
-.submission-location-text {
-  white-space: nowrap;
-}
-
-.submission-cooking-placeholder,
-.submission-location-placeholder {
-  color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.8;
-}
-
 .submission-meta {
   flex: none;
   display: flex;
@@ -775,9 +676,52 @@ const totalCents = computed(() => {
   padding: 0 1rem 1rem;
 }
 
+.submission-detail-meta {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 1rem;
+  font-size: var(--body-font-size, 1.125rem);
+}
+
+.submission-detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem 1.5rem;
+}
+
+.submission-detail-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.submission-detail-meta-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.submission-detail-meta-value {
+  font-size: inherit;
+  font-weight: 500;
+  color: var(--color-lafayette-gray, #3c373c);
+  line-height: 1.5;
+}
+
+.submission-detail-meta-value.submission-detail-meta-empty {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* Align ingredients block with meta bar: same horizontal extent and content alignment */
 .submission-detail-ingredients {
   flex: none;
   min-height: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .submission-detail-list {

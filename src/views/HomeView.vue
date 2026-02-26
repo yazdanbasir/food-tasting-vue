@@ -16,7 +16,16 @@ const IngredientList = defineAsyncComponent(
 )
 
 const store = useSubmissionStore()
-const { members, ingredients, canAdvancePage1, canSubmit } = storeToRefs(store)
+const {
+  members,
+  ingredients,
+  canAdvancePage1,
+  canSubmit,
+  hasCookingPlace,
+  cookingLocation,
+  foundAllIngredients,
+  needsUtensils,
+} = storeToRefs(store)
 const router = useRouter()
 
 const membersText = computed({
@@ -70,10 +79,10 @@ async function handleSubmit() {
     country_code: store.countryCode || '',
     members: [...members.value],
     phone_number: store.phoneNumber?.trim() || undefined,
-    has_cooking_place: store.hasCookingPlace || undefined,
-    cooking_location: store.hasCookingPlace === 'no' ? store.cookingLocation?.trim() || undefined : undefined,
-    found_all_ingredients: store.foundAllIngredients || undefined,
-    needs_utensils: store.needsUtensils || undefined,
+    has_cooking_place: hasCookingPlace.value || undefined,
+    cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
+    found_all_ingredients: foundAllIngredients.value || undefined,
+    needs_utensils: needsUtensils.value || undefined,
     ingredients: ingredients.value.map((item) => ({
       ingredient_id: item.ingredient.id,
       quantity: item.quantity,
@@ -161,7 +170,7 @@ async function handleSubmit() {
             <input
               v-model="store.dishName"
               type="text"
-              placeholder="dish name"
+              placeholder="Dish Name"
               size="11"
               class="form-section-pill-input pill-input-center"
             />
@@ -170,7 +179,7 @@ async function handleSubmit() {
             <input
               v-model="membersText"
               type="text"
-              placeholder="who's on your team?"
+              placeholder="Team Member Names"
               class="form-section-pill-input pill-input-center"
             />
           </div>
@@ -178,7 +187,7 @@ async function handleSubmit() {
             <input
               v-model="store.phoneNumber"
               type="text"
-              placeholder="phone number"
+              placeholder="Phone Number"
               size="14"
               class="form-section-pill-input pill-input-center"
             />
@@ -234,41 +243,41 @@ async function handleSubmit() {
               <div class="form-section-pill form-section-pill-label">Additional Details</div>
               <div class="form-section-pill home-dish-pill">
                 <YesNoSelect
-                  v-model="store.foundAllIngredients"
-                  placeholder="did you find all ingredients?"
+                  v-model="foundAllIngredients"
+                  placeholder="Did you find all ingredients?"
                 />
               </div>
               <div class="form-section-pill home-dish-pill">
                 <YesNoSelect
-                  v-model="store.hasCookingPlace"
-                  placeholder="do you have a kitchen"
+                  v-model="hasCookingPlace"
+                  placeholder="Do you have a kitchen"
                 />
               </div>
               <div class="form-section-pill home-dish-pill">
                 <YesNoSelect
-                  v-model="store.needsUtensils"
-                  placeholder="do you need utensils/equipment?"
+                  v-model="needsUtensils"
+                  placeholder="Do you need utensils/equipment?"
                 />
               </div>
             </div>
           </div>
 
           <!-- Other Ingredients section (shows if foundAllIngredients = 'no') -->
-          <div v-if="store.foundAllIngredients === 'no'" class="home-dish-bar form-section-top-bar">
+          <div v-if="foundAllIngredients === 'no'" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Other Ingredients</div>
             </div>
           </div>
 
-          <!-- Cooking Location section (shows if hasCookingPlace = 'no') -->
-          <div v-if="store.hasCookingPlace === 'no'" class="home-dish-bar form-section-top-bar">
+          <!-- Cooking Location section (shows if hasCookingPlace = 'yes') -->
+          <div v-if="hasCookingPlace === 'yes'" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Cooking Location</div>
               <div class="form-section-pill home-dish-pill">
                 <input
-                  v-model="store.cookingLocation"
+                  v-model="cookingLocation"
                   type="text"
-                  placeholder="where? (building + floor)"
+                  placeholder="Where? Please specify building + floor"
                   size="27"
                   class="form-section-pill-input pill-input-center"
                 />
@@ -277,7 +286,7 @@ async function handleSubmit() {
           </div>
 
           <!-- Utensils / Equipment section (shows if needsUtensils = 'yes') -->
-          <div v-if="store.needsUtensils === 'yes'" class="home-dish-bar form-section-top-bar">
+          <div v-if="needsUtensils === 'yes'" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Utensils / Equipment</div>
             </div>

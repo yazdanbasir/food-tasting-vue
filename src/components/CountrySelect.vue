@@ -12,9 +12,9 @@ const countrySearchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 
 const selectedLabel = computed(() => {
-  if (!countryCode.value) return 'country'
+  if (!countryCode.value) return 'Country'
   const c = COUNTRIES.find((x) => x.code === countryCode.value)
-  return c ? `${flagEmoji(c.code)} ${c.name}` : 'country'
+  return c ? `${flagEmoji(c.code)} ${c.name}` : 'Country'
 })
 
 const filteredCountries = computed(() => {
