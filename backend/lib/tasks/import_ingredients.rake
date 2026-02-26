@@ -6,9 +6,10 @@ namespace :import do
   desc "Import ingredients from the Giant scraper database into Rails (upsert by product_id)"
   task ingredients: :environment do
     scraper_db_path = Rails.root.join("storage", "giant-inventory.db")
+    scraper_db_path = Rails.root.join("scraper", "giant-inventory.db") unless File.exist?(scraper_db_path)
 
     unless File.exist?(scraper_db_path)
-      abort "Scraper DB not found at #{scraper_db_path}"
+      abort "Scraper DB not found. Looked in storage/ and scraper/."
     end
 
     source = SQLite3::Database.new(scraper_db_path.to_s)
@@ -20,7 +21,7 @@ namespace :import do
     offset     = 0
 
     loop do
-      rows = source.execute('SELECT * FROM "product-info" LIMIT ? OFFSET ?', BATCH_SIZE, offset)
+      rows = source.execute('SELECT * FROM "product-info" LIMIT ? OFFSET ?', [BATCH_SIZE, offset])
       break if rows.empty?
 
       rows.each do |row|
