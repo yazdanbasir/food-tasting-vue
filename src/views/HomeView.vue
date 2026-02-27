@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import CountrySelect from '@/components/CountrySelect.vue'
 import YesNoSelect from '@/components/YesNoSelect.vue'
+import { TriangleAlert } from 'lucide-vue-next'
 import { useSubmissionStore } from '@/stores/submission'
 import { createSubmission, updateSubmission } from '@/api/submissions'
 
@@ -31,10 +32,8 @@ const {
 const phoneIsValid = computed(() =>
   store.phoneNumber.trim().length === 0 ? false : store.isUSPhoneNumber(store.phoneNumber),
 )
-const phoneError = computed(() =>
-  store.phoneNumber.trim().length > 0 && !phoneIsValid.value
-    ? 'Please enter a valid US phone number (10 digits, with optional +1 country code).'
-    : '',
+const phoneIncomplete = computed(
+  () => store.phoneNumber.trim().length > 0 && !phoneIsValid.value,
 )
 const router = useRouter()
 
@@ -197,18 +196,25 @@ async function handleSubmit() {
             />
           </div>
           <div class="form-section-pill home-dish-pill home-dish-pill-phone">
-            <input
-              v-model="store.phoneNumber"
-              type="text"
-              inputmode="tel"
-              placeholder="Phone Number"
-              size="14"
-              class="form-section-pill-input pill-input-center"
-              :aria-invalid="!!phoneError"
-            />
-            <p v-if="phoneError" class="home-field-error">
-              {{ phoneError }}
-            </p>
+            <span class="home-phone-pill-inner">
+              <input
+                v-model="store.phoneNumber"
+                type="text"
+                inputmode="tel"
+                placeholder="US Phone Number"
+                size="14"
+                class="form-section-pill-input pill-input-center"
+                :aria-invalid="phoneIncomplete"
+              />
+              <span
+                v-if="phoneIncomplete"
+                class="home-phone-hazard-wrap"
+                title="Please enter a valid US phone number"
+                aria-label="Please enter a valid US phone number"
+              >
+                <TriangleAlert class="home-phone-hazard" aria-hidden="true" />
+              </span>
+            </span>
           </div>
         </div>
       </div>
@@ -418,6 +424,27 @@ async function handleSubmit() {
 
 .home-dish-pill-country {
   color: var(--color-lafayette-gray, #3c373c);
+}
+
+.home-phone-pill-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.home-phone-hazard-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-phone-hazard {
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: #b91c1c;
+  pointer-events: none;
 }
 
 .home-layout {
