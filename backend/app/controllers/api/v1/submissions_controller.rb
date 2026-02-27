@@ -17,7 +17,8 @@ class Api::V1::SubmissionsController < ApplicationController
       has_cooking_place: params[:has_cooking_place].presence,
       cooking_location: params[:cooking_location].presence,
       found_all_ingredients: params[:found_all_ingredients].presence,
-      needs_utensils: params[:needs_utensils].presence
+      needs_utensils: params[:needs_utensils].presence,
+      utensils_notes: params[:utensils_notes].presence
     }
     @submission = Submission.new(attrs)
 
@@ -112,7 +113,8 @@ class Api::V1::SubmissionsController < ApplicationController
       has_cooking_place: params[:has_cooking_place].presence,
       cooking_location: params[:cooking_location].presence,
       found_all_ingredients: params[:found_all_ingredients].presence,
-      needs_utensils: params[:needs_utensils].presence
+      needs_utensils: params[:needs_utensils].presence,
+      utensils_notes: params[:utensils_notes].presence
     )
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
@@ -162,6 +164,21 @@ class Api::V1::SubmissionsController < ApplicationController
     render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Submission or ingredient not found" }, status: :not_found
+  end
+
+  # PATCH /api/v1/submissions/by_id/:id/kitchen_allocation (organizer only)
+  def kitchen_allocation
+    submission = Submission.find(params[:id])
+    attrs = {}
+    attrs[:cooking_location]     = params[:cooking_location]     if params.key?(:cooking_location)
+    attrs[:equipment_allocated]  = params[:equipment_allocated]  if params.key?(:equipment_allocated)
+    attrs[:helper_driver_needed] = params[:helper_driver_needed] if params.key?(:helper_driver_needed)
+    submission.update!(attrs)
+    render json: submission_json(submission.reload), status: :ok
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Submission not found" }, status: :not_found
   end
 
   # DELETE /api/v1/submissions/by_id/:id (organizer only)
@@ -228,6 +245,9 @@ class Api::V1::SubmissionsController < ApplicationController
       cooking_location: submission.cooking_location,
       found_all_ingredients: submission.found_all_ingredients,
       needs_utensils: submission.needs_utensils,
+      utensils_notes: submission.utensils_notes,
+      equipment_allocated: submission.equipment_allocated,
+      helper_driver_needed: submission.helper_driver_needed,
       submitted_at: submission.created_at,
       ingredients: submission.submission_ingredients.map do |si|
         {

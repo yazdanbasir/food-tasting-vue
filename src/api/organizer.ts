@@ -1,3 +1,5 @@
+import type { SubmissionResponse } from '@/api/submissions'
+
 const BASE = import.meta.env.VITE_API_BASE_URL
 
 const LOG_PREFIX = '[Organizer Auth]'
@@ -141,6 +143,30 @@ export async function updateSubmissionIngredientQuantity(
       (body as { error?: string }).error || `Failed to update quantity: ${res.status}`,
     )
   }
+}
+
+export interface KitchenAllocationPayload {
+  cooking_location?: string
+  equipment_allocated?: string
+  helper_driver_needed?: string
+}
+
+export async function updateKitchenAllocation(
+  id: number,
+  fields: KitchenAllocationPayload,
+): Promise<SubmissionResponse> {
+  const res = await fetch(`${BASE}/api/v1/submissions/by_id/${id}/kitchen_allocation`, {
+    method: 'PATCH',
+    headers: organizerHeaders(),
+    body: JSON.stringify(fields),
+  })
+  const body = await res.json().catch(() => ({}))
+  if (res.status === 401) {
+    clearStaleOrganizerToken()
+    throw new Error('Session expired. Please log in again from the Organizer tab.')
+  }
+  if (!res.ok) throw new Error((body as { error?: string }).error || `Kitchen update failed: ${res.status}`)
+  return body as SubmissionResponse
 }
 
 export async function deleteSubmission(submissionId: number): Promise<void> {

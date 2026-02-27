@@ -25,6 +25,7 @@ const {
   cookingLocation,
   foundAllIngredients,
   needsUtensils,
+  utensilsNotes,
 } = storeToRefs(store)
 const router = useRouter()
 
@@ -83,6 +84,7 @@ async function handleSubmit() {
     cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
     found_all_ingredients: foundAllIngredients.value || undefined,
     needs_utensils: needsUtensils.value || undefined,
+    utensils_notes: needsUtensils.value === 'yes' ? utensilsNotes.value.trim() || undefined : undefined,
     ingredients: ingredients.value.map((item) => ({
       ingredient_id: item.ingredient.id,
       quantity: item.quantity,
@@ -290,6 +292,14 @@ async function handleSubmit() {
           <div v-if="needsUtensils === 'yes'" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Utensils / Equipment</div>
+              <div class="form-section-pill home-dish-pill home-dish-pill-grow">
+                <input
+                  v-model="utensilsNotes"
+                  type="text"
+                  placeholder="What do you need? (e.g. large pot, strainer, ladle)"
+                  class="form-section-pill-input pill-input-center"
+                />
+              </div>
             </div>
           </div>
 

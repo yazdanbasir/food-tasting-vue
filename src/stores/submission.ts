@@ -14,6 +14,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   const cookingLocation = ref('')
   const foundAllIngredients = ref<'yes' | 'no' | ''>('')
   const needsUtensils = ref<'yes' | 'no' | ''>('')
+  const utensilsNotes = ref('')
 
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
@@ -129,6 +130,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     cookingLocation.value = ''
     foundAllIngredients.value = ''
     needsUtensils.value = ''
+    utensilsNotes.value = ''
     ingredients.value = []
   }
 
@@ -152,6 +154,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     cookingLocation.value = sub.cooking_location ?? ''
     foundAllIngredients.value = (sub.found_all_ingredients as 'yes' | 'no' | '') ?? ''
     needsUtensils.value = (sub.needs_utensils as 'yes' | 'no' | '') ?? ''
+    utensilsNotes.value = sub.utensils_notes ?? ''
     ingredients.value = sub.ingredients.map((item) => ({
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
@@ -178,6 +181,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     cookingLocation,
     foundAllIngredients,
     needsUtensils,
+    utensilsNotes,
     editingSubmissionId,
     editingAsOrganizer,
     addMember,

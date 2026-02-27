@@ -7,7 +7,7 @@ import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
-import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, type GroceryListResponse, type GroceryItem } from '@/api/organizer'
+import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload } from '@/api/organizer'
 import LockOverlay from '@/components/LockOverlay.vue'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
 import { useSubmissionStore } from '@/stores/submission'
@@ -49,7 +49,7 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 }
 
 
-const activeTab = ref<'submissions' | 'grocery' | 'notifications' | 'kitchen'>('submissions')
+const activeTab = ref<'submissions' | 'grocery' | 'notifications'>('submissions')
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
 const expandedSubmissions = ref<Set<number>>(new Set())
@@ -66,14 +66,12 @@ const addProductError = ref<string | null>(null)
 
 // Action Cable consumer
 const cable = createConsumer(`${import.meta.env.VITE_API_BASE_URL.replace(/^http/, 'ws')}/cable`)
-let grocerySubscription: ReturnType<typeof cable.subscriptions.create> | null = null
-
 onMounted(async () => {
   await loadSubmissions()
   notifStore.load()
 
   // Subscribe to real-time grocery list updates
-  grocerySubscription = cable.subscriptions.create('GroceryListChannel', {
+  cable.subscriptions.create('GroceryListChannel', {
     received(data: { ingredient_id: number; checked: boolean; checked_by: string | null; checked_at: string | null }) {
       if (!groceryList.value) return
       for (const items of Object.values(groceryList.value.aisles)) {
@@ -138,10 +136,6 @@ function switchToNotifications() {
   notifStore.load()
 }
 
-function switchToKitchen() {
-  activeTab.value = 'kitchen'
-  addProductError.value = null
-}
 
 function notifRelativeTime(dateStr: string): string {
   const diffSec = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -228,6 +222,46 @@ const totalCents = computed(() => {
   if (!groceryList.value) return 0
   return groceryList.value.total_cents
 })
+
+// ─── Kitchen table ────────────────────────────────────────────────────────
+
+
+const kitchenEditing = ref<Record<string, string>>({})
+const kitchenSaveError = ref<string | null>(null)
+
+function kitchenKey(id: number, field: string) { return `${id}:${field}` }
+function isKitchenEditing(id: number, field: string) { return kitchenKey(id, field) in kitchenEditing.value }
+function startKitchenEdit(id: number, field: string, val: string | null | undefined) {
+  kitchenEditing.value[kitchenKey(id, field)] = val ?? ''
+}
+function cancelKitchenEdit(id: number, field: string) {
+  const next = { ...kitchenEditing.value }
+  delete next[kitchenKey(id, field)]
+  kitchenEditing.value = next
+}
+
+async function saveKitchenField(
+  sub: SubmissionResponse,
+  field: 'cooking_location' | 'equipment_allocated' | 'helper_driver_needed',
+) {
+  const key = kitchenKey(sub.id, field)
+  const newValue = kitchenEditing.value[key]
+  if (newValue === undefined) return
+  const subInList = submissions.value.find(s => s.id === sub.id)
+  const prev = subInList ? (subInList as Record<string, unknown>)[field] : undefined
+  if (subInList) (subInList as Record<string, unknown>)[field] = newValue || null
+  cancelKitchenEdit(sub.id, field)
+  kitchenSaveError.value = null
+  try {
+    const updated = await updateKitchenAllocation(sub.id, { [field]: newValue } as KitchenAllocationPayload)
+    const idx = submissions.value.findIndex(s => s.id === updated.id)
+    if (idx !== -1) submissions.value[idx] = updated
+  } catch (err) {
+    if (subInList) (subInList as Record<string, unknown>)[field] = prev
+    kitchenSaveError.value = err instanceof Error ? err.message : 'Save failed'
+  }
+}
+
 </script>
 
 <template>
@@ -255,14 +289,6 @@ const totalCents = computed(() => {
         <button
           type="button"
           class="dashboard-subtab"
-          :class="activeTab === 'kitchen' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="switchToKitchen"
-        >
-          Kitchens & Utensils
-        </button>
-        <button
-          type="button"
-          class="dashboard-subtab"
           :class="activeTab === 'notifications' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
           @click="switchToNotifications"
         >
@@ -280,9 +306,26 @@ const totalCents = computed(() => {
       <div v-else-if="error" class="dashboard-error">{{ error }}</div>
 
       <!-- Submissions Tab -->
-      <div v-else-if="activeTab === 'submissions'">
+      <div v-else-if="activeTab === 'submissions'" class="kitchen-tab">
+
+        <div v-if="kitchenSaveError" class="kitchen-save-error">{{ kitchenSaveError }}</div>
+
         <div v-if="!submissions.length" class="dashboard-empty">No submissions yet.</div>
-        <div v-else class="submissions-list">
+        <div v-else class="submissions-scroll-wrap">
+
+          <!-- Column header row — 8-col grid matching data rows exactly -->
+          <div class="submission-table-header">
+            <div class="sub-header-cell">Country &amp; Dish</div>
+            <div class="sub-header-cell sub-header-center">Members</div>
+            <div class="sub-header-cell sub-header-center">Equip. Requested</div>
+            <div class="sub-header-cell sub-header-center">Equip. Allocated ✎</div>
+            <div class="sub-header-cell sub-header-center">Kitchen / Location ✎</div>
+            <div class="sub-header-cell sub-header-center">Helper / Driver? ✎</div>
+            <div class="sub-header-cell sub-header-center">Dietary</div>
+            <div class="sub-header-cell"></div>
+          </div>
+
+          <div class="submissions-list">
           <div
             v-for="sub in submissions"
             :key="sub.id"
@@ -293,6 +336,7 @@ const totalCents = computed(() => {
               class="submission-row"
               @click="toggleSubmissionExpanded(sub.id)"
             >
+              <!-- Col 1: Country + Dish pills -->
               <div class="submission-bar form-section-top-bar">
                 <div class="form-section-top-bar-inner">
                   <div class="form-section-pill">
@@ -303,13 +347,91 @@ const totalCents = computed(() => {
                   </div>
                 </div>
               </div>
-              <div class="submission-meta">
-                <span class="submission-dietary">
-                  <DietaryIcons :dietary="aggregateDietary(sub)" :size="16" />
-                </span>
-                <span class="submission-count tabular-nums">{{ sub.ingredients.length }} item{{ sub.ingredients.length !== 1 ? 's' : '' }}</span>
-                <span class="submission-date tabular-nums">{{ new Date(sub.submitted_at).toLocaleDateString() }}</span>
-                <span class="submission-expand">{{ expandedSubmissions.has(sub.id) ? '▲' : '▼' }}</span>
+
+              <!-- Col 2: Members -->
+              <div class="kitchen-cell">
+                {{ (sub.members || []).join(', ') || '—' }}
+              </div>
+
+              <!-- Col 3: Equipment Requested (read-only) -->
+              <div class="kitchen-cell">
+                <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes" class="kitchen-notes-text">{{ sub.utensils_notes }}</span>
+                <span v-else-if="sub.needs_utensils === 'yes'" class="kitchen-cell-empty">Needs utensils</span>
+                <span v-else-if="sub.needs_utensils === 'no'" class="kitchen-cell-empty">None needed</span>
+                <span v-else class="kitchen-cell-empty">—</span>
+              </div>
+
+              <!-- Col 4: Equipment Allocated (editable) -->
+              <div
+                class="kitchen-cell kitchen-cell-editable"
+                :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'equipment_allocated') }"
+                @dblclick.stop="startKitchenEdit(sub.id, 'equipment_allocated', sub.equipment_allocated)"
+              >
+                <input
+                  v-if="isKitchenEditing(sub.id, 'equipment_allocated')"
+                  v-model="kitchenEditing[kitchenKey(sub.id, 'equipment_allocated')]"
+                  class="kitchen-cell-input"
+                  type="text"
+                  autofocus
+                  @click.stop
+                  @blur="saveKitchenField(sub, 'equipment_allocated')"
+                  @keyup.enter="saveKitchenField(sub, 'equipment_allocated')"
+                  @keyup.escape="cancelKitchenEdit(sub.id, 'equipment_allocated')"
+                />
+                <span v-else-if="sub.equipment_allocated" class="kitchen-notes-text">{{ sub.equipment_allocated }}</span>
+                <span v-else class="kitchen-cell-hint">double-click</span>
+              </div>
+
+              <!-- Col 5: Kitchen / Location (editable) -->
+              <div
+                class="kitchen-cell kitchen-cell-editable"
+                :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'cooking_location') }"
+                @dblclick.stop="startKitchenEdit(sub.id, 'cooking_location', sub.cooking_location)"
+              >
+                <input
+                  v-if="isKitchenEditing(sub.id, 'cooking_location')"
+                  v-model="kitchenEditing[kitchenKey(sub.id, 'cooking_location')]"
+                  class="kitchen-cell-input"
+                  type="text"
+                  autofocus
+                  @click.stop
+                  @blur="saveKitchenField(sub, 'cooking_location')"
+                  @keyup.enter="saveKitchenField(sub, 'cooking_location')"
+                  @keyup.escape="cancelKitchenEdit(sub.id, 'cooking_location')"
+                />
+                <span v-else-if="sub.cooking_location" class="kitchen-notes-text">{{ sub.cooking_location }}</span>
+                <span v-else class="kitchen-cell-hint">double-click</span>
+              </div>
+
+              <!-- Col 6: Helper / Driver? (editable) -->
+              <div
+                class="kitchen-cell kitchen-cell-editable"
+                :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'helper_driver_needed') }"
+                @dblclick.stop="startKitchenEdit(sub.id, 'helper_driver_needed', sub.helper_driver_needed)"
+              >
+                <input
+                  v-if="isKitchenEditing(sub.id, 'helper_driver_needed')"
+                  v-model="kitchenEditing[kitchenKey(sub.id, 'helper_driver_needed')]"
+                  class="kitchen-cell-input"
+                  type="text"
+                  autofocus
+                  @click.stop
+                  @blur="saveKitchenField(sub, 'helper_driver_needed')"
+                  @keyup.enter="saveKitchenField(sub, 'helper_driver_needed')"
+                  @keyup.escape="cancelKitchenEdit(sub.id, 'helper_driver_needed')"
+                />
+                <span v-else-if="sub.helper_driver_needed" class="kitchen-notes-text">{{ sub.helper_driver_needed }}</span>
+                <span v-else class="kitchen-cell-hint">double-click</span>
+              </div>
+
+              <!-- Col 7: Dietary icons -->
+              <div class="sub-col-dietary">
+                <DietaryIcons :dietary="aggregateDietary(sub)" :size="14" />
+              </div>
+
+              <!-- Col 8: Expand arrow (far right) -->
+              <div class="sub-col-arrow">
+                {{ expandedSubmissions.has(sub.id) ? '▲' : '▼' }}
               </div>
             </button>
 
@@ -317,20 +439,12 @@ const totalCents = computed(() => {
               <div class="submission-detail-meta">
                 <div class="submission-detail-meta-grid">
                   <div class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Members</span>
-                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.members || []).length }">{{ (sub.members || []).length ? (sub.members || []).join(', ') : '—' }}</span>
-                  </div>
-                  <div class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Phone</span>
                     <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.phone_number || '').trim() }">{{ (sub.phone_number || '').trim() || '—' }}</span>
                   </div>
                   <div class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Kitchen</span>
+                    <span class="submission-detail-meta-label">Has Own Kitchen</span>
                     <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.has_cooking_place }">{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Yes ✅' : 'No ❌') : '—' }}</span>
-                  </div>
-                  <div v-if="sub.has_cooking_place === 'no'" class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Cooking location</span>
-                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.cooking_location || '').trim() }">{{ (sub.cooking_location || '').trim() || '—' }}</span>
                   </div>
                   <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Ingredients</span>
@@ -378,6 +492,7 @@ const totalCents = computed(() => {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -441,11 +556,6 @@ const totalCents = computed(() => {
           <span>Estimated total</span>
           <span class="tabular-nums">${{ (totalCents / 100).toFixed(2) }}</span>
         </div>
-      </div>
-
-      <!-- Kitchen & Utensils Allocation Tab -->
-      <div v-else-if="activeTab === 'kitchen'">
-        <div class="dashboard-empty">Kitchen & Utensils Allocation — coming soon.</div>
       </div>
 
       <!-- Notifications Tab -->
@@ -564,7 +674,11 @@ const totalCents = computed(() => {
   box-shadow: none;
 }
 
-/* Submissions: card + grid row */
+/* Submissions: scroll wrapper + card + grid row */
+.submissions-scroll-wrap {
+  overflow: visible;
+}
+
 .submissions-list {
   display: flex;
   flex-direction: column;
@@ -578,12 +692,44 @@ const totalCents = computed(() => {
   box-shadow: var(--shadow-natural, 6px 6px 9px rgba(0, 0, 0, 0.2));
 }
 
+/*
+  Shared 8-column grid — IDENTICAL template on header and every data row.
+  col 1 : country+dish pills  (min 16rem, 2× fr weight)
+  cols 2-6: data columns      (equal 1fr — resolves identically in both
+                               containers because they share the same parent width)
+  col 7: dietary icons        (fixed 4rem — predictable icon width)
+  col 8: expand arrow         (fixed 2rem — always at the far right)
+*/
+.submission-table-header,
+.submission-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(5, 1fr) 4rem 2rem;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.submission-table-header {
+  background: var(--color-lafayette-red, #910029);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.sub-header-cell {
+  min-width: 0;
+}
+
+.sub-header-center {
+  text-align: center;
+}
+
 .submission-row {
   width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0;
+  padding: 0.6rem 1rem;
   text-align: left;
   cursor: pointer;
   border: none;
@@ -596,10 +742,10 @@ const totalCents = computed(() => {
   opacity: 0.85;
 }
 
+/* Col 1: pill structure styles */
 .submission-bar {
-  flex: 1;
   min-width: 0;
-  padding: 0.75rem 1rem;
+  overflow: hidden;
 }
 
 .submission-country-display {
@@ -620,7 +766,6 @@ const totalCents = computed(() => {
   text-overflow: ellipsis;
 }
 
-/* Dish pill: width fits text only (override shared flex grow + min-width) */
 .submission-bar .submission-dish-pill {
   flex: none;
   width: fit-content;
@@ -643,33 +788,20 @@ const totalCents = computed(() => {
   white-space: nowrap;
 }
 
-.submission-meta {
-  flex: none;
+/* Col 7: dietary icons — centered */
+.sub-col-dietary {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem 0.75rem 0;
+  justify-content: center;
 }
 
-.submission-dietary {
+/* Col 8: expand arrow — pushed to the far right of the row */
+.sub-col-arrow {
   display: flex;
   align-items: center;
-  min-width: 0;
-}
-
-.submission-count {
+  justify-content: flex-end;
+  font-size: 0.75rem;
   color: var(--color-lafayette-gray, #3c373c);
-  text-align: right;
-}
-
-.submission-date {
-  color: var(--color-lafayette-gray, #3c373c);
-  text-align: right;
-}
-
-.submission-expand {
-  color: var(--color-lafayette-gray, #3c373c);
-  text-align: center;
 }
 
 .submission-detail {
@@ -943,5 +1075,163 @@ const totalCents = computed(() => {
   opacity: 0.45;
   flex-shrink: 0;
   margin-top: 0.125rem;
+}
+
+/* ─── Kitchen & Utensils Table ────────────────────────────────────────────── */
+
+.kitchen-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.kitchen-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.kitchen-save-error {
+  font-size: 0.9375rem;
+  color: #b91c1c;
+}
+
+.kitchen-addrow-form {
+  background: var(--color-menu-gray, #e5e3e0);
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-natural, 6px 6px 9px rgba(0, 0, 0, 0.2));
+}
+
+.kitchen-addrow-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.kitchen-addrow-input {
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 9999px;
+  padding: 0.4rem 1rem;
+  min-height: 2.75rem;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 500;
+  outline: none;
+  min-width: 10rem;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.kitchen-addrow-input-grow {
+  flex: 1 1 auto;
+}
+
+.kitchen-table {
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+/*
+  7-column grid:
+  country  dish    members  equip-req  equip-alloc  location  helper
+  10rem    12rem   12rem    14rem      14rem         12rem     9rem
+*/
+.kitchen-header-row,
+.kitchen-data-row {
+  display: grid;
+  grid-template-columns: 10rem 12rem 12rem 14rem 14rem 12rem 9rem;
+  gap: 0.75rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.kitchen-header-row {
+  background: var(--color-lafayette-red, #910029);
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.kitchen-data-row {
+  background: var(--color-menu-gray, #e5e3e0);
+  border-radius: 0.75rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.9375rem;
+  transition: background-color 0.1s;
+}
+
+.kitchen-data-row:hover {
+  background: #d8d5d1;
+}
+
+.kitchen-cell {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.kitchen-cell-editable {
+  cursor: default;
+  border-radius: 0.375rem;
+  padding: 0.1rem 0.3rem;
+  margin: -0.1rem -0.3rem;
+  transition: background-color 0.1s;
+}
+
+.kitchen-cell-editable:hover {
+  background: rgba(0, 0, 0, 0.06);
+  cursor: text;
+}
+
+.kitchen-cell-active {
+  background: #fff !important;
+  box-shadow: 0 0 0 2px var(--color-lafayette-dark-blue, #006690);
+  border-radius: 0.375rem;
+}
+
+.kitchen-cell-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 0;
+  line-height: 1.4;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.kitchen-cell-hint {
+  font-size: 0.8125rem;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.35;
+  font-style: italic;
+}
+
+.kitchen-cell-empty {
+  font-size: 0.875rem;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.55;
+}
+
+.kitchen-notes-text {
+  font-weight: 500;
+  color: var(--color-lafayette-gray, #3c373c);
 }
 </style>

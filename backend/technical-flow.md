@@ -4,6 +4,28 @@ A running log of every change made to the backend, in order. Each entry explains
 
 ---
 
+## 11. Kitchen & Utensils allocation table
+
+**What:** Added a Kitchen & Utensils allocation table to the Organizer Dashboard. Three new columns were added to the `submissions` table: `utensils_notes` (text — teams describe what equipment they need, filled on the public form), `equipment_allocated` (string — organizer assigns equipment), and `helper_driver_needed` (string — organizer notes whether a helper or driver is needed). A new dedicated PATCH endpoint `submissions/by_id/:id/kitchen_allocation` was added so the organizer can update only the kitchen-specific fields surgically (cooking_location, equipment_allocated, helper_driver_needed) without touching ingredients or triggering the full update logic. The existing `update` action was extended to also accept `utensils_notes` from the public form.
+
+**Note on `cooking_location` dual use:** On the public form, teams fill in `cooking_location` only when they have their own kitchen (`has_cooking_place = 'yes'`). In the kitchen table, the organizer also uses this same field to assign a cooking station to teams that need one. Same column, intentional dual use.
+
+**Why:** The Kitchens & Utensils tab was a placeholder. Organizers need to track which teams bring their own kitchen, what equipment needs to be procured, where each team will cook, and whether any team needs a helper or driver. All editable cells write back to the database immediately on blur/Enter with optimistic updates and error rollback.
+
+**Files modified:**
+- `db/migrate/20260226200000_add_kitchen_fields_to_submissions.rb` — new migration (3 columns)
+- `app/controllers/api/v1/submissions_controller.rb` — new `kitchen_allocation` action, `utensils_notes` in create/update, 3 new fields in `submission_json`
+- `config/routes.rb` — added `PATCH submissions/by_id/:id/kitchen_allocation` route
+
+**Frontend files modified:**
+- `src/api/submissions.ts` — extended `SubmissionResponse` and `SubmissionPayload` with new fields
+- `src/api/organizer.ts` — added `KitchenAllocationPayload` interface and `updateKitchenAllocation` function
+- `src/stores/submission.ts` — added `utensilsNotes` ref, wired into reset/loadForEdit/return
+- `src/views/HomeView.vue` — activated the utensils text input on Page 2, wired into payload
+- `src/views/OrganizerDashboardView.vue` — full kitchen table (7-column CSS grid, inline edit, add row)
+
+---
+
 ## 8. Fixed empty search returning results
 
 **What:** Added a guard in the search endpoint so that if no query (or fewer than 2 characters) is provided, it returns an empty array immediately instead of hitting the database.

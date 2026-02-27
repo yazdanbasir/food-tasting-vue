@@ -13,6 +13,7 @@ export interface SubmissionPayload {
   cooking_location?: string
   found_all_ingredients?: string
   needs_utensils?: string
+  utensils_notes?: string
   ingredients: { ingredient_id: number; quantity: number }[]
 }
 
@@ -44,6 +45,9 @@ export interface SubmissionResponse {
   cooking_location?: string | null
   found_all_ingredients?: string | null
   needs_utensils?: string | null
+  utensils_notes?: string | null
+  equipment_allocated?: string | null
+  helper_driver_needed?: string | null
   submitted_at: string
   ingredients: SubmissionIngredientResponse[]
 }

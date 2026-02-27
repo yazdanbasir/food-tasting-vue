@@ -12,6 +12,7 @@ Rails.application.routes.draw do
       resources :submissions, only: [ :create, :index ]
       get "submissions/lookup", to: "submissions#lookup"
       patch "submissions/by_id/:id", to: "submissions#update"
+      patch "submissions/by_id/:id/kitchen_allocation", to: "submissions#kitchen_allocation"
       delete "submissions/by_id/:id", to: "submissions#destroy"
       resource :organizer_session, only: [ :create, :destroy ]
       resource :grocery_list, controller: "grocery_list", only: [ :show ] do
