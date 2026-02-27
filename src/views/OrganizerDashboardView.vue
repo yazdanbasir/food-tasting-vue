@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import '@/styles/form-section.css'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import type { Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
 import IngredientThumb from '@/components/IngredientThumb.vue'
@@ -322,7 +323,7 @@ function cancelKuEdit(kind: KuListKind, id: number) {
   kuEditing.value = next
 }
 
-function kuListRef(kind: KuListKind) {
+function kuListRef(kind: KuListKind): Ref<KitchenResourceItem[]> {
   if (kind === 'kitchen') return kitchensAvailable
   if (kind === 'utensil') return utensilsAvailable
   return helpersDriversAvailable
@@ -343,8 +344,8 @@ function saveKuName(kind: KuListKind, id: number) {
     cancelKuEdit(kind, id)
     return
   }
-  const original = listRef.value[idx]!
-  listRef.value[idx] = { ...original, name: trimmed }
+  const original: KitchenResourceItem = listRef.value[idx]!
+  listRef.value[idx] = { ...original, name: trimmed } as KitchenResourceItem
   cancelKuEdit(kind, id)
   updateKitchenResource(id, { name: trimmed }).catch((err) => {
     // revert local change on error
