@@ -2,27 +2,30 @@ import type { SubmissionResponse } from '@/api/submissions'
 
 const BASE = import.meta.env.VITE_API_BASE_URL
 
-const LOG_PREFIX = '[Organizer Auth]'
+let onUnauthorized: (() => void) | null = null
+
+/** Register a callback invoked on any 401 response. Called once from useLockOverlay to avoid circular imports. */
+export function setOnUnauthorized(cb: () => void): void {
+  onUnauthorized = cb
+}
 
 export function organizerHeaders(): HeadersInit {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('organizer_token') : null
-  console.log(LOG_PREFIX, 'organizerHeaders:', token ? `token present (${token.slice(0, 8)}...)` : 'NO TOKEN')
   const headers = new Headers({ 'Content-Type': 'application/json' })
   if (token) headers.set('Authorization', `Bearer ${token}`)
   return headers
 }
 
-/** Clear stale organizer token (e.g. after 401). Does not re-lock the overlay. */
-export function clearStaleOrganizerToken(): void {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('organizer_token')
-      localStorage.removeItem('organizer_username')
-    }
-  } catch {
-    // ignore
+function handleUnauthorized(): void {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('organizer_token')
+    localStorage.removeItem('organizer_username')
   }
+  onUnauthorized?.()
 }
+
+/** @deprecated use handleUnauthorized internally; exported only for submissions.ts */
+export const clearStaleOrganizerToken = handleUnauthorized
 
 /** Check if the current client has an organizer token (e.g. before update). */
 export function hasOrganizerToken(): boolean {
@@ -162,7 +165,7 @@ export async function updateKitchenAllocation(
   })
   const body = await res.json().catch(() => ({}))
   if (res.status === 401) {
-    clearStaleOrganizerToken()
+    handleUnauthorized()
     throw new Error('Session expired. Please log in again from the Organizer tab.')
   }
   if (!res.ok) throw new Error((body as { error?: string }).error || `Kitchen update failed: ${res.status}`)
@@ -179,7 +182,7 @@ export async function deleteSubmission(submissionId: number): Promise<void> {
   const body = await res.json().catch(() => ({}))
   if (res.status === 401) {
     console.error(LOG_PREFIX, 'deleteSubmission 401 Unauthorized - backend rejected token or no token sent. Body:', body)
-    clearStaleOrganizerToken()
+    handleUnauthorized()
     throw new Error('Session expired. Please log in again from the Organizer tab.')
   }
   if (!res.ok) {
@@ -205,7 +208,7 @@ export async function getKitchenResources(): Promise<KitchenResourceItem[]> {
   })
   const body = await res.json().catch(() => ({}))
   if (res.status === 401) {
-    clearStaleOrganizerToken()
+    handleUnauthorized()
     throw new Error('Session expired. Please log in again from the Organizer tab.')
   }
   if (!res.ok) {
@@ -225,7 +228,7 @@ export async function createKitchenResource(
   })
   const body = await res.json().catch(() => ({}))
   if (res.status === 401) {
-    clearStaleOrganizerToken()
+    handleUnauthorized()
     throw new Error('Session expired. Please log in again from the Organizer tab.')
   }
   if (!res.ok) {
@@ -245,7 +248,7 @@ export async function updateKitchenResource(
   })
   const body = await res.json().catch(() => ({}))
   if (res.status === 401) {
-    clearStaleOrganizerToken()
+    handleUnauthorized()
     throw new Error('Session expired. Please log in again from the Organizer tab.')
   }
   if (!res.ok) {
@@ -262,7 +265,7 @@ export async function deleteKitchenResource(id: number): Promise<void> {
   if (res.status === 401) {
     const body = await res.json().catch(() => ({}))
     console.error(LOG_PREFIX, 'deleteKitchenResource 401 Unauthorized - backend rejected token or no token sent. Body:', body)
-    clearStaleOrganizerToken()
+    handleUnauthorized()
     throw new Error('Session expired. Please log in again from the Organizer tab.')
   }
   if (!res.ok) {

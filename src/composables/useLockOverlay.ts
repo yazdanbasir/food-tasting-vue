@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { organizerLogin } from '@/api/organizer'
+import { organizerLogin, setOnUnauthorized } from '@/api/organizer'
 import { lookupSubmissionByPhone } from '@/api/submissions'
 import type { SubmissionResponse } from '@/api/submissions'
 
@@ -8,6 +8,19 @@ const CORRECT_PASSWORD = 'disney1994'
 const LOG_PREFIX = '[Organizer Auth]'
 
 const isLocked = ref(localStorage.getItem(STORAGE_KEY) !== 'true')
+
+/** Re-locks the overlay and clears stored credentials on any 401. */
+export function forceLock() {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('organizer_token')
+    localStorage.removeItem('organizer_username')
+    localStorage.removeItem(STORAGE_KEY)
+  }
+  isLocked.value = true
+}
+
+// Wire up the 401 handler now that forceLock is defined (avoids circular import)
+setOnUnauthorized(forceLock)
 
 export function useLockOverlay() {
   function verifyPassword(pwd: string): boolean {
