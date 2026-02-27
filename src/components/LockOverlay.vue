@@ -148,7 +148,7 @@ function onKeydown(e: KeyboardEvent) {
   font-size: 0.9375rem;
   color: #b91c1c;
   text-align: center;
-  max-width: 400px;
+  max-width: min(400px, 90vw);
 }
 
 .lock-searching {
@@ -168,8 +168,9 @@ function onKeydown(e: KeyboardEvent) {
   position: relative;
   display: inline-flex;
   min-height: 60px;
-  min-width: 460px;
-  width: max-content;
+  min-width: min(460px, 90vw);
+  width: 90vw;
+  max-width: 460px;
   padding: 0 24px;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   background: #fff;
@@ -283,7 +284,7 @@ function onKeydown(e: KeyboardEvent) {
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.6;
   text-align: center;
-  white-space: nowrap;
+  max-width: 90vw;
   line-height: 1.3;
 }
 </style>

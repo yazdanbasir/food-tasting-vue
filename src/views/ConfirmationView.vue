@@ -96,8 +96,9 @@ function handleEditSubmission() {
   position: relative;
   display: inline-flex;
   min-height: 60px;
-  min-width: 460px;
-  width: max-content;
+  min-width: min(460px, 90vw);
+  width: 90vw;
+  max-width: 460px;
   padding: 0 24px;
   align-items: center;
   justify-content: center;
