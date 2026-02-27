@@ -41,9 +41,9 @@
 }
 
 .form-section-pill-label {
-  background-color: var(--color-lafayette-red, #910029);
+  background-color: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
-  border-color: var(--color-lafayette-red, #910029);
+  border-color: var(--color-lafayette-red, #6b0f2a);
 }
 
 .form-section-top-bar .form-section-pill:has(.form-section-pill-input) {
@@ -110,10 +110,10 @@
 }
 
 .btn-pill-primary {
-  background-color: var(--color-lafayette-red, #910029);
+  background-color: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
   cursor: pointer;
-  border: 1px solid var(--color-lafayette-red, #910029);
+  border: 1px solid var(--color-lafayette-red, #6b0f2a);
 }
 
 .btn-pill-primary:hover:not(:disabled) {
@@ -123,7 +123,7 @@
 }
 
 .btn-pill-primary:focus-visible {
-  outline: 2px solid var(--color-lafayette-red, #910029);
+  outline: 2px solid var(--color-lafayette-red, #6b0f2a);
   outline-offset: 2px;
 }
 

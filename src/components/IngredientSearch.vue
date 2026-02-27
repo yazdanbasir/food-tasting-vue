@@ -189,9 +189,9 @@ onUnmounted(() => {
 }
 
 .search-category-pill-active {
-  background: var(--color-lafayette-red, #910029);
+  background: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
-  border-color: var(--color-lafayette-red, #910029);
+  border-color: var(--color-lafayette-red, #6b0f2a);
 }
 
 .search-results {
@@ -215,7 +215,7 @@ onUnmounted(() => {
 }
 
 .search-result-item:hover {
-  background-color: rgba(145, 0, 41, 0.08);
+  background-color: rgba(107, 15, 42, 0.08);
 }
 
 .search-result-info {

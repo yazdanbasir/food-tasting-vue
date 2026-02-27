@@ -3,7 +3,7 @@
 @theme {
   --font-mono: 'Roboto Mono', monospace;
   /* Lafayette maroon accent; hover = darker maroon for seamless feel */
-  --color-lafayette-red: #910029;
+  --color-lafayette-red: #6b0f2a;
   --color-lafayette-blue: #1da9d7;
   --color-lafayette-dark-blue: #6d001f;
   --color-lafayette-light-blue: #86ccff;
@@ -23,7 +23,7 @@
 @layer base {
   :root {
     --body-font-size: clamp(1.125rem, 1.125rem + ((1vw - 0.2rem) * 0.227), 1.25rem);
-    --color-lafayette-red: #910029;
+    --color-lafayette-red: #6b0f2a;
     --color-lafayette-blue: #1da9d7;
     --color-lafayette-dark-blue: #6d001f;
     --color-lafayette-gray: #3c373c;

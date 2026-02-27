@@ -227,7 +227,7 @@ function changeQty(delta: number) {
 }
 
 .add-product-add {
-  background: var(--color-lafayette-red, #910029);
+  background: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
 }
 

@@ -15,7 +15,7 @@ function relativeTime(dateStr: string): string {
 }
 
 function dotColor(eventType: string): string {
-  if (eventType.startsWith('new_submission') || eventType.startsWith('submission')) return '#910029'
+  if (eventType.startsWith('new_submission') || eventType.startsWith('submission')) return '#6b0f2a'
   if (eventType.startsWith('ingredient')) return '#006690'
   return '#059669'
 }
@@ -140,8 +140,8 @@ watch(() => store.panelOpen, (open) => {
 }
 
 .notif-item-unread {
-  border-left-color: var(--color-lafayette-red, #910029);
-  background: rgba(145, 0, 41, 0.03);
+  border-left-color: var(--color-lafayette-red, #6b0f2a);
+  background: rgba(107, 15, 42, 0.03);
 }
 
 .notif-dot {

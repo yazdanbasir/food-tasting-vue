@@ -165,11 +165,11 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 }
 
 .yes-no-select-option:hover {
-  background-color: rgba(145, 0, 41, 0.08);
+  background-color: rgba(107, 15, 42, 0.08);
 }
 
 .yes-no-select-option[aria-selected="true"] {
-  background-color: rgba(145, 0, 41, 0.12);
+  background-color: rgba(107, 15, 42, 0.12);
   font-weight: 500;
 }
 </style>

@@ -125,7 +125,7 @@ async function handleLogin() {
 }
 
 .login-btn-enabled {
-  background-color: var(--color-lafayette-red, #910029);
+  background-color: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
   cursor: pointer;
   opacity: 1;

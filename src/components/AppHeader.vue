@@ -42,7 +42,7 @@ const route = useRoute()
   justify-content: space-between;
   padding: 0 1rem;
   gap: 1rem;
-  background-color: var(--color-lafayette-red, #910029);
+  background-color: var(--color-lafayette-red, #6b0f2a);
   border-radius: 1rem;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
@@ -97,12 +97,12 @@ const route = useRoute()
 
 .app-header-link-active {
   background-color: #fff;
-  color: var(--color-lafayette-red, #910029);
+  color: var(--color-lafayette-red, #6b0f2a);
 }
 
 .app-header-link-active:hover {
   background-color: #fff;
-  color: var(--color-lafayette-red, #910029);
+  color: var(--color-lafayette-red, #6b0f2a);
 }
 
 .app-header-link-active:focus-visible {

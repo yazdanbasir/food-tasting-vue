@@ -1036,7 +1036,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
   flex: none;
   align-self: flex-start;
   padding: 0.5rem 0.75rem;
-  background-color: var(--color-lafayette-red, #910029);
+  background-color: var(--color-lafayette-red, #6b0f2a);
   border-radius: 1rem;
   margin: 0.75rem 0 0.75rem 1rem;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
@@ -1064,13 +1064,13 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
 
 .dashboard-subtab-active {
   background-color: #fff;
-  color: var(--color-lafayette-red, #910029);
+  color: var(--color-lafayette-red, #6b0f2a);
   border-color: #fff;
 }
 
 .dashboard-subtab-active:hover {
   background-color: #fff;
-  color: var(--color-lafayette-red, #910029);
+  color: var(--color-lafayette-red, #6b0f2a);
 }
 
 .dashboard-subtab-inactive {
@@ -1145,7 +1145,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
 }
 
 .submission-table-header {
-  background: var(--color-lafayette-red, #910029);
+  background: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
   font-size: 0.875rem;
   font-weight: 700;
@@ -1377,7 +1377,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
   width: 1.25rem;
   height: 1.25rem;
   cursor: pointer;
-  accent-color: var(--color-lafayette-red, #910029);
+  accent-color: var(--color-lafayette-red, #6b0f2a);
 }
 
 .grocery-cell-name {
@@ -1589,7 +1589,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
 }
 
 .kitchen-header-row {
-  background: var(--color-lafayette-red, #910029);
+  background: var(--color-lafayette-red, #6b0f2a);
   border-radius: 0.75rem;
   padding: 0.5rem 1rem;
   color: #fff;
@@ -1685,7 +1685,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
 }
 
 .ku-header-row {
-  background: var(--color-lafayette-red, #910029);
+  background: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
   border-radius: 0.75rem;
   padding: 0.5rem 1rem;
