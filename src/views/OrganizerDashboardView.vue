@@ -718,14 +718,16 @@ async function loadKitchenResources() {
                 <div class="ku-actions">
                   <button
                     type="button"
-                    class="ku-icon-button"
+                    class="btn-pill-primary"
+                    aria-label="Edit kitchen row"
                     @click="startKuEdit('kitchen', row.id, row.name)"
                   >
                     ✎
                   </button>
                   <button
                     type="button"
-                    class="ku-icon-button ku-icon-delete"
+                    class="btn-pill-secondary btn-pill-danger"
+                    aria-label="Delete kitchen row"
                     @click="deleteKuRow('kitchen', row.id)"
                   >
                     ✕
@@ -781,14 +783,16 @@ async function loadKitchenResources() {
                 <div class="ku-actions">
                   <button
                     type="button"
-                    class="ku-icon-button"
+                    class="btn-pill-primary"
+                    aria-label="Edit utensil row"
                     @click="startKuEdit('utensil', row.id, row.name)"
                   >
                     ✎
                   </button>
                   <button
                     type="button"
-                    class="ku-icon-button ku-icon-delete"
+                    class="btn-pill-secondary btn-pill-danger"
+                    aria-label="Delete utensil row"
                     @click="deleteKuRow('utensil', row.id)"
                   >
                     ✕
@@ -1465,12 +1469,14 @@ async function loadKitchenResources() {
 }
 
 .ku-tables-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
+  align-items: flex-start;
 }
 
 .ku-table-card {
+  flex: 1 1 20rem;
   background: var(--color-menu-gray, #e5e3e0);
   border-radius: 1rem;
   box-shadow: var(--shadow-natural, 6px 6px 9px rgba(0, 0, 0, 0.2));
@@ -1555,24 +1561,6 @@ async function loadKitchenResources() {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-}
-
-.ku-icon-button {
-  border-radius: 9999px;
-  border: none;
-  background: #e0dedb;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: var(--color-lafayette-gray, #3c373c);
-}
-
-.ku-icon-button:hover {
-  background: #d3d0cc;
-}
-
-.ku-icon-delete {
-  color: #b91c1c;
 }
 
 .ku-empty {
