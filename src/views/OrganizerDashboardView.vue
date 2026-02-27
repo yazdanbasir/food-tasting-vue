@@ -1761,6 +1761,7 @@ function helperOptions(): string[] {
 }
 
 .kitchen-cell-editable {
+  overflow: visible;
   cursor: default;
 }
 
