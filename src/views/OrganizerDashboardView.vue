@@ -315,7 +315,7 @@ async function saveKitchenField(
 
           <!-- Column header row — 8-col grid matching data rows exactly -->
           <div class="submission-table-header">
-            <div class="sub-header-cell">Country &amp; Dish</div>
+            <div class="sub-header-cell sub-header-center">Country &amp; Dish</div>
             <div class="sub-header-cell sub-header-center">Members</div>
             <div class="sub-header-cell sub-header-center">Equip. Requested</div>
             <div class="sub-header-cell sub-header-center">Equip. Allocated ✎</div>
