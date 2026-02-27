@@ -8,6 +8,7 @@ import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
 import KitchenResourceSelect from '@/components/KitchenResourceSelect.vue'
+import KitchenResourceMultiSelect from '@/components/KitchenResourceMultiSelect.vue'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
 import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, getKitchenResources, createKitchenResource, updateKitchenResource, deleteKitchenResource, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload, type KitchenResourceItem } from '@/api/organizer'
 import LockOverlay from '@/components/LockOverlay.vue'
@@ -249,11 +250,16 @@ const totalCents = computed(() => {
   return groceryList.value.total_cents
 })
 
+function parseEquipmentAllocated(val: string | null | undefined): string[] {
+  if (!val) return []
+  return val.split(',').map((s) => s.trim()).filter(Boolean)
+}
+
 const assignedEquipmentNames = computed<Set<string>>(() => {
   const set = new Set<string>()
   for (const sub of submissions.value) {
-    if (sub.equipment_allocated && sub.equipment_allocated.trim()) {
-      set.add(sub.equipment_allocated.trim())
+    for (const name of parseEquipmentAllocated(sub.equipment_allocated)) {
+      set.add(name)
     }
   }
   return set
@@ -274,6 +280,16 @@ const assignedFridgeNames = computed<Set<string>>(() => {
   for (const sub of submissions.value) {
     if (sub.fridge_location && sub.fridge_location.trim()) {
       set.add(sub.fridge_location.trim())
+    }
+  }
+  return set
+})
+
+const assignedHelperNames = computed<Set<string>>(() => {
+  const set = new Set<string>()
+  for (const sub of submissions.value) {
+    if (sub.helper_driver_needed && sub.helper_driver_needed.trim()) {
+      set.add(sub.helper_driver_needed.trim())
     }
   }
   return set
@@ -449,12 +465,10 @@ function deleteKuRow(kind: KuListKind, id: number) {
 async function loadKitchenResources() {
   try {
     const all = await getKitchenResources()
-    console.log('[KitchenResources] loaded:', all)
     fridgesAvailable.value = all.filter((r) => r.kind === 'fridge')
     kitchensAvailable.value = all.filter((r) => r.kind === 'kitchen')
     utensilsAvailable.value = all.filter((r) => r.kind === 'utensil')
     helpersDriversAvailable.value = all.filter((r) => r.kind === 'helper_driver')
-    console.log('[KitchenResources] fridges:', fridgesAvailable.value, 'kitchens:', kitchensAvailable.value, 'utensils:', utensilsAvailable.value)
   } catch (err) {
     console.error('[KitchenResources] load FAILED:', err)
   }
@@ -465,13 +479,14 @@ async function assignKitchenField(
   field: 'equipment_allocated' | 'cooking_location' | 'fridge_location' | 'helper_driver_needed',
   value: string,
 ) {
+  const saveValue = value || null  // empty string → null to clear on backend
   const subInList = submissions.value.find((s) => s.id === sub.id)
   if (!subInList) return
   const prev = (subInList as Record<string, unknown>)[field]
-  ;(subInList as Record<string, unknown>)[field] = value
+  ;(subInList as Record<string, unknown>)[field] = saveValue
   kitchenSaveError.value = null
   try {
-    const updated = await updateKitchenAllocation(sub.id, { [field]: value } as KitchenAllocationPayload)
+    const updated = await updateKitchenAllocation(sub.id, { [field]: saveValue } as KitchenAllocationPayload)
     const idx = submissions.value.findIndex((s) => s.id === updated.id)
     if (idx !== -1) submissions.value[idx] = updated
   } catch (err) {
@@ -482,21 +497,22 @@ async function assignKitchenField(
 
 function equipmentOptionsFor(sub: SubmissionResponse): string[] {
   const used = assignedEquipmentNames.value
-  const current = (sub.equipment_allocated || '').trim()
+  const currentSet = new Set(parseEquipmentAllocated(sub.equipment_allocated))
   const allNames = utensilsAvailable.value.map((r) => r.name.trim()).filter(Boolean)
   return allNames.filter((name, index) => {
-    // Deduplicate names while filtering
     if (allNames.indexOf(name) !== index) return false
     if (!used.has(name)) return true
-    return current === name
+    return currentSet.has(name)
   })
 }
 
-/** Only show stored value in dropdown if it's in the current options (hides stale/invalid values like "hg"). */
-function equipmentAllocatedDisplay(sub: SubmissionResponse): string | null {
-  const val = (sub.equipment_allocated || '').trim()
-  if (!val) return null
-  return equipmentOptionsFor(sub).includes(val) ? val : null
+function equipmentAllocatedValues(sub: SubmissionResponse): string[] {
+  const options = equipmentOptionsFor(sub)
+  return parseEquipmentAllocated(sub.equipment_allocated).filter((v) => options.includes(v))
+}
+
+async function assignEquipmentMulti(sub: SubmissionResponse, names: string[]) {
+  await assignKitchenField(sub, 'equipment_allocated', names.join(', '))
 }
 
 function kitchenOptionsFor(sub: SubmissionResponse): string[] {
@@ -521,9 +537,15 @@ function fridgeOptionsFor(sub: SubmissionResponse): string[] {
   })
 }
 
-function helperOptions(): string[] {
+function helperOptions(sub: SubmissionResponse): string[] {
+  const used = assignedHelperNames.value
+  const current = (sub.helper_driver_needed || '').trim()
   const allNames = helpersDriversAvailable.value.map((r) => r.name.trim()).filter(Boolean)
-  return allNames.filter((name, index) => allNames.indexOf(name) === index)
+  return allNames.filter((name, index) => {
+    if (allNames.indexOf(name) !== index) return false
+    if (!used.has(name)) return true
+    return current === name
+  })
 }
 
 </script>
@@ -594,7 +616,6 @@ function helperOptions(): string[] {
             <div class="sub-header-cell sub-header-center">Equip. Allocated ✎</div>
             <div class="sub-header-cell sub-header-center">Kitchen / Location ✎</div>
             <div class="sub-header-cell sub-header-center">Helper / Driver? ✎</div>
-            <div class="sub-header-cell sub-header-center">Dietary</div>
             <div class="sub-header-cell"></div>
           </div>
 
@@ -610,14 +631,12 @@ function helperOptions(): string[] {
               @click="toggleSubmissionExpanded(sub.id)"
             >
               <!-- Col 1: Country + Dish pills -->
-              <div class="submission-bar form-section-top-bar">
-                <div class="form-section-top-bar-inner">
-                  <div class="form-section-pill">
-                    <span class="submission-country-display" :title="sub.country_code || ''">{{ countryLabel(sub.country_code) }}</span>
-                  </div>
-                  <div class="form-section-pill submission-dish-pill">
-                    <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name || 'dish name...' }}</span>
-                  </div>
+              <div class="submission-bar">
+                <div class="form-section-pill">
+                  <span class="submission-country-display" :title="sub.country_code || ''">{{ countryLabel(sub.country_code) }}</span>
+                </div>
+                <div class="form-section-pill submission-dish-pill">
+                  <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name || 'dish name...' }}</span>
                 </div>
               </div>
 
@@ -634,6 +653,7 @@ function helperOptions(): string[] {
                       :model-value="sub.fridge_location || null"
                       :options="fridgeOptionsFor(sub)"
                       placeholder="Assign fridge"
+                      clearable
                       @update:model-value="(val) => assignKitchenField(sub, 'fridge_location', val)"
                     />
                   </div>
@@ -648,7 +668,7 @@ function helperOptions(): string[] {
               <div class="kitchen-cell">
                 <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes">{{ sub.utensils_notes }}</span>
                 <span v-else-if="sub.needs_utensils === 'yes'">Needs utensils</span>
-                <span v-else-if="sub.needs_utensils === 'no'">None needed</span>
+                <span v-else-if="sub.needs_utensils === 'no'">—</span>
                 <span v-else>—</span>
               </div>
 
@@ -656,33 +676,15 @@ function helperOptions(): string[] {
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
                 <template v-if="sub.needs_utensils === 'yes'">
                   <div class="form-section-pill kitchen-resource-pill">
-                    <KitchenResourceSelect
-                      :model-value="equipmentAllocatedDisplay(sub)"
+                    <KitchenResourceMultiSelect
+                      :model-value="equipmentAllocatedValues(sub)"
                       :options="equipmentOptionsFor(sub)"
                       placeholder="Assign equipment"
-                      @update:model-value="(val) => assignKitchenField(sub, 'equipment_allocated', val)"
+                      @update:model-value="(vals) => assignEquipmentMulti(sub, vals)"
                     />
                   </div>
                 </template>
-                <template v-else>
-                  <div
-                    class="kitchen-cell-inner-editable"
-                    :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'equipment_allocated') }"
-                    @dblclick.stop="startKitchenEdit(sub.id, 'equipment_allocated', sub.equipment_allocated)"
-                  >
-                    <input
-                      v-if="isKitchenEditing(sub.id, 'equipment_allocated')"
-                      v-model="kitchenEditing[kitchenKey(sub.id, 'equipment_allocated')]"
-                      class="kitchen-cell-input"
-                      type="text"
-                      autofocus
-                      @blur="saveKitchenField(sub, 'equipment_allocated')"
-                      @keyup.enter="saveKitchenField(sub, 'equipment_allocated')"
-                      @keyup.escape="cancelKitchenEdit(sub.id, 'equipment_allocated')"
-                    />
-                    <span v-else>{{ sub.equipment_allocated || '—' }}</span>
-                  </div>
-                </template>
+                <span v-else>—</span>
               </div>
 
               <!-- Col 6: Kitchen / Location (editable) -->
@@ -693,6 +695,7 @@ function helperOptions(): string[] {
                       :model-value="sub.cooking_location || null"
                       :options="kitchenOptionsFor(sub)"
                       placeholder="Assign kitchen"
+                      clearable
                       @update:model-value="(val) => assignKitchenField(sub, 'cooking_location', val)"
                     />
                   </div>
@@ -723,19 +726,15 @@ function helperOptions(): string[] {
                 <div class="form-section-pill kitchen-resource-pill">
                   <KitchenResourceSelect
                     :model-value="sub.helper_driver_needed || null"
-                    :options="helperOptions()"
+                    :options="helperOptions(sub)"
                     placeholder="Assign helper"
+                    clearable
                     @update:model-value="(val) => assignKitchenField(sub, 'helper_driver_needed', val)"
                   />
                 </div>
               </div>
 
-              <!-- Col 7: Dietary icons -->
-              <div class="sub-col-dietary">
-                <DietaryIcons :dietary="aggregateDietary(sub)" :size="14" />
-              </div>
-
-              <!-- Col 8: Expand arrow (far right) -->
+              <!-- Col 7: Expand arrow (far right) -->
               <div class="sub-col-arrow">
                 {{ expandedSubmissions.has(sub.id) ? '▲' : '▼' }}
               </div>
@@ -763,6 +762,10 @@ function helperOptions(): string[] {
                   <div v-if="sub.needs_utensils" class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Utensils</span>
                     <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needs Utensils ⚠️' : 'No Utensils ✅' }}</span>
+                  </div>
+                  <div class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Dietary</span>
+                    <DietaryIcons :dietary="aggregateDietary(sub)" :size="18" />
                   </div>
                 </div>
               </div>
@@ -1278,7 +1281,7 @@ function helperOptions(): string[] {
 .submission-table-header,
 .submission-row {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) repeat(6, 1fr) 4rem 2rem;
+  grid-template-columns: minmax(0, 2fr) repeat(6, 1fr) 2rem;
   gap: 0.75rem;
   align-items: center;
 }
@@ -1320,7 +1323,10 @@ function helperOptions(): string[] {
 /* Col 1: pill structure styles */
 .submission-bar {
   min-width: 0;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .submission-country-display {
@@ -1363,14 +1369,7 @@ function helperOptions(): string[] {
   white-space: nowrap;
 }
 
-/* Col 7: dietary icons — centered */
-.sub-col-dietary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Col 8: expand arrow — pushed to the far right of the row */
+/* Col 7: expand arrow — pushed to the far right of the row */
 .sub-col-arrow {
   display: flex;
   align-items: center;

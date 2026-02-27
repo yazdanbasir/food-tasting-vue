@@ -149,10 +149,10 @@ export async function updateSubmissionIngredientQuantity(
 }
 
 export interface KitchenAllocationPayload {
-  cooking_location?: string
-  equipment_allocated?: string
-  helper_driver_needed?: string
-  fridge_location?: string
+  cooking_location?: string | null
+  equipment_allocated?: string | null
+  helper_driver_needed?: string | null
+  fridge_location?: string | null
 }
 
 export async function updateKitchenAllocation(

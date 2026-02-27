@@ -2,14 +2,13 @@
 import { computed, onMounted, onUnmounted, ref, nextTick } from 'vue'
 
 const props = defineProps<{
-  modelValue: string | null
+  modelValue: string[]
   options: string[]
   placeholder?: string
-  clearable?: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
+  (e: 'update:modelValue', value: string[]): void
 }>()
 
 const open = ref(false)
@@ -17,9 +16,9 @@ const buttonRef = ref<HTMLElement | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 
 const selectedLabel = computed(() => {
-  const v = props.modelValue?.trim()
-  if (v) return v
-  return props.placeholder || 'Select'
+  if (!props.modelValue.length) return props.placeholder || 'Select'
+  if (props.modelValue.length === 1) return props.modelValue[0]
+  return `${props.modelValue.length} selected`
 })
 
 async function toggle() {
@@ -37,9 +36,16 @@ async function toggle() {
   }
 }
 
-function selectOption(name: string) {
-  emit('update:modelValue', name)
-  open.value = false
+function toggleOption(name: string) {
+  if (props.modelValue.includes(name)) {
+    emit('update:modelValue', props.modelValue.filter((n) => n !== name))
+  } else {
+    emit('update:modelValue', [...props.modelValue, name])
+  }
+}
+
+function clearAll() {
+  emit('update:modelValue', [])
 }
 
 function handleClickOutside(e: MouseEvent) {
@@ -63,7 +69,7 @@ onUnmounted(() => {
       ref="buttonRef"
       type="button"
       class="resource-select-btn"
-      :class="{ 'resource-select-btn--placeholder': !modelValue }"
+      :class="{ 'resource-select-btn--placeholder': !modelValue.length }"
       aria-haspopup="listbox"
       :aria-expanded="open"
       @click.stop="toggle"
@@ -80,12 +86,12 @@ onUnmounted(() => {
         tabindex="-1"
       >
         <button
-          v-if="clearable && modelValue"
+          v-if="modelValue.length"
           type="button"
           class="resource-select-option resource-select-option--clear"
-          @click.stop="selectOption('')"
+          @click.stop="clearAll"
         >
-          ✕ Clear
+          ✕ Clear all
         </button>
         <template v-if="options.length">
           <button
@@ -93,10 +99,12 @@ onUnmounted(() => {
             :key="name"
             type="button"
             role="option"
-            class="resource-select-option"
-            :aria-selected="modelValue === name"
-            @click.stop="selectOption(name)"
+            class="resource-select-option resource-select-option--multi"
+            :aria-selected="modelValue.includes(name)"
+            :class="{ 'resource-select-option--selected': modelValue.includes(name) }"
+            @click.stop="toggleOption(name)"
           >
+            <span class="resource-select-check">{{ modelValue.includes(name) ? '✓' : '' }}</span>
             {{ name }}
           </button>
         </template>
@@ -159,60 +167,17 @@ onUnmounted(() => {
 </style>
 
 <style>
-.resource-select-dropdown {
-  min-width: 18rem;
-  width: max-content;
-  max-width: min(22rem, 95vw);
-  max-height: 36rem;
-  overflow-y: auto;
-  background: #fff;
-  color: #000;
-  border: 1px solid var(--color-lafayette-gray, #3c373c);
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 9999;
-  padding: 0.25rem 0;
-  outline: none;
+.resource-select-option--multi {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left !important;
 }
 
-.resource-select-option {
-  display: block;
-  width: 100%;
-  padding: 0.5rem 1rem;
-  border: none;
-  background: none;
-  color: #000 !important;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.1s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.resource-select-option:hover {
-  background-color: rgba(107, 15, 42, 0.08);
-}
-
-.resource-select-option[aria-selected="true"] {
-  background-color: rgba(107, 15, 42, 0.12);
-  font-weight: 500;
-}
-
-.resource-select-option--clear {
-  color: #b91c1c !important;
-  font-size: 0.8rem;
-  padding: 0.25rem 1rem;
-  opacity: 0.75;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  margin-bottom: 0.125rem;
-}
-
-.resource-select-empty {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  color: #000;
-  opacity: 0.7;
+.resource-select-check {
+  width: 1em;
+  flex-shrink: 0;
+  color: #6b0f2a;
+  font-weight: 700;
 }
 </style>
