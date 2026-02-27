@@ -1,5 +1,6 @@
 class Api::V1::KitchenResourcesController < ApplicationController
   include OrganizerAuthenticatable
+  skip_before_action :require_organizer_auth, only: [:index]
 
   # GET /api/v1/kitchen_resources
   def index

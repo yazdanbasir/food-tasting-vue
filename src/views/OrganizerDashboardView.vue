@@ -141,6 +141,14 @@ async function switchToGrocery() {
   if (!groceryList.value) await loadGroceryList()
 }
 
+async function switchToSubmissions() {
+  activeTab.value = 'submissions'
+  addProductError.value = null
+  if (!kitchensAvailable.value.length && !utensilsAvailable.value.length) {
+    await loadKitchenResources()
+  }
+}
+
 async function switchToKitchens() {
   activeTab.value = 'kitchens'
   addProductError.value = null
@@ -416,11 +424,13 @@ function deleteKuRow(kind: KuListKind, id: number) {
 async function loadKitchenResources() {
   try {
     const all = await getKitchenResources()
+    console.log('[KitchenResources] loaded:', all)
     kitchensAvailable.value = all.filter((r) => r.kind === 'kitchen')
     utensilsAvailable.value = all.filter((r) => r.kind === 'utensil')
     helpersDriversAvailable.value = all.filter((r) => r.kind === 'helper_driver')
+    console.log('[KitchenResources] kitchens:', kitchensAvailable.value, 'utensils:', utensilsAvailable.value)
   } catch (err) {
-    console.error(err)
+    console.error('[KitchenResources] load FAILED:', err)
   }
 }
 
@@ -479,7 +489,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
           type="button"
           class="dashboard-subtab"
           :class="activeTab === 'submissions' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="activeTab = 'submissions'; addProductError = null"
+          @click="switchToSubmissions"
         >
           Submissions
         </button>
