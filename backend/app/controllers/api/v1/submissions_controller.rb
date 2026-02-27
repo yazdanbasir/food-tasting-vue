@@ -175,6 +175,7 @@ class Api::V1::SubmissionsController < ApplicationController
     attrs[:cooking_location]     = params[:cooking_location]     if params.key?(:cooking_location)
     attrs[:equipment_allocated]  = params[:equipment_allocated]  if params.key?(:equipment_allocated)
     attrs[:helper_driver_needed] = params[:helper_driver_needed] if params.key?(:helper_driver_needed)
+    attrs[:fridge_location]      = params[:fridge_location]      if params.key?(:fridge_location)
     submission.update!(attrs)
     render json: submission_json(submission.reload), status: :ok
   rescue ActiveRecord::RecordInvalid => e
@@ -251,6 +252,7 @@ class Api::V1::SubmissionsController < ApplicationController
       utensils_notes: submission.utensils_notes,
       equipment_allocated: submission.equipment_allocated,
       helper_driver_needed: submission.helper_driver_needed,
+      fridge_location: submission.fridge_location,
       submitted_at: submission.created_at,
       ingredients: submission.submission_ingredients.map do |si|
         {

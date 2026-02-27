@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_27_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_27_094500) do
   create_table "grocery_checkins", force: :cascade do |t|
     t.boolean "checked", default: false, null: false
     t.datetime "checked_at"
@@ -98,12 +98,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_090000) do
     t.string "has_cooking_place"
     t.string "helper_driver_needed"
     t.text "members"
+    t.string "needs_fridge_space"
     t.string "needs_utensils"
     t.text "notes"
     t.string "phone_number"
     t.string "team_name", null: false
     t.datetime "updated_at", null: false
     t.text "utensils_notes"
+    t.string "fridge_location"
   end
 
   add_foreign_key "grocery_checkins", "ingredients"

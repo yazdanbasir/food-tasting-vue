@@ -50,6 +50,7 @@ export interface SubmissionResponse {
   utensils_notes?: string | null
   equipment_allocated?: string | null
   helper_driver_needed?: string | null
+  fridge_location?: string | null
   submitted_at: string
   ingredients: SubmissionIngredientResponse[]
 }

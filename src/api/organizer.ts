@@ -152,6 +152,7 @@ export interface KitchenAllocationPayload {
   cooking_location?: string
   equipment_allocated?: string
   helper_driver_needed?: string
+  fridge_location?: string
 }
 
 export async function updateKitchenAllocation(

@@ -270,6 +270,16 @@ const assignedKitchenNames = computed<Set<string>>(() => {
   return set
 })
 
+const assignedFridgeNames = computed<Set<string>>(() => {
+  const set = new Set<string>()
+  for (const sub of submissions.value) {
+    if (sub.fridge_location && sub.fridge_location.trim()) {
+      set.add(sub.fridge_location.trim())
+    }
+  }
+  return set
+})
+
 // ─── Kitchen table (per-submission fields) ────────────────────────────────
 
 
@@ -436,7 +446,7 @@ async function loadKitchenResources() {
 
 async function assignKitchenField(
   sub: SubmissionResponse,
-  field: 'equipment_allocated' | 'cooking_location',
+  field: 'equipment_allocated' | 'cooking_location' | 'fridge_location',
   value: string,
 ) {
   const subInList = submissions.value.find((s) => s.id === sub.id)
@@ -466,9 +476,27 @@ function equipmentOptionsFor(sub: SubmissionResponse): string[] {
   })
 }
 
+/** Only show stored value in dropdown if it's in the current options (hides stale/invalid values like "hg"). */
+function equipmentAllocatedDisplay(sub: SubmissionResponse): string | null {
+  const val = (sub.equipment_allocated || '').trim()
+  if (!val) return null
+  return equipmentOptionsFor(sub).includes(val) ? val : null
+}
+
 function kitchenOptionsFor(sub: SubmissionResponse): string[] {
   const used = assignedKitchenNames.value
   const current = (sub.cooking_location || '').trim()
+  const allNames = kitchensAvailable.value.map((r) => r.name.trim()).filter(Boolean)
+  return allNames.filter((name, index) => {
+    if (allNames.indexOf(name) !== index) return false
+    if (!used.has(name)) return true
+    return current === name
+  })
+}
+
+function fridgeOptionsFor(sub: SubmissionResponse): string[] {
+  const used = assignedFridgeNames.value
+  const current = (sub.fridge_location || '').trim()
   const allNames = kitchensAvailable.value.map((r) => r.name.trim()).filter(Boolean)
   return allNames.filter((name, index) => {
     if (allNames.indexOf(name) !== index) return false
@@ -540,7 +568,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
           <div class="submission-table-header">
             <div class="sub-header-cell sub-header-center">Country &amp; Dish</div>
             <div class="sub-header-cell sub-header-center">Members</div>
-            <div class="sub-header-cell sub-header-center">Fridge?</div>
+            <div class="sub-header-cell sub-header-center">Fridge Needed</div>
             <div class="sub-header-cell sub-header-center">Equip. Requested</div>
             <div class="sub-header-cell sub-header-center">Equip. Allocated ✎</div>
             <div class="sub-header-cell sub-header-center">Kitchen / Location ✎</div>
@@ -577,11 +605,22 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
                 {{ (sub.members || []).join(', ') || '—' }}
               </div>
 
-              <!-- Col 3: Fridge? -->
-              <div class="kitchen-cell">
-                <span v-if="sub.needs_fridge_space === 'yes'">Yes</span>
-                <span v-else-if="sub.needs_fridge_space === 'no'">No</span>
-                <span v-else>—</span>
+              <!-- Col 3: Fridge Needed -->
+              <div class="kitchen-cell kitchen-cell-editable" @click.stop>
+                <template v-if="sub.needs_fridge_space === 'yes'">
+                  <div class="form-section-pill kitchen-resource-pill">
+                    <KitchenResourceSelect
+                      :model-value="sub.fridge_location || null"
+                      :options="fridgeOptionsFor(sub)"
+                      placeholder="Assign fridge"
+                      @update:model-value="(val) => assignKitchenField(sub, 'fridge_location', val)"
+                    />
+                  </div>
+                </template>
+                <template v-else>
+                  <span v-if="sub.needs_fridge_space === 'no'">No</span>
+                  <span v-else>—</span>
+                </template>
               </div>
 
               <!-- Col 4: Equipment Requested (read-only) -->
@@ -597,9 +636,9 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
                 <template v-if="sub.needs_utensils === 'no'">
                   <div class="form-section-pill kitchen-resource-pill">
                     <KitchenResourceSelect
-                      :model-value="sub.equipment_allocated || null"
+                      :model-value="equipmentAllocatedDisplay(sub)"
                       :options="equipmentOptionsFor(sub)"
-                      placeholder="Allocate equipment"
+                      placeholder="Assign equipment"
                       @update:model-value="(val) => assignKitchenField(sub, 'equipment_allocated', val)"
                     />
                   </div>
@@ -735,17 +774,17 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
                 <div class="submission-detail-buttons">
                   <button
                     type="button"
-                    class="ku-icon-button"
+                    class="btn-pill-primary"
                     @click.stop="handleEditSubmission(sub)"
                   >
-                    ✎ Edit
+                    Edit
                   </button>
                   <button
                     type="button"
-                    class="ku-icon-button ku-icon-delete"
+                    class="btn-pill-secondary btn-pill-danger"
                     @click.stop="handleDeleteSubmission(sub)"
                   >
-                    ✕ Delete
+                    Delete
                   </button>
                 </div>
               </div>
@@ -1161,7 +1200,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
 .submission-table-header,
 .submission-row {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) repeat(5, 1fr) 4rem 2rem;
+  grid-template-columns: minmax(0, 2fr) repeat(6, 1fr) 4rem 2rem;
   gap: 0.75rem;
   align-items: center;
 }
