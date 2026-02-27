@@ -485,7 +485,7 @@ async function handleSubmit() {
 .home-reminders-toggle {
   cursor: pointer;
   font: inherit;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0;
   text-align: center;
   transition: opacity 0.15s;
