@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import '@/styles/form-section.css'
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
@@ -11,6 +11,7 @@ import KitchenResourceSelect from '@/components/KitchenResourceSelect.vue'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
 import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, getKitchenResources, createKitchenResource, updateKitchenResource, deleteKitchenResource, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload, type KitchenResourceItem } from '@/api/organizer'
 import LockOverlay from '@/components/LockOverlay.vue'
+import { useLockOverlay } from '@/composables/useLockOverlay'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
 import { useSubmissionStore } from '@/stores/submission'
 import { useNotificationStore } from '@/stores/notifications'
@@ -20,6 +21,13 @@ import type { Ingredient, IngredientDietary } from '@/types/ingredient'
 const router = useRouter()
 const submissionStore = useSubmissionStore()
 const notifStore = useNotificationStore()
+const { isLocked } = useLockOverlay()
+
+// Re-load kitchen resources after the organizer unlocks, since onMounted runs
+// before auth and the first attempt silently fails (401, no token yet).
+watch(isLocked, (locked) => {
+  if (!locked) loadKitchenResources()
+})
 
 /** Map API ingredient to frontend Ingredient for IngredientRow */
 function toIngredient(raw: SubmissionResponse['ingredients'][0]['ingredient']): Ingredient {
