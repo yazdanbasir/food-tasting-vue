@@ -49,7 +49,7 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 }
 
 
-const activeTab = ref<'submissions' | 'grocery' | 'notifications'>('submissions')
+const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'notifications'>('submissions')
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
 const expandedSubmissions = ref<Set<number>>(new Set())
@@ -223,7 +223,7 @@ const totalCents = computed(() => {
   return groceryList.value.total_cents
 })
 
-// ─── Kitchen table ────────────────────────────────────────────────────────
+// ─── Kitchen table (per-submission fields) ────────────────────────────────
 
 
 const kitchenEditing = ref<Record<string, string>>({})
@@ -262,6 +262,81 @@ async function saveKitchenField(
   }
 }
 
+// ─── Kitchens & Utensils tab (standalone lists) ───────────────────────────
+
+interface SimpleResourceRow {
+  id: number
+  name: string
+}
+
+type KuListKind = 'kitchen' | 'utensil'
+
+const kitchensAvailable = ref<SimpleResourceRow[]>([])
+const utensilsAvailable = ref<SimpleResourceRow[]>([])
+const newKitchenName = ref('')
+const newUtensilName = ref('')
+const kuEditing = ref<Record<string, string>>({})
+let kuNextId = 1
+
+function nextKuId(): number {
+  return kuNextId++
+}
+
+function kuKey(kind: KuListKind, id: number) {
+  return `${kind}:${id}`
+}
+
+function isKuEditing(kind: KuListKind, id: number) {
+  return kuKey(kind, id) in kuEditing.value
+}
+
+function startKuEdit(kind: KuListKind, id: number, current: string) {
+  kuEditing.value[kuKey(kind, id)] = current
+}
+
+function cancelKuEdit(kind: KuListKind, id: number) {
+  const next = { ...kuEditing.value }
+  delete next[kuKey(kind, id)]
+  kuEditing.value = next
+}
+
+function saveKuName(kind: KuListKind, id: number) {
+  const key = kuKey(kind, id)
+  const value = kuEditing.value[key]
+  if (value === undefined) return
+  const listRef = kind === 'kitchen' ? kitchensAvailable : utensilsAvailable
+  const trimmed = value.trim()
+  if (!trimmed) {
+    cancelKuEdit(kind, id)
+    return
+  }
+  const idx = listRef.value.findIndex((row) => row.id === id)
+  if (idx !== -1) {
+    listRef.value[idx] = { ...listRef.value[idx], name: trimmed }
+  }
+  cancelKuEdit(kind, id)
+}
+
+function addKitchenRow() {
+  const name = newKitchenName.value.trim()
+  if (!name) return
+  kitchensAvailable.value = [...kitchensAvailable.value, { id: nextKuId(), name }]
+  newKitchenName.value = ''
+}
+
+function addUtensilRow() {
+  const name = newUtensilName.value.trim()
+  if (!name) return
+  utensilsAvailable.value = [...utensilsAvailable.value, { id: nextKuId(), name }]
+  newUtensilName.value = ''
+}
+
+function deleteKuRow(kind: KuListKind, id: number) {
+  const listRef = kind === 'kitchen' ? kitchensAvailable : utensilsAvailable
+  listRef.value = listRef.value.filter((row) => row.id !== id)
+  cancelKuEdit(kind, id)
+}
+
 </script>
 
 <template>
@@ -285,6 +360,14 @@ async function saveKitchenField(
           @click="switchToGrocery"
         >
           Grocery List
+        </button>
+        <button
+          type="button"
+          class="dashboard-subtab"
+          :class="activeTab === 'kitchens' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+          @click="activeTab = 'kitchens'; addProductError = null"
+        >
+          Kitchens &amp; Utensils
         </button>
         <button
           type="button"
@@ -355,16 +438,17 @@ async function saveKitchenField(
 
               <!-- Col 3: Equipment Requested (read-only) -->
               <div class="kitchen-cell">
-                <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes" class="kitchen-notes-text">{{ sub.utensils_notes }}</span>
-                <span v-else-if="sub.needs_utensils === 'yes'" class="kitchen-cell-empty">Needs utensils</span>
-                <span v-else-if="sub.needs_utensils === 'no'" class="kitchen-cell-empty">None needed</span>
-                <span v-else class="kitchen-cell-empty">—</span>
+                <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes">{{ sub.utensils_notes }}</span>
+                <span v-else-if="sub.needs_utensils === 'yes'">Needs utensils</span>
+                <span v-else-if="sub.needs_utensils === 'no'">None needed</span>
+                <span v-else>—</span>
               </div>
 
               <!-- Col 4: Equipment Allocated (editable) -->
               <div
                 class="kitchen-cell kitchen-cell-editable"
                 :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'equipment_allocated') }"
+                @click.stop
                 @dblclick.stop="startKitchenEdit(sub.id, 'equipment_allocated', sub.equipment_allocated)"
               >
                 <input
@@ -373,19 +457,18 @@ async function saveKitchenField(
                   class="kitchen-cell-input"
                   type="text"
                   autofocus
-                  @click.stop
                   @blur="saveKitchenField(sub, 'equipment_allocated')"
                   @keyup.enter="saveKitchenField(sub, 'equipment_allocated')"
                   @keyup.escape="cancelKitchenEdit(sub.id, 'equipment_allocated')"
                 />
-                <span v-else-if="sub.equipment_allocated" class="kitchen-notes-text">{{ sub.equipment_allocated }}</span>
-                <span v-else class="kitchen-cell-hint">double-click</span>
+                <span v-else>{{ sub.equipment_allocated || '—' }}</span>
               </div>
 
               <!-- Col 5: Kitchen / Location (editable) -->
               <div
                 class="kitchen-cell kitchen-cell-editable"
                 :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'cooking_location') }"
+                @click.stop
                 @dblclick.stop="startKitchenEdit(sub.id, 'cooking_location', sub.cooking_location)"
               >
                 <input
@@ -394,19 +477,18 @@ async function saveKitchenField(
                   class="kitchen-cell-input"
                   type="text"
                   autofocus
-                  @click.stop
                   @blur="saveKitchenField(sub, 'cooking_location')"
                   @keyup.enter="saveKitchenField(sub, 'cooking_location')"
                   @keyup.escape="cancelKitchenEdit(sub.id, 'cooking_location')"
                 />
-                <span v-else-if="sub.cooking_location" class="kitchen-notes-text">{{ sub.cooking_location }}</span>
-                <span v-else class="kitchen-cell-hint">double-click</span>
+                <span v-else>{{ sub.cooking_location || '—' }}</span>
               </div>
 
               <!-- Col 6: Helper / Driver? (editable) -->
               <div
                 class="kitchen-cell kitchen-cell-editable"
                 :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'helper_driver_needed') }"
+                @click.stop
                 @dblclick.stop="startKitchenEdit(sub.id, 'helper_driver_needed', sub.helper_driver_needed)"
               >
                 <input
@@ -415,13 +497,11 @@ async function saveKitchenField(
                   class="kitchen-cell-input"
                   type="text"
                   autofocus
-                  @click.stop
                   @blur="saveKitchenField(sub, 'helper_driver_needed')"
                   @keyup.enter="saveKitchenField(sub, 'helper_driver_needed')"
                   @keyup.escape="cancelKitchenEdit(sub.id, 'helper_driver_needed')"
                 />
-                <span v-else-if="sub.helper_driver_needed" class="kitchen-notes-text">{{ sub.helper_driver_needed }}</span>
-                <span v-else class="kitchen-cell-hint">double-click</span>
+                <span v-else>{{ sub.helper_driver_needed || '—' }}</span>
               </div>
 
               <!-- Col 7: Dietary icons -->
@@ -558,6 +638,137 @@ async function saveKitchenField(
         </div>
       </div>
 
+      <!-- Kitchens & Utensils Tab -->
+      <div v-else-if="activeTab === 'kitchens'" class="ku-tab">
+        <div class="ku-tables-row">
+          <!-- Kitchens Available table -->
+          <div class="ku-table-card">
+            <div class="ku-header-row">
+              <div class="ku-header-title">Kitchens Available</div>
+            </div>
+            <div class="ku-add-row">
+              <input
+                v-model="newKitchenName"
+                class="ku-add-input"
+                type="text"
+                placeholder="Add kitchen location..."
+                @keyup.enter="addKitchenRow"
+              />
+              <button
+                type="button"
+                class="btn-pill-primary ku-add-button"
+                @click="addKitchenRow"
+              >
+                Add
+              </button>
+            </div>
+            <div v-if="kitchensAvailable.length" class="ku-rows">
+              <div
+                v-for="row in kitchensAvailable"
+                :key="row.id"
+                class="ku-data-row"
+              >
+                <div class="ku-cell">
+                  <input
+                    v-if="isKuEditing('kitchen', row.id)"
+                    v-model="kuEditing[kuKey('kitchen', row.id)]"
+                    class="ku-cell-input"
+                    type="text"
+                    autofocus
+                    @blur="saveKuName('kitchen', row.id)"
+                    @keyup.enter="saveKuName('kitchen', row.id)"
+                    @keyup.escape="cancelKuEdit('kitchen', row.id)"
+                  />
+                  <span v-else>{{ row.name }}</span>
+                </div>
+                <div class="ku-actions">
+                  <button
+                    type="button"
+                    class="ku-icon-button"
+                    @click="startKuEdit('kitchen', row.id, row.name)"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    class="ku-icon-button ku-icon-delete"
+                    @click="deleteKuRow('kitchen', row.id)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="ku-empty">
+              No kitchens added yet.
+            </div>
+          </div>
+
+          <!-- Utensils/Equipment Available table -->
+          <div class="ku-table-card">
+            <div class="ku-header-row">
+              <div class="ku-header-title">Utensils / Equipment Available</div>
+            </div>
+            <div class="ku-add-row">
+              <input
+                v-model="newUtensilName"
+                class="ku-add-input"
+                type="text"
+                placeholder="Add utensil or equipment..."
+                @keyup.enter="addUtensilRow"
+              />
+              <button
+                type="button"
+                class="btn-pill-primary ku-add-button"
+                @click="addUtensilRow"
+              >
+                Add
+              </button>
+            </div>
+            <div v-if="utensilsAvailable.length" class="ku-rows">
+              <div
+                v-for="row in utensilsAvailable"
+                :key="row.id"
+                class="ku-data-row"
+              >
+                <div class="ku-cell">
+                  <input
+                    v-if="isKuEditing('utensil', row.id)"
+                    v-model="kuEditing[kuKey('utensil', row.id)]"
+                    class="ku-cell-input"
+                    type="text"
+                    autofocus
+                    @blur="saveKuName('utensil', row.id)"
+                    @keyup.enter="saveKuName('utensil', row.id)"
+                    @keyup.escape="cancelKuEdit('utensil', row.id)"
+                  />
+                  <span v-else>{{ row.name }}</span>
+                </div>
+                <div class="ku-actions">
+                  <button
+                    type="button"
+                    class="ku-icon-button"
+                    @click="startKuEdit('utensil', row.id, row.name)"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    class="ku-icon-button ku-icon-delete"
+                    @click="deleteKuRow('utensil', row.id)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="ku-empty">
+              No utensils or equipment added yet.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Notifications Tab -->
       <div v-else-if="activeTab === 'notifications'">
         <div v-if="!notifStore.notifications.length" class="dashboard-empty">No notifications yet.</div>
@@ -649,7 +860,7 @@ async function saveKitchenField(
 
 .dashboard-body {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll;
   padding: 1rem;
   min-height: 0;
 }
@@ -1182,26 +1393,19 @@ async function saveKitchenField(
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: var(--color-lafayette-gray, #3c373c);
+  color: #000;
 }
 
 .kitchen-cell-editable {
   cursor: default;
-  border-radius: 0.375rem;
-  padding: 0.1rem 0.3rem;
-  margin: -0.1rem -0.3rem;
-  transition: background-color 0.1s;
 }
 
 .kitchen-cell-editable:hover {
-  background: rgba(0, 0, 0, 0.06);
   cursor: text;
 }
 
 .kitchen-cell-active {
-  background: #fff !important;
-  box-shadow: 0 0 0 2px var(--color-lafayette-dark-blue, #006690);
-  border-radius: 0.375rem;
+  /* no visual box — input appears inline, seamless */
 }
 
 .kitchen-cell-input {
@@ -1211,27 +1415,135 @@ async function saveKitchenField(
   outline: none;
   font-size: inherit;
   font-family: inherit;
-  font-weight: 500;
+  font-weight: inherit;
   padding: 0;
   line-height: 1.4;
+  color: #000;
+  text-align: center;
+}
+
+/* ─── Kitchens & Utensils tab (standalone lists) ─────────────────────────── */
+
+.ku-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ku-tables-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.ku-table-card {
+  background: var(--color-menu-gray, #e5e3e0);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-natural, 6px 6px 9px rgba(0, 0, 0, 0.2));
+  padding: 0.75rem 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ku-header-row {
+  background: var(--color-lafayette-red, #910029);
+  color: #fff;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ku-header-title {
+  text-align: center;
+}
+
+.ku-add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.25rem 0;
+}
+
+.ku-add-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border, #e5e5e5);
+  padding: 0.4rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
   color: var(--color-lafayette-gray, #3c373c);
 }
 
-.kitchen-cell-hint {
-  font-size: 0.8125rem;
-  color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.35;
-  font-style: italic;
+.ku-add-button {
+  flex: none;
 }
 
-.kitchen-cell-empty {
-  font-size: 0.875rem;
-  color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.55;
+.ku-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
 }
 
-.kitchen-notes-text {
-  font-weight: 500;
+.ku-data-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f3f2f0;
+  border-radius: 9999px;
+  padding: 0.4rem 0.75rem;
+}
+
+.ku-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.ku-cell-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  color: inherit;
+}
+
+.ku-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ku-icon-button {
+  border-radius: 9999px;
+  border: none;
+  background: #e0dedb;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
   color: var(--color-lafayette-gray, #3c373c);
+}
+
+.ku-icon-button:hover {
+  background: #d3d0cc;
+}
+
+.ku-icon-delete {
+  color: #b91c1c;
+}
+
+.ku-empty {
+  padding: 0.5rem 0.75rem 0;
+  font-size: 0.9rem;
+  opacity: 0.7;
 }
 </style>
