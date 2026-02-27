@@ -27,6 +27,14 @@ const {
   needsUtensils,
   utensilsNotes,
 } = storeToRefs(store)
+const phoneIsValid = computed(() =>
+  store.phoneNumber.trim().length === 0 ? false : store.isUSPhoneNumber(store.phoneNumber),
+)
+const phoneError = computed(() =>
+  store.phoneNumber.trim().length > 0 && !phoneIsValid.value
+    ? 'Please enter a valid US phone number (10 digits, with optional +1 country code).'
+    : '',
+)
 const router = useRouter()
 
 const membersText = computed({
@@ -43,7 +51,7 @@ const showGrocerySection = computed(() =>
   Boolean(store.countryCode) &&
   Boolean(store.dishName.trim()) &&
   members.value.length > 0 &&
-  Boolean(store.phoneNumber.trim())
+  phoneIsValid.value,
 )
 
 const remindersExpanded = ref(true)
@@ -186,14 +194,19 @@ async function handleSubmit() {
               class="form-section-pill-input pill-input-center"
             />
           </div>
-          <div class="form-section-pill home-dish-pill">
+          <div class="form-section-pill home-dish-pill home-dish-pill-phone">
             <input
               v-model="store.phoneNumber"
               type="text"
+              inputmode="tel"
               placeholder="Phone Number"
               size="14"
               class="form-section-pill-input pill-input-center"
+              :aria-invalid="!!phoneError"
             />
+            <p v-if="phoneError" class="home-field-error">
+              {{ phoneError }}
+            </p>
           </div>
         </div>
       </div>

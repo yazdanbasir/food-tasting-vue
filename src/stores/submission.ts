@@ -4,6 +4,13 @@ import type { Ingredient } from '@/types/ingredient'
 import type { MasterListItem, SubmissionIngredient } from '@/types/submission'
 import type { SubmissionResponse } from '@/api/submissions'
 
+function isUSPhoneNumber(value: string): boolean {
+  const digits = value.replace(/\D/g, '')
+  if (digits.length === 10) return true
+  if (digits.length === 11 && digits.startsWith('1')) return true
+  return false
+}
+
 export const useSubmissionStore = defineStore('submission', () => {
   const teamName = ref('')
   const dishName = ref('')
@@ -107,7 +114,7 @@ export const useSubmissionStore = defineStore('submission', () => {
       !!countryCode.value &&
       dishName.value.trim().length > 0 &&
       members.value.length > 0 &&
-      phoneNumber.value.trim().length > 0 &&
+      isUSPhoneNumber(phoneNumber.value) &&
       ingredients.value.length > 0,
   )
 
@@ -199,5 +206,6 @@ export const useSubmissionStore = defineStore('submission', () => {
     clearEdit,
     lastSubmittedSubmission,
     setLastSubmitted,
+    isUSPhoneNumber,
   }
 })
