@@ -655,7 +655,7 @@ function helperOptions(): string[] {
 
               <!-- Col 5: Equipment Allocated (editable) -->
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
-                <template v-if="sub.needs_utensils === 'no'">
+                <template v-if="sub.needs_utensils === 'yes'">
                   <div class="form-section-pill kitchen-resource-pill">
                     <KitchenResourceSelect
                       :model-value="equipmentAllocatedDisplay(sub)"
@@ -688,7 +688,7 @@ function helperOptions(): string[] {
 
               <!-- Col 6: Kitchen / Location (editable) -->
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
-                <template v-if="!sub.cooking_location">
+                <template v-if="sub.has_cooking_place === 'no'">
                   <div class="form-section-pill kitchen-resource-pill">
                     <KitchenResourceSelect
                       :model-value="sub.cooking_location || null"
