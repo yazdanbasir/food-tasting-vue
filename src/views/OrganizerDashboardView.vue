@@ -612,10 +612,10 @@ function helperOptions(sub: SubmissionResponse): string[] {
             <div class="sub-header-cell sub-header-center">Country &amp; Dish</div>
             <div class="sub-header-cell sub-header-center">Members</div>
             <div class="sub-header-cell sub-header-center">Fridge Needed</div>
-            <div class="sub-header-cell sub-header-center">Equip. Requested</div>
-            <div class="sub-header-cell sub-header-center">Equip. Allocated ✎</div>
-            <div class="sub-header-cell sub-header-center">Kitchen / Location ✎</div>
-            <div class="sub-header-cell sub-header-center">Helper / Driver? ✎</div>
+            <div class="sub-header-cell sub-header-center">Requested</div>
+            <div class="sub-header-cell sub-header-center">Allocated</div>
+            <div class="sub-header-cell sub-header-center">Kitchen</div>
+            <div class="sub-header-cell sub-header-center">Helper / Driver?</div>
             <div class="sub-header-cell"></div>
           </div>
 
@@ -1289,12 +1289,14 @@ function helperOptions(sub: SubmissionResponse): string[] {
 .submission-table-header {
   background: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
-  font-size: 0.875rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 500;
   letter-spacing: 0.02em;
-  border-radius: 0.75rem;
-  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  padding: 0.5rem 1.5rem;
+  min-height: 3.75rem;
   margin-bottom: 0.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
 .sub-header-cell {

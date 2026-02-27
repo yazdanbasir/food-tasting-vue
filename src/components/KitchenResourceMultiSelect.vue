@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, nextTick } from 'vue'
 
 const props = defineProps<{
   modelValue: string[]
@@ -15,11 +15,6 @@ const open = ref(false)
 const buttonRef = ref<HTMLElement | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 
-const selectedLabel = computed(() => {
-  if (!props.modelValue.length) return props.placeholder || 'Select'
-  if (props.modelValue.length === 1) return props.modelValue[0]
-  return `${props.modelValue.length} selected`
-})
 
 async function toggle() {
   open.value = !open.value
@@ -69,12 +64,14 @@ onUnmounted(() => {
       ref="buttonRef"
       type="button"
       class="resource-select-btn"
-      :class="{ 'resource-select-btn--placeholder': !modelValue.length }"
       aria-haspopup="listbox"
       :aria-expanded="open"
       @click.stop="toggle"
     >
-      {{ selectedLabel }}
+      <span class="resource-select-labels">
+        <span v-if="!modelValue.length" class="resource-select-placeholder">{{ placeholder || 'Select' }}</span>
+        <span v-for="item in modelValue" :key="item" class="resource-select-label-item">{{ item }}</span>
+      </span>
       <span class="resource-select-chevron" aria-hidden="true">{{ open ? '▲' : '▼' }}</span>
     </button>
     <Teleport to="body">
@@ -126,8 +123,8 @@ onUnmounted(() => {
 
 .resource-select-btn {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 0.375rem;
   padding: 0.25rem 1rem;
   min-height: 2.5rem;
@@ -140,16 +137,26 @@ onUnmounted(() => {
   cursor: pointer;
   transition: opacity 0.15s;
   text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   outline: none;
 }
 
-.resource-select-btn--placeholder {
-  color: #3c373c !important;
+.resource-select-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  line-height: 1.4;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.resource-select-placeholder {
   opacity: 0.7;
 }
+
+.resource-select-label-item {
+  display: block;
+}
+
 
 .resource-select-btn:hover:not([disabled]) {
   opacity: 0.85;
@@ -163,6 +170,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   font-size: 0.65em;
   opacity: 0.8;
+  align-self: center;
 }
 </style>
 
