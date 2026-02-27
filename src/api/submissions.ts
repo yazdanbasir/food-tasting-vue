@@ -12,6 +12,7 @@ export interface SubmissionPayload {
   has_cooking_place?: string
   cooking_location?: string
   found_all_ingredients?: string
+  needs_fridge_space?: string
   needs_utensils?: string
   utensils_notes?: string
   ingredients: { ingredient_id: number; quantity: number }[]
@@ -44,6 +45,7 @@ export interface SubmissionResponse {
   has_cooking_place?: string | null
   cooking_location?: string | null
   found_all_ingredients?: string | null
+  needs_fridge_space?: string | null
   needs_utensils?: string | null
   utensils_notes?: string | null
   equipment_allocated?: string | null

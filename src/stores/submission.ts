@@ -20,6 +20,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   const hasCookingPlace = ref<'yes' | 'no' | ''>('')
   const cookingLocation = ref('')
   const foundAllIngredients = ref<'yes' | 'no' | ''>('')
+  const needsFridgeSpace = ref<'yes' | 'no' | ''>('')
   const needsUtensils = ref<'yes' | 'no' | ''>('')
   const utensilsNotes = ref('')
 
@@ -124,6 +125,7 @@ export const useSubmissionStore = defineStore('submission', () => {
       foundAllIngredients.value !== '' &&
       hasCookingPlace.value !== '' &&
       (hasCookingPlace.value !== 'yes' || cookingLocation.value.trim().length > 0) &&
+      needsFridgeSpace.value !== '' &&
       needsUtensils.value !== '',
   )
 
@@ -136,6 +138,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     hasCookingPlace.value = ''
     cookingLocation.value = ''
     foundAllIngredients.value = ''
+    needsFridgeSpace.value = ''
     needsUtensils.value = ''
     utensilsNotes.value = ''
     ingredients.value = []
@@ -160,6 +163,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     hasCookingPlace.value = (sub.has_cooking_place as 'yes' | 'no' | '') ?? ''
     cookingLocation.value = sub.cooking_location ?? ''
     foundAllIngredients.value = (sub.found_all_ingredients as 'yes' | 'no' | '') ?? ''
+    needsFridgeSpace.value = (sub.needs_fridge_space as 'yes' | 'no' | '') ?? ''
     needsUtensils.value = (sub.needs_utensils as 'yes' | 'no' | '') ?? ''
     utensilsNotes.value = sub.utensils_notes ?? ''
     ingredients.value = sub.ingredients.map((item) => ({
@@ -187,6 +191,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     hasCookingPlace,
     cookingLocation,
     foundAllIngredients,
+    needsFridgeSpace,
     needsUtensils,
     utensilsNotes,
     editingSubmissionId,

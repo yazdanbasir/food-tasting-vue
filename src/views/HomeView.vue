@@ -24,6 +24,7 @@ const {
   hasCookingPlace,
   cookingLocation,
   foundAllIngredients,
+  needsFridgeSpace,
   needsUtensils,
   utensilsNotes,
 } = storeToRefs(store)
@@ -91,6 +92,7 @@ async function handleSubmit() {
     has_cooking_place: hasCookingPlace.value || undefined,
     cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
     found_all_ingredients: foundAllIngredients.value || undefined,
+    needs_fridge_space: needsFridgeSpace.value || undefined,
     needs_utensils: needsUtensils.value || undefined,
     utensils_notes: needsUtensils.value === 'yes' ? utensilsNotes.value.trim() || undefined : undefined,
     ingredients: ingredients.value.map((item) => ({
@@ -273,6 +275,12 @@ async function handleSubmit() {
                 <YesNoSelect
                   v-model="needsUtensils"
                   placeholder="Do you need utensils/equipment?"
+                />
+              </div>
+              <div class="form-section-pill home-dish-pill">
+                <YesNoSelect
+                  v-model="needsFridgeSpace"
+                  placeholder="Do you need fridge space?"
                 />
               </div>
             </div>
