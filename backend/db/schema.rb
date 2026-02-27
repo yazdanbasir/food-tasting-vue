@@ -49,10 +49,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_090000) do
   end
 
   create_table "kitchen_resources", force: :cascade do |t|
+    t.datetime "created_at", null: false
     t.string "kind", null: false
     t.string "name", null: false
     t.integer "position"
-    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["kind"], name: "index_kitchen_resources_on_kind"
   end
