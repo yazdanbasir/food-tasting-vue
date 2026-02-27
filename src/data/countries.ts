@@ -219,7 +219,7 @@ export const COUNTRIES: CountryOption[] = [
   { name: 'Tonga', code: 'TO' },
   { name: 'Trinidad and Tobago', code: 'TT' },
   { name: 'Tunisia', code: 'TN' },
-  { name: 'Türkiye', code: 'TR' },
+  { name: 'Turkey', code: 'TR' },
   { name: 'Turkmenistan', code: 'TM' },
   { name: 'Turks and Caicos', code: 'TC' },
   { name: 'Tuvalu', code: 'TV' },
