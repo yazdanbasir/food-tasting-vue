@@ -321,11 +321,13 @@ async function saveKitchenField(
 
 // ─── Kitchens & Utensils tab (standalone lists) ───────────────────────────
 
-type KuListKind = 'kitchen' | 'utensil' | 'helper_driver'
+type KuListKind = 'kitchen' | 'utensil' | 'helper_driver' | 'fridge'
 
+const fridgesAvailable = ref<KitchenResourceItem[]>([])
 const kitchensAvailable = ref<KitchenResourceItem[]>([])
 const utensilsAvailable = ref<KitchenResourceItem[]>([])
 const helpersDriversAvailable = ref<KitchenResourceItem[]>([])
+const newFridgeName = ref('')
 const newKitchenName = ref('')
 const newUtensilName = ref('')
 const newHelperDriverName = ref('')
@@ -352,7 +354,8 @@ function cancelKuEdit(kind: KuListKind, id: number) {
 function kuListRef(kind: KuListKind): Ref<KitchenResourceItem[]> {
   if (kind === 'kitchen') return kitchensAvailable
   if (kind === 'utensil') return utensilsAvailable
-  return helpersDriversAvailable
+  if (kind === 'helper_driver') return helpersDriversAvailable
+  return fridgesAvailable
 }
 
 function saveKuName(kind: KuListKind, id: number) {
@@ -387,6 +390,19 @@ function addKitchenRow() {
     .then((created) => {
       kitchensAvailable.value = [...kitchensAvailable.value, created]
       newKitchenName.value = ''
+    })
+    .catch((err) => {
+      console.error(err)
+    })
+}
+
+function addFridgeRow() {
+  const name = newFridgeName.value.trim()
+  if (!name) return
+  createKitchenResource('fridge', name)
+    .then((created) => {
+      fridgesAvailable.value = [...fridgesAvailable.value, created]
+      newFridgeName.value = ''
     })
     .catch((err) => {
       console.error(err)
@@ -435,10 +451,11 @@ async function loadKitchenResources() {
   try {
     const all = await getKitchenResources()
     console.log('[KitchenResources] loaded:', all)
+    fridgesAvailable.value = all.filter((r) => r.kind === 'fridge')
     kitchensAvailable.value = all.filter((r) => r.kind === 'kitchen')
     utensilsAvailable.value = all.filter((r) => r.kind === 'utensil')
     helpersDriversAvailable.value = all.filter((r) => r.kind === 'helper_driver')
-    console.log('[KitchenResources] kitchens:', kitchensAvailable.value, 'utensils:', utensilsAvailable.value)
+    console.log('[KitchenResources] fridges:', fridgesAvailable.value, 'kitchens:', kitchensAvailable.value, 'utensils:', utensilsAvailable.value)
   } catch (err) {
     console.error('[KitchenResources] load FAILED:', err)
   }
@@ -446,7 +463,7 @@ async function loadKitchenResources() {
 
 async function assignKitchenField(
   sub: SubmissionResponse,
-  field: 'equipment_allocated' | 'cooking_location' | 'fridge_location',
+  field: 'equipment_allocated' | 'cooking_location' | 'fridge_location' | 'helper_driver_needed',
   value: string,
 ) {
   const subInList = submissions.value.find((s) => s.id === sub.id)
@@ -497,12 +514,17 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
 function fridgeOptionsFor(sub: SubmissionResponse): string[] {
   const used = assignedFridgeNames.value
   const current = (sub.fridge_location || '').trim()
-  const allNames = kitchensAvailable.value.map((r) => r.name.trim()).filter(Boolean)
+  const allNames = fridgesAvailable.value.map((r) => r.name.trim()).filter(Boolean)
   return allNames.filter((name, index) => {
     if (allNames.indexOf(name) !== index) return false
     if (!used.has(name)) return true
     return current === name
   })
+}
+
+function helperOptions(): string[] {
+  const allNames = helpersDriversAvailable.value.map((r) => r.name.trim()).filter(Boolean)
+  return allNames.filter((name, index) => allNames.indexOf(name) === index)
 }
 
 </script>
@@ -697,24 +719,16 @@ function fridgeOptionsFor(sub: SubmissionResponse): string[] {
                 </template>
               </div>
 
-              <!-- Col 7: Helper / Driver? (editable) -->
-              <div
-                class="kitchen-cell kitchen-cell-editable"
-                :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'helper_driver_needed') }"
-                @click.stop
-                @dblclick.stop="startKitchenEdit(sub.id, 'helper_driver_needed', sub.helper_driver_needed)"
-              >
-                <input
-                  v-if="isKitchenEditing(sub.id, 'helper_driver_needed')"
-                  v-model="kitchenEditing[kitchenKey(sub.id, 'helper_driver_needed')]"
-                  class="kitchen-cell-input"
-                  type="text"
-                  autofocus
-                  @blur="saveKitchenField(sub, 'helper_driver_needed')"
-                  @keyup.enter="saveKitchenField(sub, 'helper_driver_needed')"
-                  @keyup.escape="cancelKitchenEdit(sub.id, 'helper_driver_needed')"
-                />
-                <span v-else>{{ sub.helper_driver_needed || '—' }}</span>
+              <!-- Col 7: Helper / Driver? (Assign helper dropdown) -->
+              <div class="kitchen-cell kitchen-cell-editable" @click.stop>
+                <div class="form-section-pill kitchen-resource-pill">
+                  <KitchenResourceSelect
+                    :model-value="sub.helper_driver_needed || null"
+                    :options="helperOptions()"
+                    placeholder="Assign helper"
+                    @update:model-value="(val) => assignKitchenField(sub, 'helper_driver_needed', val)"
+                  />
+                </div>
               </div>
 
               <!-- Col 7: Dietary icons -->
@@ -858,6 +872,71 @@ function fridgeOptionsFor(sub: SubmissionResponse): string[] {
       <!-- Kitchens & Utensils Tab -->
       <div v-else-if="activeTab === 'kitchens'" class="ku-tab">
         <div class="ku-tables-row">
+          <!-- Fridges Available table -->
+          <div class="ku-table-card">
+            <div class="ku-header-row">
+              <div class="ku-header-title">Fridges Available</div>
+            </div>
+            <div class="ku-add-row">
+              <input
+                v-model="newFridgeName"
+                class="ku-add-input"
+                type="text"
+                placeholder="Add fridge location..."
+                @keyup.enter="addFridgeRow"
+              />
+              <button
+                type="button"
+                class="btn-pill-primary ku-add-button"
+                @click="addFridgeRow"
+              >
+                +
+              </button>
+            </div>
+            <div v-if="fridgesAvailable.length" class="ku-rows">
+              <div
+                v-for="row in fridgesAvailable"
+                :key="row.id"
+                class="ku-data-row"
+              >
+                <div class="ku-cell">
+                  <input
+                    v-if="isKuEditing('fridge', row.id)"
+                    v-model="kuEditing[kuKey('fridge', row.id)]"
+                    class="ku-cell-input"
+                    type="text"
+                    autofocus
+                    @blur="saveKuName('fridge', row.id)"
+                    @keyup.enter="saveKuName('fridge', row.id)"
+                    @keyup.escape="cancelKuEdit('fridge', row.id)"
+                  />
+                  <span v-else>{{ row.name }}</span>
+                </div>
+                <div class="ku-actions">
+                  <button
+                    type="button"
+                    class="btn-pill-primary"
+                    aria-label="Edit fridge row"
+                    @click="startKuEdit('fridge', row.id, row.name)"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-pill-secondary btn-pill-danger"
+                    aria-label="Delete fridge row"
+                    @click="deleteKuRow('fridge', row.id)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="ku-empty">
+              No fridges added yet.
+            </div>
+          </div>
+
           <!-- Kitchens Available table -->
           <div class="ku-table-card">
             <div class="ku-header-row">

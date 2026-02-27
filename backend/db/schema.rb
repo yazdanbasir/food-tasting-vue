@@ -95,6 +95,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_094500) do
     t.string "dish_name", null: false
     t.string "equipment_allocated"
     t.string "found_all_ingredients"
+    t.string "fridge_location"
     t.string "has_cooking_place"
     t.string "helper_driver_needed"
     t.text "members"
@@ -105,7 +106,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_094500) do
     t.string "team_name", null: false
     t.datetime "updated_at", null: false
     t.text "utensils_notes"
-    t.string "fridge_location"
   end
 
   add_foreign_key "grocery_checkins", "ingredients"
