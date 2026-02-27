@@ -27,7 +27,7 @@ const route = useRoute()
         class="app-header-link"
         :class="route.path.startsWith('/organizer') ? 'app-header-link-active' : 'app-header-link-inactive'"
       >
-        Submissions
+        Manage
       </RouterLink>
     </div>
   </header>
