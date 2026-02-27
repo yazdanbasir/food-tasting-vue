@@ -77,8 +77,7 @@ const addProductError = ref<string | null>(null)
 // Action Cable consumer
 const cable = createConsumer(`${import.meta.env.VITE_API_BASE_URL.replace(/^http/, 'ws')}/cable`)
 onMounted(async () => {
-  await loadSubmissions()
-  await loadKitchenResources()
+  await Promise.all([loadSubmissions(), loadKitchenResources()])
   notifStore.load()
 
   // Subscribe to real-time grocery list updates
