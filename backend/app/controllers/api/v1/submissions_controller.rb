@@ -17,6 +17,7 @@ class Api::V1::SubmissionsController < ApplicationController
       has_cooking_place: params[:has_cooking_place].presence,
       cooking_location: params[:cooking_location].presence,
       found_all_ingredients: params[:found_all_ingredients].presence,
+      needs_fridge_space: params[:needs_fridge_space].presence,
       needs_utensils: params[:needs_utensils].presence,
       utensils_notes: params[:utensils_notes].presence
     }
@@ -113,6 +114,7 @@ class Api::V1::SubmissionsController < ApplicationController
       has_cooking_place: params[:has_cooking_place].presence,
       cooking_location: params[:cooking_location].presence,
       found_all_ingredients: params[:found_all_ingredients].presence,
+      needs_fridge_space: params[:needs_fridge_space].presence,
       needs_utensils: params[:needs_utensils].presence,
       utensils_notes: params[:utensils_notes].presence
     )
@@ -244,6 +246,7 @@ class Api::V1::SubmissionsController < ApplicationController
       has_cooking_place: submission.has_cooking_place,
       cooking_location: submission.cooking_location,
       found_all_ingredients: submission.found_all_ingredients,
+      needs_fridge_space: submission.needs_fridge_space,
       needs_utensils: submission.needs_utensils,
       utensils_notes: submission.utensils_notes,
       equipment_allocated: submission.equipment_allocated,

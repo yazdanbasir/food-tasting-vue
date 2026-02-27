@@ -1,0 +1,6 @@
+class AddNeedsFridgeSpaceToSubmissions < ActiveRecord::Migration[8.0]
+  def change
+    add_column :submissions, :needs_fridge_space, :string
+  end
+end
+

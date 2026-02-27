@@ -5,4 +5,8 @@ class Submission < ApplicationRecord
   serialize :members, coder: JSON
 
   validates :dish_name, presence: true
+
+  def needs_fridge_space?
+    needs_fridge_space == "yes"
+  end
 end

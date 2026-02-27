@@ -540,6 +540,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
           <div class="submission-table-header">
             <div class="sub-header-cell sub-header-center">Country &amp; Dish</div>
             <div class="sub-header-cell sub-header-center">Members</div>
+            <div class="sub-header-cell sub-header-center">Fridge?</div>
             <div class="sub-header-cell sub-header-center">Equip. Requested</div>
             <div class="sub-header-cell sub-header-center">Equip. Allocated ✎</div>
             <div class="sub-header-cell sub-header-center">Kitchen / Location ✎</div>
@@ -576,7 +577,14 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
                 {{ (sub.members || []).join(', ') || '—' }}
               </div>
 
-              <!-- Col 3: Equipment Requested (read-only) -->
+              <!-- Col 3: Fridge? -->
+              <div class="kitchen-cell">
+                <span v-if="sub.needs_fridge_space === 'yes'">Yes</span>
+                <span v-else-if="sub.needs_fridge_space === 'no'">No</span>
+                <span v-else>—</span>
+              </div>
+
+              <!-- Col 4: Equipment Requested (read-only) -->
               <div class="kitchen-cell">
                 <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes">{{ sub.utensils_notes }}</span>
                 <span v-else-if="sub.needs_utensils === 'yes'">Needs utensils</span>
@@ -584,7 +592,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
                 <span v-else>—</span>
               </div>
 
-              <!-- Col 4: Equipment Allocated (editable) -->
+              <!-- Col 5: Equipment Allocated (editable) -->
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
                 <template v-if="sub.needs_utensils === 'no'">
                   <div class="form-section-pill kitchen-resource-pill">
@@ -617,7 +625,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
                 </template>
               </div>
 
-              <!-- Col 5: Kitchen / Location (editable) -->
+              <!-- Col 6: Kitchen / Location (editable) -->
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
                 <template v-if="!sub.cooking_location">
                   <div class="form-section-pill kitchen-resource-pill">
@@ -650,7 +658,7 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
                 </template>
               </div>
 
-              <!-- Col 6: Helper / Driver? (editable) -->
+              <!-- Col 7: Helper / Driver? (editable) -->
               <div
                 class="kitchen-cell kitchen-cell-editable"
                 :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'helper_driver_needed') }"
@@ -691,6 +699,10 @@ function kitchenOptionsFor(sub: SubmissionResponse): string[] {
                   <div class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Has Own Kitchen</span>
                     <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.has_cooking_place }">{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Yes ✅' : 'No ❌') : '—' }}</span>
+                  </div>
+                  <div v-if="sub.needs_fridge_space" class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Fridge Space</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needs Fridge Space ⚠️' : 'No Fridge Needed ✅' }}</span>
                   </div>
                   <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Ingredients</span>

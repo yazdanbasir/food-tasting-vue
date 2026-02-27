@@ -5,22 +5,40 @@ import type { SubmissionResponse } from '@/api/submissions'
 
 const STORAGE_KEY = 'organizer_unlocked'
 const CORRECT_PASSWORD = 'disney1994'
-const LOG_PREFIX = '[Organizer Auth]'
 
 const isLocked = ref(localStorage.getItem(STORAGE_KEY) !== 'true')
 
-/** Re-locks the overlay and clears stored credentials on any 401. */
-export function forceLock() {
+let isReauthing = false
+
+/**
+ * On 401: silently re-authenticate with the known credentials and store a fresh token.
+ * The user stays on the page — no password prompt. Only re-locks if re-auth itself fails.
+ */
+async function handleSessionExpired(): Promise<void> {
+  if (isReauthing) return
+  isReauthing = true
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem('organizer_token')
     localStorage.removeItem('organizer_username')
-    localStorage.removeItem(STORAGE_KEY)
   }
-  isLocked.value = true
+  const apiUser = (import.meta.env.VITE_ORGANIZER_API_USERNAME as string | undefined) ?? 'organizer'
+  const apiPass = (import.meta.env.VITE_ORGANIZER_API_PASSWORD as string | undefined) ?? CORRECT_PASSWORD
+  try {
+    const result = await organizerLogin(apiUser, apiPass)
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('organizer_token', result.token)
+      localStorage.setItem('organizer_username', result.username)
+    }
+  } catch {
+    // Re-auth failed (wrong creds, server down, etc.) — only NOW re-lock
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY)
+    isLocked.value = true
+  } finally {
+    isReauthing = false
+  }
 }
 
-// Wire up the 401 handler now that forceLock is defined (avoids circular import)
-setOnUnauthorized(forceLock)
+setOnUnauthorized(() => { handleSessionExpired() })
 
 export function useLockOverlay() {
   function verifyPassword(pwd: string): boolean {
@@ -33,7 +51,7 @@ export function useLockOverlay() {
     const apiPass = import.meta.env.VITE_ORGANIZER_API_PASSWORD as string | undefined
     const username = apiUser ?? 'organizer'
     const pass = apiPass ?? password
-    console.log(LOG_PREFIX, 'unlock: attempting organizer login', { username, hasApiPass: !!apiPass })
+    console.log('[Organizer Auth]', 'unlock: attempting organizer login', { username, hasApiPass: !!apiPass })
     try {
       const result = await organizerLogin(username, pass)
       if (typeof localStorage !== 'undefined') {
@@ -41,13 +59,13 @@ export function useLockOverlay() {
         localStorage.setItem('organizer_username', result.username)
         localStorage.setItem(STORAGE_KEY, 'true')
         isLocked.value = false
-        console.log(LOG_PREFIX, 'unlock SUCCESS: token stored, overlay unlocked')
+        console.log('[Organizer Auth]', 'unlock SUCCESS: token stored, overlay unlocked')
         return { ok: true }
       }
       return { ok: false, error: 'Login succeeded but could not store token' }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Login failed'
-      console.error(LOG_PREFIX, 'unlock FAILED: organizer login did not succeed:', msg)
+      console.error('[Organizer Auth]', 'unlock FAILED: organizer login did not succeed:', msg)
       return { ok: false, error: msg }
     }
   }
