@@ -6,6 +6,7 @@ import { createConsumer } from '@rails/actioncable'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
+import KitchenResourceSelect from '@/components/KitchenResourceSelect.vue'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
 import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, getKitchenResources, createKitchenResource, updateKitchenResource, deleteKitchenResource, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload, type KitchenResourceItem } from '@/api/organizer'
 import LockOverlay from '@/components/LockOverlay.vue'
@@ -68,6 +69,7 @@ const addProductError = ref<string | null>(null)
 const cable = createConsumer(`${import.meta.env.VITE_API_BASE_URL.replace(/^http/, 'ws')}/cable`)
 onMounted(async () => {
   await loadSubmissions()
+  await loadKitchenResources()
   notifStore.load()
 
   // Subscribe to real-time grocery list updates
@@ -231,6 +233,26 @@ const totalCents = computed(() => {
   return groceryList.value.total_cents
 })
 
+const assignedEquipmentNames = computed<Set<string>>(() => {
+  const set = new Set<string>()
+  for (const sub of submissions.value) {
+    if (sub.equipment_allocated && sub.equipment_allocated.trim()) {
+      set.add(sub.equipment_allocated.trim())
+    }
+  }
+  return set
+})
+
+const assignedKitchenNames = computed<Set<string>>(() => {
+  const set = new Set<string>()
+  for (const sub of submissions.value) {
+    if (sub.cooking_location && sub.cooking_location.trim()) {
+      set.add(sub.cooking_location.trim())
+    }
+  }
+  return set
+})
+
 // ─── Kitchen table (per-submission fields) ────────────────────────────────
 
 
@@ -272,12 +294,14 @@ async function saveKitchenField(
 
 // ─── Kitchens & Utensils tab (standalone lists) ───────────────────────────
 
-type KuListKind = 'kitchen' | 'utensil'
+type KuListKind = 'kitchen' | 'utensil' | 'helper_driver'
 
 const kitchensAvailable = ref<KitchenResourceItem[]>([])
 const utensilsAvailable = ref<KitchenResourceItem[]>([])
+const helpersDriversAvailable = ref<KitchenResourceItem[]>([])
 const newKitchenName = ref('')
 const newUtensilName = ref('')
+const newHelperDriverName = ref('')
 const kuEditing = ref<Record<string, string>>({})
 
 function kuKey(kind: KuListKind, id: number) {
@@ -298,11 +322,17 @@ function cancelKuEdit(kind: KuListKind, id: number) {
   kuEditing.value = next
 }
 
+function kuListRef(kind: KuListKind) {
+  if (kind === 'kitchen') return kitchensAvailable
+  if (kind === 'utensil') return utensilsAvailable
+  return helpersDriversAvailable
+}
+
 function saveKuName(kind: KuListKind, id: number) {
   const key = kuKey(kind, id)
   const value = kuEditing.value[key]
   if (value === undefined) return
-  const listRef = kind === 'kitchen' ? kitchensAvailable : utensilsAvailable
+  const listRef = kuListRef(kind)
   const trimmed = value.trim()
   if (!trimmed) {
     cancelKuEdit(kind, id)
@@ -349,8 +379,21 @@ function addUtensilRow() {
     })
 }
 
+function addHelperDriverRow() {
+  const name = newHelperDriverName.value.trim()
+  if (!name) return
+  createKitchenResource('helper_driver', name)
+    .then((created) => {
+      helpersDriversAvailable.value = [...helpersDriversAvailable.value, created]
+      newHelperDriverName.value = ''
+    })
+    .catch((err) => {
+      console.error(err)
+    })
+}
+
 function deleteKuRow(kind: KuListKind, id: number) {
-  const listRef = kind === 'kitchen' ? kitchensAvailable : utensilsAvailable
+  const listRef = kuListRef(kind)
   const previous = listRef.value
   listRef.value = listRef.value.filter((row) => row.id !== id)
   cancelKuEdit(kind, id)
@@ -366,9 +409,53 @@ async function loadKitchenResources() {
     const all = await getKitchenResources()
     kitchensAvailable.value = all.filter((r) => r.kind === 'kitchen')
     utensilsAvailable.value = all.filter((r) => r.kind === 'utensil')
+    helpersDriversAvailable.value = all.filter((r) => r.kind === 'helper_driver')
   } catch (err) {
     console.error(err)
   }
+}
+
+async function assignKitchenField(
+  sub: SubmissionResponse,
+  field: 'equipment_allocated' | 'cooking_location',
+  value: string,
+) {
+  const subInList = submissions.value.find((s) => s.id === sub.id)
+  if (!subInList) return
+  const prev = (subInList as Record<string, unknown>)[field]
+  ;(subInList as Record<string, unknown>)[field] = value
+  kitchenSaveError.value = null
+  try {
+    const updated = await updateKitchenAllocation(sub.id, { [field]: value } as KitchenAllocationPayload)
+    const idx = submissions.value.findIndex((s) => s.id === updated.id)
+    if (idx !== -1) submissions.value[idx] = updated
+  } catch (err) {
+    ;(subInList as Record<string, unknown>)[field] = prev
+    kitchenSaveError.value = err instanceof Error ? err.message : 'Save failed'
+  }
+}
+
+function equipmentOptionsFor(sub: SubmissionResponse): string[] {
+  const used = assignedEquipmentNames.value
+  const current = (sub.equipment_allocated || '').trim()
+  const allNames = utensilsAvailable.value.map((r) => r.name.trim()).filter(Boolean)
+  return allNames.filter((name, index) => {
+    // Deduplicate names while filtering
+    if (allNames.indexOf(name) !== index) return false
+    if (!used.has(name)) return true
+    return current === name
+  })
+}
+
+function kitchenOptionsFor(sub: SubmissionResponse): string[] {
+  const used = assignedKitchenNames.value
+  const current = (sub.cooking_location || '').trim()
+  const allNames = kitchensAvailable.value.map((r) => r.name.trim()).filter(Boolean)
+  return allNames.filter((name, index) => {
+    if (allNames.indexOf(name) !== index) return false
+    if (!used.has(name)) return true
+    return current === name
+  })
 }
 
 </script>
@@ -479,43 +566,69 @@ async function loadKitchenResources() {
               </div>
 
               <!-- Col 4: Equipment Allocated (editable) -->
-              <div
-                class="kitchen-cell kitchen-cell-editable"
-                :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'equipment_allocated') }"
-                @click.stop
-                @dblclick.stop="startKitchenEdit(sub.id, 'equipment_allocated', sub.equipment_allocated)"
-              >
-                <input
-                  v-if="isKitchenEditing(sub.id, 'equipment_allocated')"
-                  v-model="kitchenEditing[kitchenKey(sub.id, 'equipment_allocated')]"
-                  class="kitchen-cell-input"
-                  type="text"
-                  autofocus
-                  @blur="saveKitchenField(sub, 'equipment_allocated')"
-                  @keyup.enter="saveKitchenField(sub, 'equipment_allocated')"
-                  @keyup.escape="cancelKitchenEdit(sub.id, 'equipment_allocated')"
-                />
-                <span v-else>{{ sub.equipment_allocated || '—' }}</span>
+              <div class="kitchen-cell kitchen-cell-editable" @click.stop>
+                <template v-if="sub.needs_utensils === 'no'">
+                  <div class="form-section-pill kitchen-resource-pill">
+                    <KitchenResourceSelect
+                      :model-value="sub.equipment_allocated || null"
+                      :options="equipmentOptionsFor(sub)"
+                      placeholder="Allocate equipment"
+                      @update:model-value="(val) => assignKitchenField(sub, 'equipment_allocated', val)"
+                    />
+                  </div>
+                </template>
+                <template v-else>
+                  <div
+                    class="kitchen-cell-inner-editable"
+                    :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'equipment_allocated') }"
+                    @dblclick.stop="startKitchenEdit(sub.id, 'equipment_allocated', sub.equipment_allocated)"
+                  >
+                    <input
+                      v-if="isKitchenEditing(sub.id, 'equipment_allocated')"
+                      v-model="kitchenEditing[kitchenKey(sub.id, 'equipment_allocated')]"
+                      class="kitchen-cell-input"
+                      type="text"
+                      autofocus
+                      @blur="saveKitchenField(sub, 'equipment_allocated')"
+                      @keyup.enter="saveKitchenField(sub, 'equipment_allocated')"
+                      @keyup.escape="cancelKitchenEdit(sub.id, 'equipment_allocated')"
+                    />
+                    <span v-else>{{ sub.equipment_allocated || '—' }}</span>
+                  </div>
+                </template>
               </div>
 
               <!-- Col 5: Kitchen / Location (editable) -->
-              <div
-                class="kitchen-cell kitchen-cell-editable"
-                :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'cooking_location') }"
-                @click.stop
-                @dblclick.stop="startKitchenEdit(sub.id, 'cooking_location', sub.cooking_location)"
-              >
-                <input
-                  v-if="isKitchenEditing(sub.id, 'cooking_location')"
-                  v-model="kitchenEditing[kitchenKey(sub.id, 'cooking_location')]"
-                  class="kitchen-cell-input"
-                  type="text"
-                  autofocus
-                  @blur="saveKitchenField(sub, 'cooking_location')"
-                  @keyup.enter="saveKitchenField(sub, 'cooking_location')"
-                  @keyup.escape="cancelKitchenEdit(sub.id, 'cooking_location')"
-                />
-                <span v-else>{{ sub.cooking_location || '—' }}</span>
+              <div class="kitchen-cell kitchen-cell-editable" @click.stop>
+                <template v-if="!sub.cooking_location">
+                  <div class="form-section-pill kitchen-resource-pill">
+                    <KitchenResourceSelect
+                      :model-value="sub.cooking_location || null"
+                      :options="kitchenOptionsFor(sub)"
+                      placeholder="Assign kitchen"
+                      @update:model-value="(val) => assignKitchenField(sub, 'cooking_location', val)"
+                    />
+                  </div>
+                </template>
+                <template v-else>
+                  <div
+                    class="kitchen-cell-inner-editable"
+                    :class="{ 'kitchen-cell-active': isKitchenEditing(sub.id, 'cooking_location') }"
+                    @dblclick.stop="startKitchenEdit(sub.id, 'cooking_location', sub.cooking_location)"
+                  >
+                    <input
+                      v-if="isKitchenEditing(sub.id, 'cooking_location')"
+                      v-model="kitchenEditing[kitchenKey(sub.id, 'cooking_location')]"
+                      class="kitchen-cell-input"
+                      type="text"
+                      autofocus
+                      @blur="saveKitchenField(sub, 'cooking_location')"
+                      @keyup.enter="saveKitchenField(sub, 'cooking_location')"
+                      @keyup.escape="cancelKitchenEdit(sub.id, 'cooking_location')"
+                    />
+                    <span v-else>{{ sub.cooking_location || '—' }}</span>
+                  </div>
+                </template>
               </div>
 
               <!-- Col 6: Helper / Driver? (editable) -->
@@ -802,6 +915,71 @@ async function loadKitchenResources() {
             </div>
             <div v-else class="ku-empty">
               No utensils or equipment added yet.
+            </div>
+          </div>
+
+          <!-- Helpers/Drivers Available table -->
+          <div class="ku-table-card">
+            <div class="ku-header-row">
+              <div class="ku-header-title">Helpers / Drivers Available</div>
+            </div>
+            <div class="ku-add-row">
+              <input
+                v-model="newHelperDriverName"
+                class="ku-add-input"
+                type="text"
+                placeholder="Add helper or driver..."
+                @keyup.enter="addHelperDriverRow"
+              />
+              <button
+                type="button"
+                class="btn-pill-primary ku-add-button"
+                @click="addHelperDriverRow"
+              >
+                +
+              </button>
+            </div>
+            <div v-if="helpersDriversAvailable.length" class="ku-rows">
+              <div
+                v-for="row in helpersDriversAvailable"
+                :key="row.id"
+                class="ku-data-row"
+              >
+                <div class="ku-cell">
+                  <input
+                    v-if="isKuEditing('helper_driver', row.id)"
+                    v-model="kuEditing[kuKey('helper_driver', row.id)]"
+                    class="ku-cell-input"
+                    type="text"
+                    autofocus
+                    @blur="saveKuName('helper_driver', row.id)"
+                    @keyup.enter="saveKuName('helper_driver', row.id)"
+                    @keyup.escape="cancelKuEdit('helper_driver', row.id)"
+                  />
+                  <span v-else>{{ row.name }}</span>
+                </div>
+                <div class="ku-actions">
+                  <button
+                    type="button"
+                    class="btn-pill-primary"
+                    aria-label="Edit helper/driver row"
+                    @click="startKuEdit('helper_driver', row.id, row.name)"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-pill-secondary btn-pill-danger"
+                    aria-label="Delete helper/driver row"
+                    @click="deleteKuRow('helper_driver', row.id)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="ku-empty">
+              No helpers or drivers added yet.
             </div>
           </div>
         </div>
@@ -1440,6 +1618,17 @@ async function loadKitchenResources() {
 
 .kitchen-cell-editable:hover {
   cursor: text;
+}
+
+.kitchen-cell-inner-editable {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kitchen-resource-pill {
+  margin: 0;
 }
 
 .kitchen-cell-active {

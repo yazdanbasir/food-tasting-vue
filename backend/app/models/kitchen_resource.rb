@@ -1,5 +1,5 @@
 class KitchenResource < ApplicationRecord
-  KINDS = %w[kitchen utensil].freeze
+  KINDS = %w[kitchen utensil helper_driver].freeze
 
   validates :kind, presence: true, inclusion: { in: KINDS }
   validates :name, presence: true

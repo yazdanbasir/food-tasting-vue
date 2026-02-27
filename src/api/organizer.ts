@@ -190,7 +190,7 @@ export async function deleteSubmission(submissionId: number): Promise<void> {
 
 // ─── Kitchens & Utensils resources ─────────────────────────────────────────
 
-export type KitchenResourceKind = 'kitchen' | 'utensil'
+export type KitchenResourceKind = 'kitchen' | 'utensil' | 'helper_driver'
 
 export interface KitchenResourceItem {
   id: number
