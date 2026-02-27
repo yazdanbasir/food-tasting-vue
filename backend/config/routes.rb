@@ -23,6 +23,7 @@ Rails.application.routes.draw do
       patch "submissions/by_id/:submission_id/ingredients/:ingredient_id", to: "submissions#update_ingredient_quantity"
       get "notifications", to: "notifications#index"
       patch "notifications/mark_all_read", to: "notifications#mark_all_read"
+      resources :kitchen_resources, only: [:index, :create, :update, :destroy]
     end
   end
 end

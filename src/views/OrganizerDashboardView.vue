@@ -7,7 +7,7 @@ import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
-import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload } from '@/api/organizer'
+import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, getKitchenResources, createKitchenResource, updateKitchenResource, deleteKitchenResource, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload, type KitchenResourceItem } from '@/api/organizer'
 import LockOverlay from '@/components/LockOverlay.vue'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
 import { useSubmissionStore } from '@/stores/submission'
@@ -128,6 +128,14 @@ async function switchToGrocery() {
   activeTab.value = 'grocery'
   addProductError.value = null
   if (!groceryList.value) await loadGroceryList()
+}
+
+async function switchToKitchens() {
+  activeTab.value = 'kitchens'
+  addProductError.value = null
+  if (!kitchensAvailable.value.length && !utensilsAvailable.value.length) {
+    await loadKitchenResources()
+  }
 }
 
 function switchToNotifications() {
@@ -264,23 +272,13 @@ async function saveKitchenField(
 
 // ─── Kitchens & Utensils tab (standalone lists) ───────────────────────────
 
-interface SimpleResourceRow {
-  id: number
-  name: string
-}
-
 type KuListKind = 'kitchen' | 'utensil'
 
-const kitchensAvailable = ref<SimpleResourceRow[]>([])
-const utensilsAvailable = ref<SimpleResourceRow[]>([])
+const kitchensAvailable = ref<KitchenResourceItem[]>([])
+const utensilsAvailable = ref<KitchenResourceItem[]>([])
 const newKitchenName = ref('')
 const newUtensilName = ref('')
 const kuEditing = ref<Record<string, string>>({})
-let kuNextId = 1
-
-function nextKuId(): number {
-  return kuNextId++
-}
 
 function kuKey(kind: KuListKind, id: number) {
   return `${kind}:${id}`
@@ -311,30 +309,66 @@ function saveKuName(kind: KuListKind, id: number) {
     return
   }
   const idx = listRef.value.findIndex((row) => row.id === id)
-  if (idx !== -1) {
-    listRef.value[idx] = { ...listRef.value[idx], name: trimmed }
+  if (idx === -1) {
+    cancelKuEdit(kind, id)
+    return
   }
+  const original = listRef.value[idx]!
+  listRef.value[idx] = { ...original, name: trimmed }
   cancelKuEdit(kind, id)
+  updateKitchenResource(id, { name: trimmed }).catch((err) => {
+    // revert local change on error
+    listRef.value[idx] = original
+    console.error(err)
+  })
 }
 
 function addKitchenRow() {
   const name = newKitchenName.value.trim()
   if (!name) return
-  kitchensAvailable.value = [...kitchensAvailable.value, { id: nextKuId(), name }]
-  newKitchenName.value = ''
+  createKitchenResource('kitchen', name)
+    .then((created) => {
+      kitchensAvailable.value = [...kitchensAvailable.value, created]
+      newKitchenName.value = ''
+    })
+    .catch((err) => {
+      console.error(err)
+    })
 }
 
 function addUtensilRow() {
   const name = newUtensilName.value.trim()
   if (!name) return
-  utensilsAvailable.value = [...utensilsAvailable.value, { id: nextKuId(), name }]
-  newUtensilName.value = ''
+  createKitchenResource('utensil', name)
+    .then((created) => {
+      utensilsAvailable.value = [...utensilsAvailable.value, created]
+      newUtensilName.value = ''
+    })
+    .catch((err) => {
+      console.error(err)
+    })
 }
 
 function deleteKuRow(kind: KuListKind, id: number) {
   const listRef = kind === 'kitchen' ? kitchensAvailable : utensilsAvailable
+  const previous = listRef.value
   listRef.value = listRef.value.filter((row) => row.id !== id)
   cancelKuEdit(kind, id)
+  deleteKitchenResource(id).catch((err) => {
+    console.error(err)
+    // revert on failure
+    listRef.value = previous
+  })
+}
+
+async function loadKitchenResources() {
+  try {
+    const all = await getKitchenResources()
+    kitchensAvailable.value = all.filter((r) => r.kind === 'kitchen')
+    utensilsAvailable.value = all.filter((r) => r.kind === 'utensil')
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 </script>
@@ -365,7 +399,7 @@ function deleteKuRow(kind: KuListKind, id: number) {
           type="button"
           class="dashboard-subtab"
           :class="activeTab === 'kitchens' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="activeTab = 'kitchens'; addProductError = null"
+          @click="switchToKitchens"
         >
           Kitchens &amp; Utensils
         </button>
@@ -557,17 +591,17 @@ function deleteKuRow(kind: KuListKind, id: number) {
                 <div class="submission-detail-buttons">
                   <button
                     type="button"
-                    class="btn-pill-primary"
+                    class="ku-icon-button"
                     @click.stop="handleEditSubmission(sub)"
                   >
-                    Edit
+                    ✎ Edit
                   </button>
                   <button
                     type="button"
-                    class="btn-pill-secondary btn-pill-danger"
+                    class="ku-icon-button ku-icon-delete"
                     @click.stop="handleDeleteSubmission(sub)"
                   >
-                    Delete
+                    ✕ Delete
                   </button>
                 </div>
               </div>
@@ -659,7 +693,7 @@ function deleteKuRow(kind: KuListKind, id: number) {
                 class="btn-pill-primary ku-add-button"
                 @click="addKitchenRow"
               >
-                Add
+                +
               </button>
             </div>
             <div v-if="kitchensAvailable.length" class="ku-rows">
@@ -722,7 +756,7 @@ function deleteKuRow(kind: KuListKind, id: number) {
                 class="btn-pill-primary ku-add-button"
                 @click="addUtensilRow"
               >
-                Add
+                +
               </button>
             </div>
             <div v-if="utensilsAvailable.length" class="ku-rows">

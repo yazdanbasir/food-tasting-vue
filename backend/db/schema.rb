@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_26_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_27_090000) do
   create_table "grocery_checkins", force: :cascade do |t|
     t.boolean "checked", default: false, null: false
     t.datetime "checked_at"
@@ -46,6 +46,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_200000) do
     t.index ["category"], name: "index_ingredients_on_category"
     t.index ["name"], name: "index_ingredients_on_name"
     t.index ["product_id"], name: "index_ingredients_on_product_id", unique: true
+  end
+
+  create_table "kitchen_resources", force: :cascade do |t|
+    t.string "kind", null: false
+    t.string "name", null: false
+    t.integer "position"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["kind"], name: "index_kitchen_resources_on_kind"
   end
 
   create_table "notifications", force: :cascade do |t|

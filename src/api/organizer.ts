@@ -187,3 +187,86 @@ export async function deleteSubmission(submissionId: number): Promise<void> {
   }
   console.log(LOG_PREFIX, 'deleteSubmission SUCCESS:', submissionId)
 }
+
+// ─── Kitchens & Utensils resources ─────────────────────────────────────────
+
+export type KitchenResourceKind = 'kitchen' | 'utensil'
+
+export interface KitchenResourceItem {
+  id: number
+  kind: KitchenResourceKind
+  name: string
+  position: number | null
+}
+
+export async function getKitchenResources(): Promise<KitchenResourceItem[]> {
+  const res = await fetch(`${BASE}/api/v1/kitchen_resources`, {
+    headers: organizerHeaders(),
+  })
+  const body = await res.json().catch(() => ({}))
+  if (res.status === 401) {
+    clearStaleOrganizerToken()
+    throw new Error('Session expired. Please log in again from the Organizer tab.')
+  }
+  if (!res.ok) {
+    throw new Error((body as { error?: string }).error || `Failed to load kitchen resources: ${res.status}`)
+  }
+  return body as KitchenResourceItem[]
+}
+
+export async function createKitchenResource(
+  kind: KitchenResourceKind,
+  name: string,
+): Promise<KitchenResourceItem> {
+  const res = await fetch(`${BASE}/api/v1/kitchen_resources`, {
+    method: 'POST',
+    headers: organizerHeaders(),
+    body: JSON.stringify({ kind, name }),
+  })
+  const body = await res.json().catch(() => ({}))
+  if (res.status === 401) {
+    clearStaleOrganizerToken()
+    throw new Error('Session expired. Please log in again from the Organizer tab.')
+  }
+  if (!res.ok) {
+    throw new Error((body as { error?: string }).error || `Failed to create kitchen resource: ${res.status}`)
+  }
+  return body as KitchenResourceItem
+}
+
+export async function updateKitchenResource(
+  id: number,
+  attrs: Partial<Pick<KitchenResourceItem, 'name' | 'position'>>,
+): Promise<KitchenResourceItem> {
+  const res = await fetch(`${BASE}/api/v1/kitchen_resources/${id}`, {
+    method: 'PATCH',
+    headers: organizerHeaders(),
+    body: JSON.stringify(attrs),
+  })
+  const body = await res.json().catch(() => ({}))
+  if (res.status === 401) {
+    clearStaleOrganizerToken()
+    throw new Error('Session expired. Please log in again from the Organizer tab.')
+  }
+  if (!res.ok) {
+    throw new Error((body as { error?: string }).error || `Failed to update kitchen resource: ${res.status}`)
+  }
+  return body as KitchenResourceItem
+}
+
+export async function deleteKitchenResource(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/api/v1/kitchen_resources/${id}`, {
+    method: 'DELETE',
+    headers: organizerHeaders(),
+  })
+  if (res.status === 401) {
+    const body = await res.json().catch(() => ({}))
+    console.error(LOG_PREFIX, 'deleteKitchenResource 401 Unauthorized - backend rejected token or no token sent. Body:', body)
+    clearStaleOrganizerToken()
+    throw new Error('Session expired. Please log in again from the Organizer tab.')
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || `Failed to delete kitchen resource: ${res.status}`)
+  }
+}
