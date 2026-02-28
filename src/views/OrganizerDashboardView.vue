@@ -478,8 +478,9 @@ function addKitchenRow() {
   if (!name) return
   createKitchenResource('kitchen', name)
     .then((created) => {
-      kitchensAvailable.value = [...kitchensAvailable.value, created]
+      kitchensAvailable.value = [created, ...kitchensAvailable.value]
       newKitchenName.value = ''
+      addingKuType.value = null
     })
     .catch((err) => {
       console.error(err)
@@ -491,8 +492,9 @@ function addFridgeRow() {
   if (!name) return
   createKitchenResource('fridge', name)
     .then((created) => {
-      fridgesAvailable.value = [...fridgesAvailable.value, created]
+      fridgesAvailable.value = [created, ...fridgesAvailable.value]
       newFridgeName.value = ''
+      addingKuType.value = null
     })
     .catch((err) => {
       console.error(err)
@@ -504,8 +506,9 @@ function addUtensilRow() {
   if (!name) return
   createKitchenResource('utensil', name)
     .then((created) => {
-      utensilsAvailable.value = [...utensilsAvailable.value, created]
+      utensilsAvailable.value = [created, ...utensilsAvailable.value]
       newUtensilName.value = ''
+      addingKuType.value = null
     })
     .catch((err) => {
       console.error(err)
@@ -517,8 +520,9 @@ function addHelperDriverRow() {
   if (!name) return
   createKitchenResource('helper_driver', name)
     .then((created) => {
-      helpersDriversAvailable.value = [...helpersDriversAvailable.value, created]
+      helpersDriversAvailable.value = [created, ...helpersDriversAvailable.value]
       newHelperDriverName.value = ''
+      addingKuType.value = null
     })
     .catch((err) => {
       console.error(err)
@@ -541,22 +545,18 @@ function cancelAddingKu() {
 }
 function commitAddFridge() {
   if (addingKuType.value !== 'fridge') return
-  addingKuType.value = null
   addFridgeRow()
 }
 function commitAddKitchen() {
   if (addingKuType.value !== 'kitchen') return
-  addingKuType.value = null
   addKitchenRow()
 }
 function commitAddUtensil() {
   if (addingKuType.value !== 'utensil') return
-  addingKuType.value = null
   addUtensilRow()
 }
 function commitAddHelperDriver() {
   if (addingKuType.value !== 'helper_driver') return
-  addingKuType.value = null
   addHelperDriverRow()
 }
 function onAddFridgeBlur() {
@@ -576,16 +576,56 @@ function onAddHelperBlur() {
   else cancelAddingKu()
 }
 
+/** When a resource is deleted from the list, clear that assignment from all submissions so re-adding the same name does not auto-reassign. */
+async function clearSubmissionsAssignmentsForDeletedResource(kind: KuListKind, resourceName: string) {
+  const name = resourceName.trim()
+  if (!name) return
+  const toUpdate: Array<{ sub: SubmissionResponse; payload: KitchenAllocationPayload }> = []
+  if (kind === 'fridge') {
+    for (const sub of submissions.value) {
+      if ((sub.fridge_location || '').trim() === name) toUpdate.push({ sub, payload: { fridge_location: null } })
+    }
+  } else if (kind === 'kitchen') {
+    for (const sub of submissions.value) {
+      if ((sub.cooking_location || '').trim() === name) toUpdate.push({ sub, payload: { cooking_location: null } })
+    }
+  } else if (kind === 'helper_driver') {
+    for (const sub of submissions.value) {
+      if ((sub.helper_driver_needed || '').trim() === name) toUpdate.push({ sub, payload: { helper_driver_needed: null } })
+    }
+  } else if (kind === 'utensil') {
+    for (const sub of submissions.value) {
+      const current = parseEquipmentAllocated(sub.equipment_allocated)
+      if (!current.includes(name)) continue
+      const newList = current.filter((n) => n !== name)
+      toUpdate.push({ sub, payload: { equipment_allocated: newList.length ? newList.join(', ') : null } })
+    }
+  }
+  for (const { sub, payload } of toUpdate) {
+    try {
+      const updated = await updateKitchenAllocation(sub.id, payload)
+      const idx = submissions.value.findIndex((s) => s.id === updated.id)
+      if (idx !== -1) submissions.value[idx] = updated
+    } catch (err) {
+      console.error('[clearSubmissionsAssignmentsForDeletedResource]', err)
+    }
+  }
+}
+
 function deleteKuRow(kind: KuListKind, id: number) {
   const listRef = kuListRef(kind)
+  const row = listRef.value.find((r) => r.id === id)
+  if (!row) return
+  const deletedName = row.name.trim()
   const previous = listRef.value
-  listRef.value = listRef.value.filter((row) => row.id !== id)
+  listRef.value = listRef.value.filter((r) => r.id !== id)
   cancelKuEdit(kind, id)
-  deleteKitchenResource(id).catch((err) => {
-    console.error(err)
-    // revert on failure
-    listRef.value = previous
-  })
+  deleteKitchenResource(id)
+    .then(() => clearSubmissionsAssignmentsForDeletedResource(kind, deletedName))
+    .catch((err) => {
+      console.error(err)
+      listRef.value = previous
+    })
 }
 
 async function loadKitchenResources() {
@@ -725,7 +765,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
           :class="activeTab === 'kitchens' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
           @click="switchToKitchens"
         >
-          Kitchens &amp; Utensils
+          Assignments
         </button>
         <button
           type="button"
@@ -1113,7 +1153,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
               :class="kuSubTab === 'fridges' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
               @click="kuSubTab = 'fridges'"
             >
-              Fridges Available
+              Fridges
             </button>
             <button
               type="button"
@@ -1121,7 +1161,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
               :class="kuSubTab === 'kitchens' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
               @click="kuSubTab = 'kitchens'"
             >
-              Kitchens Available
+              Kitchens
             </button>
             <button
               type="button"
@@ -1129,7 +1169,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
               :class="kuSubTab === 'utensils' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
               @click="kuSubTab = 'utensils'"
             >
-              Utensils / Equipment
+              Utensils/Equipment
             </button>
             <button
               type="button"
@@ -1137,10 +1177,10 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
               :class="kuSubTab === 'helpers' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
               @click="kuSubTab = 'helpers'"
             >
-              Helpers / Drivers
+              Helpers/Drivers
             </button>
           </div>
-          <button type="button" class="btn-pill-primary ku-add-btn" aria-label="Add" @click="startAddingKu">{{ kuSubTab === 'fridges' ? 'Add Fridge' : kuSubTab === 'kitchens' ? 'Add Kitchen' : kuSubTab === 'utensils' ? 'Add Utensil' : 'Add Helper' }}</button>
+          <button type="button" class="btn-pill-primary ku-add-btn" aria-label="Add" @click="startAddingKu">{{ kuSubTab === 'fridges' ? 'Add Fridge' : kuSubTab === 'kitchens' ? 'Add Kitchen' : kuSubTab === 'utensils' ? 'Add Utensil/Equipment' : 'Add Helper/Driver' }}</button>
         </div>
 
         <!-- Fridges -->
@@ -1231,7 +1271,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
           <div v-else class="ku-empty">No kitchens added yet.</div>
         </div>
 
-        <!-- Utensils / Equipment -->
+        <!-- Utensils/Equipment -->
         <div v-if="kuSubTab === 'utensils'" class="ku-section">
           <div v-if="addingKuType === 'utensil'" class="grocery-aisle-card ku-item-card ku-add-card">
             <div class="ku-item-row">
@@ -1275,7 +1315,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
           <div v-else class="ku-empty">No utensils or equipment added yet.</div>
         </div>
 
-        <!-- Helpers / Drivers -->
+        <!-- Helpers/Drivers -->
         <div v-if="kuSubTab === 'helpers'" class="ku-section">
           <div v-if="addingKuType === 'helper_driver'" class="grocery-aisle-card ku-item-card ku-add-card">
             <div class="ku-item-row">
