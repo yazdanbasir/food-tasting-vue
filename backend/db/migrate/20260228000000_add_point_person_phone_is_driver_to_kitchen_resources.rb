@@ -1,4 +1,6 @@
 # frozen_string_literal: true
+# Assignments (Fridges, Kitchens, Utensils, Helpers) need these columns for point_person, phone, is_driver to persist.
+# If edit data doesn't persist after refresh, run: cd backend && bundle exec rails db:migrate
 
 class AddPointPersonPhoneIsDriverToKitchenResources < ActiveRecord::Migration[8.0]
   def change

@@ -441,6 +441,7 @@ function isKuCardEditing(kind: KuListKind, row: KitchenResourceItem) {
 }
 
 function startKuEdit(kind: KuListKind, row: KitchenResourceItem) {
+  kuEditError.value = null
   editingKuCard.value = { kind, id: row.id }
   kuEditForm.value = {
     name: row.name,
@@ -456,6 +457,7 @@ function startKuEdit(kind: KuListKind, row: KitchenResourceItem) {
 
 function cancelKuEditForm() {
   editingKuCard.value = null
+  kuEditError.value = null
 }
 
 const driverSelectValue = computed({
@@ -468,9 +470,12 @@ const driverSelectValue = computed({
   },
 })
 
+const kuEditError = ref<string | null>(null)
+
 async function saveKuEdit() {
   const c = editingKuCard.value
   if (!c) return
+  kuEditError.value = null
   const { name, point_person, phone, is_driver } = kuEditForm.value
   const trimmedName = name.trim()
   if (!trimmedName) return
@@ -491,10 +496,14 @@ async function saveKuEdit() {
     listRef.value[idx] = { ...original, ...payload } as KitchenResourceItem
   }
   editingKuCard.value = null
-  updateKitchenResource(c.id, payload).catch((err) => {
+  try {
+    await updateKitchenResource(c.id, payload)
+  } catch (err) {
     if (original && idx >= 0) listRef.value[idx] = original
+    editingKuCard.value = c
+    kuEditError.value = err instanceof Error ? err.message : 'Failed to save. Run backend migration: cd backend && bundle exec rails db:migrate'
     console.error(err)
-  })
+  }
 }
 
 function kuListRef(kind: KuListKind): Ref<KitchenResourceItem[]> {
@@ -1280,6 +1289,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                 class="ku-card-detail"
               >
                 <div v-if="isKuCardEditing('fridge', row)" class="ku-card-meta ku-card-edit-form">
+                  <div v-if="kuEditError" class="ku-edit-error">{{ kuEditError }}</div>
                   <div class="ku-card-edit-fields">
                     <div class="ku-card-meta-item">
                       <label class="ku-card-meta-label">Name</label>
@@ -1360,6 +1370,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                 class="ku-card-detail"
               >
                 <div v-if="isKuCardEditing('kitchen', row)" class="ku-card-meta ku-card-edit-form">
+                  <div v-if="kuEditError" class="ku-edit-error">{{ kuEditError }}</div>
                   <div class="ku-card-edit-fields">
                     <div class="ku-card-meta-item">
                       <label class="ku-card-meta-label">Name</label>
@@ -1440,6 +1451,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                 class="ku-card-detail"
               >
                 <div v-if="isKuCardEditing('utensil', row)" class="ku-card-meta ku-card-edit-form">
+                  <div v-if="kuEditError" class="ku-edit-error">{{ kuEditError }}</div>
                   <div class="ku-card-edit-fields">
                     <div class="ku-card-meta-item">
                       <label class="ku-card-meta-label">Name</label>
@@ -1520,6 +1532,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                 class="ku-card-detail"
               >
                 <div v-if="isKuCardEditing('helper_driver', row)" class="ku-card-meta ku-card-edit-form">
+                  <div v-if="kuEditError" class="ku-edit-error">{{ kuEditError }}</div>
                   <div class="ku-card-edit-fields">
                     <div class="ku-card-meta-item">
                       <label class="ku-card-meta-label">Name</label>
@@ -2611,6 +2624,15 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
   border: 1px solid var(--color-border, #e5e5e5);
   border-radius: 1rem;
   font-size: var(--body-font-size, 1.125rem);
+}
+.ku-edit-error {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #b91c1c;
 }
 .ku-card-edit-form .ku-card-edit-fields {
   display: flex;
