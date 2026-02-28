@@ -750,23 +750,23 @@ function helperOptions(sub: SubmissionResponse): string[] {
                     <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.phone_number || '').trim() }">{{ (sub.phone_number || '').trim() || '—' }}</span>
                   </div>
                   <div class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Has Own Kitchen</span>
-                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.has_cooking_place }">{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Yes ✅' : 'No ❌') : '—' }}</span>
+                    <span class="submission-detail-meta-label">Kitchen</span>
+                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.has_cooking_place }">{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Has Kitchen ✅' : 'Needs Kitchen ⚠️') : '—' }}</span>
                   </div>
                   <div v-if="sub.needs_fridge_space" class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Fridge Space</span>
-                    <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needs Fridge Space ⚠️' : 'No Fridge Needed ✅' }}</span>
+                    <span class="submission-detail-meta-label">Fridge</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needs Fridge ⚠️' : 'Has Fridge ✅' }}</span>
                   </div>
                   <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Ingredients</span>
-                    <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'All Found ✅' : 'Missing Items ⚠️' }}</span>
+                    <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'Has Ingredients ✅' : 'Missing Ingredients ⚠️' }}</span>
                   </div>
                   <div v-if="sub.needs_utensils" class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Utensils</span>
-                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needs Utensils ⚠️' : 'No Utensils ✅' }}</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needs Utensils ⚠️' : 'Has Utensils ✅' }}</span>
                   </div>
                   <div class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Dietary</span>
+                    <span class="submission-detail-meta-label">Dietary Flags</span>
                     <DietaryIcons :dietary="aggregateDietary(sub)" :size="18" />
                   </div>
                 </div>
@@ -1390,11 +1390,24 @@ function helperOptions(sub: SubmissionResponse): string[] {
 }
 
 .submission-detail {
-  padding: 0 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.submission-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.submission-detail-section-title {
+  align-self: flex-start;
 }
 
 .submission-detail-meta {
-  margin-bottom: 1rem;
   padding: 0.75rem 1rem;
   background: #fff;
   border: 1px solid var(--color-border, #e5e5e5);
@@ -1403,21 +1416,25 @@ function helperOptions(sub: SubmissionResponse): string[] {
 }
 
 .submission-detail-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: 0.75rem 1.5rem;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.75rem 3.5rem;
+  overflow-x: auto;
 }
 
 .submission-detail-meta-item {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.25rem;
+  flex: 0 0 auto;
 }
 
 .submission-detail-meta-label {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-lafayette-gray, #3c373c);
+  text-align: center;
 }
 
 .submission-detail-meta-value {
@@ -1433,10 +1450,12 @@ function helperOptions(sub: SubmissionResponse): string[] {
   font-style: italic;
 }
 
-/* Align ingredients block with meta bar: same horizontal extent and content alignment */
+/* Align ingredients block with meta bar: same horizontal extent; gap above matches gap between ingredient rows (0.5rem) */
 .submission-detail-ingredients {
   flex: none;
   min-height: 0;
+  margin-top: -0.5rem;
+  padding: 0 1rem 0.75rem 1rem;
   padding-left: 0;
   padding-right: 0;
 }
@@ -1448,11 +1467,9 @@ function helperOptions(sub: SubmissionResponse): string[] {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.25rem 0;
 }
 
 .submission-detail-actions {
-  margin-top: 1rem;
   display: flex;
   align-items: center;
   gap: 1rem;

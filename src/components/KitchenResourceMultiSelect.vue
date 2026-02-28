@@ -118,10 +118,10 @@ onUnmounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.375rem;
-  padding: 0.25rem 1rem;
+  padding: 0.25rem 1.25rem;
   min-height: 2.5rem;
   border: none;
-  border-radius: 9999px;
+  border-radius: 1.5rem;
   background: transparent;
   color: #3c373c !important;
   font: inherit;

@@ -110,6 +110,9 @@ function changeQty(delta: number) {
   align-items: center;
   gap: 0.5rem;
   flex: none;
+  align-self: stretch;
+  border-left: 1px solid rgba(0, 0, 0, 0.15);
+  padding-left: 1rem;
 }
 
 .ingredient-row-qty-readonly {
