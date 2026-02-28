@@ -769,6 +769,22 @@ function helperOptions(sub: SubmissionResponse): string[] {
                     <span class="submission-detail-meta-label">Dietary Flags</span>
                     <DietaryIcons :dietary="aggregateDietary(sub)" :size="18" />
                   </div>
+                  <div class="submission-detail-meta-actions">
+                    <button
+                      type="button"
+                      class="btn-pill-primary"
+                      @click.stop="handleEditSubmission(sub)"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-pill-secondary btn-pill-danger"
+                      @click.stop="handleDeleteSubmission(sub)"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="form-section-ingredients submission-detail-ingredients">
@@ -788,24 +804,6 @@ function helperOptions(sub: SubmissionResponse): string[] {
                 {{ addProductError }}
               </div>
               <div v-if="sub.notes" class="submission-notes">{{ sub.notes }}</div>
-              <div class="submission-detail-actions">
-                <div class="submission-detail-buttons">
-                  <button
-                    type="button"
-                    class="btn-pill-primary"
-                    @click.stop="handleEditSubmission(sub)"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-pill-secondary btn-pill-danger"
-                    @click.stop="handleDeleteSubmission(sub)"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
           </div>
@@ -1426,8 +1424,17 @@ function helperOptions(sub: SubmissionResponse): string[] {
 .submission-detail-meta-grid {
   display: flex;
   flex-wrap: nowrap;
+  align-items: center;
   gap: 0.75rem 3.5rem;
   overflow-x: auto;
+}
+
+.submission-detail-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .submission-detail-meta-item {
