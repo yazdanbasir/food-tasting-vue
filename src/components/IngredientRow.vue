@@ -35,23 +35,25 @@ function changeQty(delta: number) {
     </div>
     <div v-if="editable" class="ingredient-row-actions">
       <span class="qty-controls">
-        <button
-          type="button"
-          class="qty-btn"
-          aria-label="Decrease quantity"
-          @click="changeQty(-1)"
-        >
-          −
-        </button>
         <span class="tabular-nums qty-num">{{ quantity }}</span>
-        <button
-          type="button"
-          class="qty-btn"
-          aria-label="Increase quantity"
-          @click="changeQty(1)"
-        >
-          +
-        </button>
+        <span class="qty-btn-stack">
+          <button
+            type="button"
+            class="qty-btn"
+            aria-label="Increase quantity"
+            @click="changeQty(1)"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+          </button>
+          <button
+            type="button"
+            class="qty-btn"
+            aria-label="Decrease quantity"
+            @click="changeQty(-1)"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </span>
       </span>
     </div>
     <template v-else>
