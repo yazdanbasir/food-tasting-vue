@@ -17,6 +17,16 @@ class Api::V1::GroceryListController < ApplicationController
         "ingredients.aisle",
         "ingredients.price_cents",
         "ingredients.image_url",
+        "ingredients.is_alcohol",
+        "ingredients.gluten",
+        "ingredients.dairy",
+        "ingredients.egg",
+        "ingredients.peanut",
+        "ingredients.kosher",
+        "ingredients.vegan",
+        "ingredients.vegetarian",
+        "ingredients.lactose_free",
+        "ingredients.wheat_free",
         "SUM(submission_ingredients.quantity) as total_quantity",
         "GROUP_CONCAT(submissions.team_name, '||') as team_names",
         "grocery_checkins.checked as checkin_checked",
@@ -36,7 +46,17 @@ class Api::V1::GroceryListController < ApplicationController
         "size" => row.size,
         "aisle" => row.aisle,
         "price_cents" => row.price_cents,
-        "image_url" => row.image_url
+        "image_url" => row.image_url,
+        "is_alcohol" => row.try(:is_alcohol) || false,
+        "gluten" => row.try(:gluten) || false,
+        "dairy" => row.try(:dairy) || false,
+        "egg" => row.try(:egg) || false,
+        "peanut" => row.try(:peanut) || false,
+        "kosher" => row.try(:kosher) || false,
+        "vegan" => row.try(:vegan) || false,
+        "vegetarian" => row.try(:vegetarian) || false,
+        "lactose_free" => row.try(:lactose_free) || false,
+        "wheat_free" => row.try(:wheat_free) || false
       }
       checkin_qty = row.try(:checkin_quantity_override)
       total_qty = checkin_qty.present? ? checkin_qty.to_i : aggregated_qty

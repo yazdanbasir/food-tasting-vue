@@ -6,7 +6,7 @@ const store = useSubmissionStore()
 const { masterGroceryList, totalCents } = storeToRefs(store)
 
 function formatAisleTitle(aisle: string): string {
-  if (!aisle || aisle === 'Other' || aisle === 'Unknown') return 'Aisle Unknown'
+  if (!aisle || aisle === 'Other' || aisle === 'Unknown') return 'Aisle Other'
   return `Aisle ${aisle}`
 }
 </script>

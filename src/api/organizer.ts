@@ -1,4 +1,5 @@
 import type { SubmissionResponse } from '@/api/submissions'
+import type { IngredientDietary } from '@/types/ingredient'
 
 const BASE = import.meta.env.VITE_API_BASE_URL
 
@@ -62,6 +63,7 @@ export interface GroceryItem {
     aisle: string | null
     price_cents: number
     image_url: string | null
+    dietary: IngredientDietary
   }
   total_quantity: number
   teams: string[]

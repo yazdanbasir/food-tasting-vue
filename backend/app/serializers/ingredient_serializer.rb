@@ -37,7 +37,6 @@ class IngredientSerializer
   end
 
   def dietary_hash
-    return {} if @variant == :grocery_list
     return {} if @source.respond_to?(:key?) && !@source.key?(:is_alcohol) && !@source.key?("is_alcohol")
 
     {

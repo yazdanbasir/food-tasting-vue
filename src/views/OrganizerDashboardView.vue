@@ -61,6 +61,7 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 
 
 const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'notifications'>('submissions')
+const groceryStore = ref<'giant' | 'other-stores'>('giant') // tab bar above aisles: Giant | Other Stores
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
 const expandedSubmissions = ref<Set<number>>(new Set())
@@ -71,6 +72,61 @@ function toggleSubmissionExpanded(id: number) {
   else next.add(id)
   expandedSubmissions.value = next
 }
+
+// ─── Grocery aisle expand/collapse ────────────────────────────
+const expandedAisles = ref<Set<string>>(new Set())
+
+function toggleAisleExpanded(aisle: string) {
+  const next = new Set(expandedAisles.value)
+  if (next.has(aisle)) next.delete(aisle)
+  else next.add(aisle)
+  expandedAisles.value = next
+}
+
+function aisleTotal(items: GroceryItem[]): number {
+  return items.reduce((sum, i) => sum + i.ingredient.price_cents * i.total_quantity, 0)
+}
+
+function aisleQtySum(items: GroceryItem[]): number {
+  return items.reduce((sum, i) => sum + i.total_quantity, 0)
+}
+
+// ─── Grocery lightbox ─────────────────────────────────────────
+const groceryLightboxOpen = ref(false)
+const groceryLightboxSrc = ref<string | null>(null)
+const groceryLightboxAlt = ref('')
+const GROCERY_API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:1826'
+
+function openGroceryLightbox(item: GroceryItem) {
+  const url = item.ingredient.image_url
+  if (!url || typeof url !== 'string' || !url.trim()) return
+  const trimmed = url.trim()
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    groceryLightboxSrc.value = trimmed
+  } else {
+    const base = (GROCERY_API_BASE as string).replace(/\/$/, '')
+    const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+    groceryLightboxSrc.value = `${base}${path}`
+  }
+  groceryLightboxAlt.value = item.ingredient.name
+  groceryLightboxOpen.value = true
+}
+
+function closeGroceryLightbox() {
+  groceryLightboxOpen.value = false
+}
+
+function handleGroceryLightboxEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeGroceryLightbox()
+}
+
+watch(groceryLightboxOpen, (open) => {
+  if (open) document.addEventListener('keydown', handleGroceryLightboxEsc)
+  else document.removeEventListener('keydown', handleGroceryLightboxEsc)
+})
+
+onUnmounted(() => document.removeEventListener('keydown', handleGroceryLightboxEsc))
+
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const addProductError = ref<string | null>(null)
@@ -128,6 +184,8 @@ async function loadGroceryList() {
   error.value = null
   try {
     groceryList.value = await getGroceryList()
+    // Default all aisles to collapsed
+    expandedAisles.value = new Set()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load'
   } finally {
@@ -216,7 +274,7 @@ async function handleSubmissionIngredientQty(
 }
 
 function formatAisleTitle(aisle: string): string {
-  if (!aisle || aisle === 'Other' || aisle === 'Unknown') return 'Aisle Unknown'
+  if (!aisle || aisle === 'Other' || aisle === 'Unknown') return 'Aisle Other'
   return `Aisle ${aisle}`
 }
 
@@ -248,6 +306,14 @@ async function handleDeleteSubmission(sub: SubmissionResponse) {
 const totalCents = computed(() => {
   if (!groceryList.value) return 0
   return groceryList.value.total_cents
+})
+
+const grandTotalQty = computed(() => {
+  if (!groceryList.value) return 0
+  return Object.values(groceryList.value.aisles).reduce(
+    (sum, items) => sum + items.reduce((s, i) => s + i.total_quantity, 0),
+    0,
+  )
 })
 
 function parseEquipmentAllocated(val: string | null | undefined): string[] {
@@ -812,17 +878,69 @@ function helperOptions(sub: SubmissionResponse): string[] {
 
       <!-- Grocery List Tab -->
       <div v-else-if="activeTab === 'grocery' && groceryList">
-        <div class="grocery-sections">
-          <section v-for="(items, aisle) in groceryList.aisles" :key="aisle" class="grocery-aisle">
-            <h2 class="grocery-aisle-title">{{ formatAisleTitle(aisle) }}</h2>
-            <div class="grocery-items">
+        <!-- Store tab bar above Aisles (spacing matches submission-table-header) -->
+        <div class="grocery-store-bar">
+          <button
+            type="button"
+            class="grocery-store-tab"
+            :class="groceryStore === 'giant' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+            @click="groceryStore = 'giant'"
+          >
+            Giant
+          </button>
+          <button
+            type="button"
+            class="grocery-store-tab"
+            :class="groceryStore === 'other-stores' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+            @click="groceryStore = 'other-stores'"
+          >
+            Other Stores
+          </button>
+        </div>
+        <div v-if="groceryStore === 'giant'" class="grocery-sections">
+          <div v-for="(items, aisle) in groceryList.aisles" :key="aisle" class="grocery-aisle-card">
+            <!-- Aisle header (collapsible) -->
+            <button
+              type="button"
+              class="grocery-aisle-header"
+              @click="toggleAisleExpanded(aisle as string)"
+            >
+              <div class="grocery-aisle-name-col">
+                <div class="form-section-pill grocery-aisle-dish-pill">
+                  <span class="form-section-pill-input grocery-aisle-dish-text">{{ formatAisleTitle(aisle as string) }}</span>
+                </div>
+              </div>
+              <span class="grocery-aisle-header-spacer"></span>
+              <div class="grocery-product-price grocery-aisle-header-val tabular-nums">${{ (aisleTotal(items) / 100).toFixed(2) }}</div>
+              <div class="grocery-product-actions grocery-aisle-header-actions">
+                <span class="qty-controls">
+                  <span class="tabular-nums qty-num grocery-aisle-header-val">{{ aisleQtySum(items) }}</span>
+                  <span class="qty-btn-stack" style="visibility: hidden;">
+                    <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                    </button>
+                    <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                    </button>
+                  </span>
+                </span>
+              </div>
+              <span class="grocery-aisle-arrow" :class="{ 'grocery-aisle-arrow-open': expandedAisles.has(aisle as string) }">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </span>
+            </button>
+
+            <!-- Aisle body (expanded) -->
+            <div v-if="expandedAisles.has(aisle as string)" class="grocery-aisle-body">
               <div
                 v-for="item in items"
                 :key="item.ingredient.id"
-                class="grocery-row"
-                :class="item.checked ? 'grocery-row-checked' : ''"
+                class="grocery-product-row"
+                :class="{ 'grocery-product-row-checked': item.checked }"
               >
-                <label class="grocery-cell grocery-cell-checkbox">
+                <label class="grocery-product-checkbox-wrap">
                   <input
                     type="checkbox"
                     :checked="item.checked"
@@ -830,44 +948,76 @@ function helperOptions(sub: SubmissionResponse): string[] {
                     @change="toggleCheck(item)"
                   />
                 </label>
-                <div class="grocery-cell grocery-cell-thumb">
-                  <IngredientThumb :ingredient="item.ingredient" />
+                <IngredientThumb
+                  :ingredient="item.ingredient"
+                  :class="item.ingredient.image_url ? 'grocery-thumb-clickable' : ''"
+                  @click="openGroceryLightbox(item)"
+                />
+                <div class="grocery-product-info">
+                  <span class="grocery-product-name truncate" :class="{ 'line-through': item.checked }">{{ item.ingredient.name }}</span>
+                  <span class="grocery-product-size" :class="{ 'line-through': item.checked }">{{ item.ingredient.size }}</span>
                 </div>
-                <div class="grocery-cell grocery-cell-name min-w-0">
-                  <span class="grocery-name truncate" :class="item.checked ? 'line-through' : ''">{{ item.ingredient.name }}</span>
-                  <span class="grocery-size" :class="item.checked ? 'line-through' : ''">{{ item.ingredient.size }}</span>
+                <div class="grocery-product-dietary">
+                  <DietaryIcons v-if="item.ingredient.dietary" :dietary="item.ingredient.dietary" :size="16" />
                 </div>
-                <div class="grocery-cell grocery-cell-teams truncate" :title="item.teams.join(', ')">
-                  <span class="grocery-teams">{{ item.teams.join(', ') }}</span>
+                <div class="grocery-product-teams truncate" :title="item.teams.join(', ')">
+                  {{ item.teams.join(', ') }}
                 </div>
-                <div class="grocery-cell grocery-cell-price tabular-nums text-right">
+                <div class="grocery-product-price tabular-nums">
                   ${{ ((item.ingredient.price_cents * item.total_quantity) / 100).toFixed(2) }}
                 </div>
-                <div class="grocery-cell grocery-cell-qty">
+                <div class="grocery-product-actions">
                   <span class="qty-controls">
-                    <button
-                      type="button"
-                      class="qty-btn"
-                      aria-label="Decrease quantity"
-                      @click.prevent.stop="changeQuantity(item, -1)"
-                    >−</button>
                     <span class="tabular-nums qty-num">{{ item.total_quantity }}</span>
-                    <button
-                      type="button"
-                      class="qty-btn"
-                      aria-label="Increase quantity"
-                      @click.prevent.stop="changeQuantity(item, +1)"
-                    >+</button>
+                    <span class="qty-btn-stack">
+                      <button
+                        type="button"
+                        class="qty-btn"
+                        aria-label="Increase quantity"
+                        @click.prevent.stop="changeQuantity(item, 1)"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                      </button>
+                      <button
+                        type="button"
+                        class="qty-btn"
+                        aria-label="Decrease quantity"
+                        @click.prevent.stop="changeQuantity(item, -1)"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                      </button>
+                    </span>
                   </span>
                 </div>
               </div>
+
             </div>
-          </section>
+          </div>
         </div>
 
-        <div class="grocery-total">
-          <span>Estimated total</span>
-          <span class="tabular-nums">${{ (totalCents / 100).toFixed(2) }}</span>
+        <div v-if="groceryStore === 'giant'" class="grocery-aisle-card grocery-grand-total">
+          <div class="grocery-aisle-header grocery-grand-total-header">
+            <div class="grocery-aisle-name-col">
+              <div class="form-section-pill grocery-aisle-dish-pill">
+                <span class="form-section-pill-input grocery-aisle-dish-text">Grand Total</span>
+              </div>
+            </div>
+            <span class="grocery-aisle-header-spacer"></span>
+            <div class="grocery-product-price grocery-aisle-header-val tabular-nums">${{ (totalCents / 100).toFixed(2) }}</div>
+            <div class="grocery-product-actions grocery-aisle-header-actions">
+              <span class="qty-controls">
+                <span class="tabular-nums qty-num grocery-aisle-header-val">{{ grandTotalQty }}</span>
+                <span class="qty-btn-stack" style="visibility: hidden;">
+                  <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                  </button>
+                  <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                  </button>
+                </span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1137,28 +1287,32 @@ function helperOptions(sub: SubmissionResponse): string[] {
       </div>
 
       <!-- Notifications Tab -->
-      <div v-else-if="activeTab === 'notifications'">
+      <div v-else-if="activeTab === 'notifications'" class="notif-tab">
+        <div class="notif-tab-header">
+          <span class="notif-tab-header-title">Notifications</span>
+          <button
+            v-if="notifStore.unreadCount > 0"
+            type="button"
+            class="btn-pill-secondary"
+            @click="notifStore.markAllRead()"
+          >Mark all read</button>
+        </div>
         <div v-if="!notifStore.notifications.length" class="dashboard-empty">No notifications yet.</div>
-        <div v-else>
-          <div v-if="notifStore.unreadCount > 0" class="notif-tab-actions">
-            <button type="button" class="btn-pill-secondary" @click="notifStore.markAllRead()">Mark all read</button>
-          </div>
-          <div class="submissions-list">
-            <div
-              v-for="n in notifStore.notifications"
-              :key="n.id"
-              class="submission-card notif-card"
-              :class="{ 'notif-card-read': n.read }"
-              :style="{ borderLeftColor: notifDotColor(n.event_type) }"
-            >
-              <div class="notif-card-row">
-                <div class="notif-card-dot" :style="{ background: notifDotColor(n.event_type) }" />
-                <div class="notif-card-body">
-                  <div class="notif-card-title">{{ n.title }}</div>
-                  <div v-if="n.message" class="notif-card-message">{{ n.message }}</div>
-                </div>
-                <div class="notif-card-time">{{ notifRelativeTime(n.created_at) }}</div>
+        <div v-else class="submissions-list">
+          <div
+            v-for="n in notifStore.notifications"
+            :key="n.id"
+            class="submission-card notif-card"
+            :class="{ 'notif-card-read': n.read }"
+            :style="{ borderLeftColor: notifDotColor(n.event_type) }"
+          >
+            <div class="notif-card-row">
+              <div class="notif-card-dot" :style="{ background: notifDotColor(n.event_type) }" />
+              <div class="notif-card-body">
+                <div class="notif-card-title">{{ n.title }}</div>
+                <div v-if="n.message" class="notif-card-message">{{ n.message }}</div>
               </div>
+              <div class="notif-card-time">{{ notifRelativeTime(n.created_at) }}</div>
             </div>
           </div>
         </div>
@@ -1166,6 +1320,20 @@ function helperOptions(sub: SubmissionResponse): string[] {
     </div>
   </div>
   </LockOverlay>
+
+  <!-- Grocery lightbox -->
+  <Teleport to="body">
+    <div v-if="groceryLightboxOpen" class="grocery-lightbox-overlay" @click.self="closeGroceryLightbox">
+      <div class="grocery-lightbox-window">
+        <button class="btn-pill-primary grocery-lightbox-close" aria-label="Close" @click="closeGroceryLightbox">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+        <img :src="groceryLightboxSrc!" :alt="groceryLightboxAlt" class="grocery-lightbox-img" />
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -1295,7 +1463,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
   border-radius: 1rem;
   padding: 0.5rem 1.5rem;
   min-height: 3.75rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.75rem; /* same gap as between main tab bar and body (0.75rem + 1rem) */
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -1501,52 +1669,189 @@ function helperOptions(sub: SubmissionResponse): string[] {
   font-style: italic;
 }
 
-/* Grocery: aisle + grid rows */
+/* Grocery: store tab bar above Aisles (spacing matches submission-table-header, width fits content like dashboard-subtab-bar) */
+.grocery-store-bar {
+  flex: none;
+  align-self: flex-start;
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-radius: 1rem;
+  padding: 0.5rem 1.5rem;
+  min-height: 3.75rem;
+  margin-bottom: 1.75rem; /* same total gap as between main tab bar and this bar (0.75rem + 1rem) */
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.grocery-store-tab {
+  border-radius: 9999px;
+  padding: 0.5rem 1.5rem;
+  min-height: 2.75rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  transition: background-color 0.15s, color 0.15s;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grocery-store-tab-active {
+  background-color: #fff;
+  color: var(--color-lafayette-red, #6b0f2a);
+  border-color: #fff;
+}
+
+.grocery-store-tab-inactive {
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.grocery-store-tab-inactive:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+/* Grocery: collapsible aisle cards + white product rows */
 .grocery-sections {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.grocery-aisle-title {
-  font-size: clamp(1.25rem, 1.25rem + ((1vw - 0.48rem) * 0.5), 1.5rem);
-  font-weight: 700;
-  color: var(--color-lafayette-gray, #3c373c);
-  margin: 0 0 0.5rem 0;
-}
-
-.grocery-items {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.grocery-row {
-  display: grid;
-  grid-template-columns: auto 2.5rem 1fr 10rem 5.5rem auto;
-  gap: 1rem;
-  align-items: center;
+.grocery-aisle-card {
   background: var(--color-menu-gray, #e5e3e0);
-  border-radius: 0.75rem;
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
+  border-radius: 1rem;
+  overflow: visible;
+  box-shadow: var(--shadow-natural, 6px 6px 9px rgba(0, 0, 0, 0.2));
+}
+
+.grocery-aisle-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.6rem 2rem 0.6rem 1rem;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-size: inherit;
+  color: #000;
   transition: opacity 0.15s;
 }
 
-.grocery-cell-thumb {
+.grocery-aisle-header:hover {
+  opacity: 0.85;
+}
+
+.grocery-aisle-name-col {
+  flex: none;
   display: flex;
   align-items: center;
-  justify-content: center;
+}
+
+.grocery-aisle-dish-pill {
   flex: none;
 }
 
-.grocery-row-checked {
+.grocery-aisle-dish-pill .form-section-pill-input {
+  min-width: 0;
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.grocery-aisle-dish-text {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  color: #000 !important;
+  -webkit-text-fill-color: #000;
+  font-weight: 500;
+}
+
+.grocery-aisle-header-spacer {
+  flex: 1;
+}
+
+.grocery-aisle-header-label {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.grocery-aisle-header-val {
+  font-weight: 400;
+}
+
+.grocery-aisle-header-actions {
+  align-self: center;
+}
+
+.grocery-aisle-arrow {
+  position: absolute;
+  right: 0.5rem;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.82;
+  transition: transform 0.2s;
+}
+
+.grocery-aisle-arrow-open {
+  transform: rotate(180deg);
+}
+
+.grocery-aisle-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 1rem;
+}
+
+
+
+/* Product rows — white card style matching IngredientRow */
+.grocery-product-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.15s, border-color 0.15s, background-color 0.15s, opacity 0.15s;
+}
+
+.grocery-product-row:hover {
+  background: #fafafa;
+  border-color: #d5d5d5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.grocery-product-row-checked {
   opacity: 0.6;
 }
 
-.grocery-cell-checkbox {
+.grocery-product-checkbox-wrap {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
@@ -1557,43 +1862,117 @@ function helperOptions(sub: SubmissionResponse): string[] {
   accent-color: var(--color-lafayette-red, #6b0f2a);
 }
 
-.grocery-cell-name {
+.grocery-thumb-clickable {
+  cursor: zoom-in;
+}
+
+.grocery-product-info {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
 }
 
-.grocery-name {
-  font-weight: 500;
+.grocery-product-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
-.grocery-size {
-  font-size: 0.875rem;
-  color: var(--color-lafayette-gray, #3c373c);
+.grocery-product-size {
+  font-size: 0.9375rem;
+  color: #666;
 }
 
-.grocery-cell-qty {
+.grocery-product-dietary {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-.grocery-teams {
+.grocery-product-teams {
   font-size: 0.875rem;
   color: var(--color-lafayette-gray, #3c373c);
+  max-width: 10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.grocery-total {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-lafayette-gray, #3c373c);
+.grocery-product-price {
+  font-size: 1.5rem;
+  color: var(--color-lafayette-gray, #3c373c);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+.grocery-product-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 1.125rem;
-  font-weight: 600;
+  gap: 0.5rem;
+  flex: none;
+  align-self: stretch;
+  border-left: 1px solid rgba(0, 0, 0, 0.15);
+  padding-left: 1rem;
+}
+
+.grocery-product-actions .qty-num {
+  min-width: 2.5rem;
+}
+
+.grocery-grand-total {
+  margin-top: 1rem;
+}
+
+.grocery-grand-total-header {
+  cursor: default;
+}
+
+.grocery-grand-total-header:hover {
+  opacity: 1;
+}
+
+/* Grocery lightbox */
+.grocery-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.grocery-lightbox-window {
+  position: relative;
+  display: inline-flex;
+}
+
+.grocery-lightbox-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+}
+
+.grocery-lightbox-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  min-height: unset;
+  border-radius: 50%;
+  font-size: 1rem;
+  z-index: 1;
 }
 
 .add-product-err {
@@ -1631,11 +2010,29 @@ function helperOptions(sub: SubmissionResponse): string[] {
 }
 
 
-/* Notifications tab: mark-all action row */
-.notif-tab-actions {
-  margin-bottom: 0.75rem;
+/* Notifications tab */
+.notif-tab {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.notif-tab-header {
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  border-radius: 1rem;
+  padding: 0.5rem 1.5rem;
+  min-height: 3.75rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notif-tab-header-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* Notification cards */
@@ -1874,11 +2271,16 @@ function helperOptions(sub: SubmissionResponse): string[] {
 .ku-header-row {
   background: var(--color-lafayette-red, #6b0f2a);
   color: #fff;
-  border-radius: 0.75rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 700;
+  border-radius: 1rem;
+  padding: 0.5rem 1.5rem;
+  min-height: 3rem;
+  font-size: 1.125rem;
+  font-weight: 500;
   letter-spacing: 0.02em;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ku-header-title {
@@ -1911,7 +2313,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
 .ku-rows {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
   margin-top: 0.25rem;
 }
 
@@ -1919,10 +2321,19 @@ function helperOptions(sub: SubmissionResponse): string[] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.5rem;
-  background: #f3f2f0;
-  border-radius: 9999px;
-  padding: 0.4rem 0.75rem;
+  gap: 0.75rem;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.15s, border-color 0.15s, background-color 0.15s;
+}
+
+.ku-data-row:hover {
+  background: #fafafa;
+  border-color: #d5d5d5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 .ku-cell {
@@ -1945,12 +2356,16 @@ function helperOptions(sub: SubmissionResponse): string[] {
 .ku-actions {
   display: inline-flex;
   align-items: center;
+  align-self: stretch;
   gap: 0.25rem;
+  border-left: 1px solid rgba(0, 0, 0, 0.15);
+  padding-left: 0.75rem;
 }
 
 .ku-empty {
-  padding: 0.5rem 0.75rem 0;
+  padding: 0.75rem 1rem;
   font-size: 0.9rem;
   opacity: 0.7;
+  text-align: center;
 }
 </style>
