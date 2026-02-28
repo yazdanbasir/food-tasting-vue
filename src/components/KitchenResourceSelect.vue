@@ -38,7 +38,11 @@ async function toggle() {
 }
 
 function selectOption(name: string) {
-  emit('update:modelValue', name)
+  if (props.modelValue === name) {
+    emit('update:modelValue', '')
+  } else {
+    emit('update:modelValue', name)
+  }
   open.value = false
 }
 
@@ -79,24 +83,18 @@ onUnmounted(() => {
         role="listbox"
         tabindex="-1"
       >
-        <button
-          v-if="clearable && modelValue"
-          type="button"
-          class="resource-select-option resource-select-option--clear"
-          @click.stop="selectOption('')"
-        >
-          ✕ Clear
-        </button>
         <template v-if="options.length">
           <button
             v-for="name in options"
             :key="name"
             type="button"
             role="option"
-            class="resource-select-option"
+            class="resource-select-option resource-select-option--single"
             :aria-selected="modelValue === name"
+            :class="{ 'resource-select-option--selected': modelValue === name }"
             @click.stop="selectOption(name)"
           >
+            <span class="resource-select-check">{{ modelValue === name ? '✓' : '' }}</span>
             {{ name }}
           </button>
         </template>
@@ -176,7 +174,9 @@ onUnmounted(() => {
 }
 
 .resource-select-option {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   width: 100%;
   padding: 0.5rem 1rem;
   border: none;
@@ -207,6 +207,13 @@ onUnmounted(() => {
   opacity: 0.75;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   margin-bottom: 0.125rem;
+}
+
+.resource-select-check {
+  width: 1em;
+  flex-shrink: 0;
+  color: #6b0f2a;
+  font-weight: 700;
 }
 
 .resource-select-empty {

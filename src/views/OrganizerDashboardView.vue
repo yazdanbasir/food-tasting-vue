@@ -615,7 +615,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
             <div class="sub-header-cell sub-header-center">Requested</div>
             <div class="sub-header-cell sub-header-center">Allocated</div>
             <div class="sub-header-cell sub-header-center">Kitchen</div>
-            <div class="sub-header-cell sub-header-center">Helper / Driver?</div>
+            <div class="sub-header-cell sub-header-center">Helper/Driver</div>
             <div class="sub-header-cell"></div>
           </div>
 
@@ -633,7 +633,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
               <!-- Col 1: Country + Dish pills -->
               <div class="submission-bar">
                 <div class="form-section-pill">
-                  <span class="submission-country-display" :title="sub.country_code || ''">{{ countryLabel(sub.country_code) }}</span>
+                  <span class="submission-country-display" :title="countryLabel(sub.country_code)">{{ sub.country_code ? flagEmoji(sub.country_code) : '🏳️' }}</span>
                 </div>
                 <div class="form-section-pill submission-dish-pill">
                   <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name || 'dish name...' }}</span>
@@ -734,9 +734,11 @@ function helperOptions(sub: SubmissionResponse): string[] {
                 </div>
               </div>
 
-              <!-- Col 7: Expand arrow (far right) -->
-              <div class="sub-col-arrow">
-                {{ expandedSubmissions.has(sub.id) ? '▲' : '▼' }}
+              <!-- Col 8: Expand arrow (far right) -->
+              <div class="sub-col-arrow" :class="{ 'sub-col-arrow-open': expandedSubmissions.has(sub.id) }">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
               </div>
             </button>
 
@@ -1315,6 +1317,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
   border: none;
   background: none;
   font-size: inherit;
+  color: #000;
   transition: opacity 0.15s;
 }
 
@@ -1326,9 +1329,9 @@ function helperOptions(sub: SubmissionResponse): string[] {
 .submission-bar {
   min-width: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .submission-country-display {
@@ -1350,25 +1353,26 @@ function helperOptions(sub: SubmissionResponse): string[] {
 }
 
 .submission-bar .submission-dish-pill {
-  flex: none;
-  width: fit-content;
+  flex: 1;
   min-width: 0;
 }
 
 .submission-dish-pill .form-section-pill-input {
-  width: auto;
-  min-width: 4ch;
+  width: 100%;
+  min-width: 0;
   min-height: 2.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+  overflow: hidden;
 }
 
 .submission-dish-text {
   display: block;
   min-width: 0;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 /* Col 7: expand arrow — pushed to the far right of the row */
@@ -1376,8 +1380,13 @@ function helperOptions(sub: SubmissionResponse): string[] {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  font-size: 0.75rem;
   color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.82;
+  transition: transform 0.2s;
+}
+
+.sub-col-arrow-open {
+  transform: rotate(180deg);
 }
 
 .submission-detail {
@@ -1759,6 +1768,8 @@ function helperOptions(sub: SubmissionResponse): string[] {
   justify-content: center;
   text-align: center;
   color: #000;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .kitchen-cell-editable {

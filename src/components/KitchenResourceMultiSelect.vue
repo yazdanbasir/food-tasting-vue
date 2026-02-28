@@ -82,14 +82,6 @@ onUnmounted(() => {
         role="listbox"
         tabindex="-1"
       >
-        <button
-          v-if="modelValue.length"
-          type="button"
-          class="resource-select-option resource-select-option--clear"
-          @click.stop="clearAll"
-        >
-          ✕ Clear all
-        </button>
         <template v-if="options.length">
           <button
             v-for="name in options"
