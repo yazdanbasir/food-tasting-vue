@@ -636,7 +636,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
                   <span class="submission-country-display" :title="countryLabel(sub.country_code)">{{ sub.country_code ? flagEmoji(sub.country_code) : '🏳️' }}</span>
                 </div>
                 <div class="form-section-pill submission-dish-pill">
-                  <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name || 'dish name...' }}</span>
+                  <span class="form-section-pill-input submission-dish-text" :class="{ 'submission-dish-placeholder': !sub.dish_name }">{{ sub.dish_name || 'dish name...' }}</span>
                 </div>
               </div>
 
@@ -1373,6 +1373,14 @@ function helperOptions(sub: SubmissionResponse): string[] {
   min-width: 0;
   white-space: normal;
   word-break: break-word;
+  color: #000 !important;
+  -webkit-text-fill-color: #000;
+}
+
+.submission-dish-placeholder {
+  color: var(--color-lafayette-gray, #3c373c) !important;
+  -webkit-text-fill-color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.5;
 }
 
 /* Col 7: expand arrow — pushed to the far right of the row */

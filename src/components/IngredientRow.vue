@@ -3,6 +3,7 @@ import '@/styles/form-section.css'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
 import type { Ingredient } from '@/types/ingredient'
+import { ref, computed, watch, onUnmounted } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -21,11 +22,46 @@ const emit = defineEmits<{
 function changeQty(delta: number) {
   emit('changeQty', delta)
 }
+
+// Lightbox
+const lightboxOpen = ref(false)
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:1826'
+
+const lightboxSrc = computed(() => {
+  const url = props.ingredient?.image_url
+  if (!url || typeof url !== 'string') return null
+  const trimmed = url.trim()
+  if (!trimmed) return null
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  const base = API_BASE.replace(/\/$/, '')
+  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  return `${base}${path}`
+})
+
+function openLightbox() {
+  if (lightboxSrc.value) lightboxOpen.value = true
+}
+function closeLightbox() {
+  lightboxOpen.value = false
+}
+function handleEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeLightbox()
+}
+
+watch(lightboxOpen, (open) => {
+  if (open) document.addEventListener('keydown', handleEsc)
+  else document.removeEventListener('keydown', handleEsc)
+})
+onUnmounted(() => document.removeEventListener('keydown', handleEsc))
 </script>
 
 <template>
   <div class="ingredient-row">
-    <IngredientThumb :ingredient="ingredient" />
+    <IngredientThumb
+      :ingredient="ingredient"
+      :class="lightboxSrc ? 'ingredient-thumb-clickable' : ''"
+      @click="openLightbox"
+    />
     <div class="ingredient-row-info">
       <div class="ingredient-row-name truncate">{{ ingredient.name }}</div>
       <div class="ingredient-row-size">{{ ingredient.size }}</div>
@@ -63,6 +99,19 @@ function changeQty(delta: number) {
       </span>
     </template>
   </div>
+
+  <Teleport to="body">
+    <div v-if="lightboxOpen" class="lightbox-overlay" @click.self="closeLightbox">
+      <div class="lightbox-window">
+        <button class="btn-pill-primary lightbox-close" aria-label="Close" @click="closeLightbox">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+        <img :src="lightboxSrc!" :alt="ingredient.name" class="lightbox-img" />
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -126,5 +175,48 @@ function changeQty(delta: number) {
   flex: none;
   min-width: 5rem;
   color: var(--color-lafayette-gray, #3c373c);
+}
+
+.ingredient-thumb-clickable {
+  cursor: zoom-in;
+}
+
+/* Lightbox */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.lightbox-window {
+  position: relative;
+  display: inline-flex;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  min-height: unset;
+  border-radius: 50%;
+  font-size: 1rem;
+  z-index: 1;
 }
 </style>

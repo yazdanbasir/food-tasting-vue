@@ -57,8 +57,8 @@ const showImage = computed(
 <style scoped>
 .ingredient-thumb-wrap {
   position: relative;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
   flex: none;
   border-radius: 0.25rem;
 }
