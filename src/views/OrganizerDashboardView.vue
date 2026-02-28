@@ -775,11 +775,11 @@ function helperOptions(sub: SubmissionResponse): string[] {
                       class="btn-pill-primary"
                       @click.stop="handleEditSubmission(sub)"
                     >
-                      Edit
+                      Edit Form
                     </button>
                     <button
                       type="button"
-                      class="btn-pill-secondary btn-pill-danger"
+                      class="btn-pill-primary"
                       @click.stop="handleDeleteSubmission(sub)"
                     >
                       Delete
@@ -1465,14 +1465,10 @@ function helperOptions(sub: SubmissionResponse): string[] {
   font-style: italic;
 }
 
-/* Align ingredients block with meta bar: same horizontal extent; gap above matches gap between ingredient rows (0.5rem) */
 .submission-detail-ingredients {
   flex: none;
   min-height: 0;
-  margin-top: -0.5rem;
-  padding: 0 1rem 0.75rem 1rem;
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0.5rem 0;
 }
 
 .submission-detail-list {
