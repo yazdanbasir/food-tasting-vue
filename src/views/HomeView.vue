@@ -28,6 +28,7 @@ const {
   needsFridgeSpace,
   needsUtensils,
   utensilsNotes,
+  otherIngredients,
 } = storeToRefs(store)
 const phoneIsValid = computed(() =>
   store.phoneNumber.trim().length === 0 ? false : store.isUSPhoneNumber(store.phoneNumber),
@@ -91,6 +92,7 @@ async function handleSubmit() {
     has_cooking_place: hasCookingPlace.value || undefined,
     cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
     found_all_ingredients: foundAllIngredients.value || undefined,
+    other_ingredients: foundAllIngredients.value === 'no' ? otherIngredients.value.trim() || undefined : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
     needs_utensils: needsUtensils.value || undefined,
     utensils_notes: needsUtensils.value === 'yes' ? utensilsNotes.value.trim() || undefined : undefined,
@@ -292,18 +294,29 @@ async function handleSubmit() {
             </div>
           </div>
 
-          <!-- Other Ingredients section (shows if foundAllIngredients = 'no') -->
-          <div v-if="foundAllIngredients === 'no'" class="home-dish-bar form-section-top-bar">
+          <!-- Other Ingredients section (shows when foundAllIngredients is answered) -->
+          <div v-if="foundAllIngredients !== ''" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Other Ingredients</div>
+              <div v-if="foundAllIngredients === 'no'" class="form-section-pill home-dish-pill home-dish-pill-grow">
+                <input
+                  v-model="otherIngredients"
+                  type="text"
+                  placeholder="Please list what you need and we will get it from other stores if possible"
+                  class="form-section-pill-input pill-input-center"
+                />
+              </div>
+              <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
+                Thanks! Feel free to edit your form later if needed
+              </div>
             </div>
           </div>
 
-          <!-- Cooking Location section (shows if hasCookingPlace = 'yes') -->
-          <div v-if="hasCookingPlace === 'yes'" class="home-dish-bar form-section-top-bar">
+          <!-- Cooking Location section (shows when hasCookingPlace answered; input if yes, message pill if no) -->
+          <div v-if="hasCookingPlace !== ''" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Cooking Location</div>
-              <div class="form-section-pill home-dish-pill">
+              <div v-if="hasCookingPlace === 'yes'" class="form-section-pill home-dish-pill">
                 <input
                   v-model="cookingLocation"
                   type="text"
@@ -312,20 +325,39 @@ async function handleSubmit() {
                   class="form-section-pill-input pill-input-center"
                 />
               </div>
+              <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
+                No worries! We will assign a kitchen and notify your group
+              </div>
             </div>
           </div>
 
-          <!-- Utensils / Equipment section (shows if needsUtensils = 'yes') -->
-          <div v-if="needsUtensils === 'yes'" class="home-dish-bar form-section-top-bar">
+          <!-- Utensils / Equipment section (shows when needsUtensils answered; input if yes, message pill if no) -->
+          <div v-if="needsUtensils !== ''" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Utensils / Equipment</div>
-              <div class="form-section-pill home-dish-pill home-dish-pill-grow">
+              <div v-if="needsUtensils === 'yes'" class="form-section-pill home-dish-pill home-dish-pill-grow">
                 <input
                   v-model="utensilsNotes"
                   type="text"
                   placeholder="What do you need? (e.g. large pot, strainer, ladle)"
                   class="form-section-pill-input pill-input-center"
                 />
+              </div>
+              <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
+                Thanks! Feel free to edit your form later if needed
+              </div>
+            </div>
+          </div>
+
+          <!-- Fridge Space section (shows when needsFridgeSpace answered; same pattern as Cooking Location) -->
+          <div v-if="needsFridgeSpace !== ''" class="home-dish-bar form-section-top-bar">
+            <div class="home-dish-bar-inner">
+              <div class="form-section-pill form-section-pill-label">Fridge Space</div>
+              <div v-if="needsFridgeSpace === 'yes'" class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
+                No worries! We will assign you fridge space and notify your group
+              </div>
+              <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
+                Thanks! Feel free to edit your form later if needed
               </div>
             </div>
           </div>
@@ -424,6 +456,13 @@ async function handleSubmit() {
 
 .home-dish-pill-country {
   color: var(--color-lafayette-gray, #3c373c);
+}
+
+.home-dish-display-pill {
+  color: #000;
+  font-style: normal;
+  font-weight: 500;
+  text-align: center;
 }
 
 .home-phone-pill-inner {

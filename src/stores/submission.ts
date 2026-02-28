@@ -23,6 +23,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   const needsFridgeSpace = ref<'yes' | 'no' | ''>('')
   const needsUtensils = ref<'yes' | 'no' | ''>('')
   const utensilsNotes = ref('')
+  const otherIngredients = ref('')
 
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
@@ -141,6 +142,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     needsFridgeSpace.value = ''
     needsUtensils.value = ''
     utensilsNotes.value = ''
+    otherIngredients.value = ''
     ingredients.value = []
   }
 
@@ -166,6 +168,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     needsFridgeSpace.value = (sub.needs_fridge_space as 'yes' | 'no' | '') ?? ''
     needsUtensils.value = (sub.needs_utensils as 'yes' | 'no' | '') ?? ''
     utensilsNotes.value = sub.utensils_notes ?? ''
+    otherIngredients.value = sub.other_ingredients ?? ''
     ingredients.value = sub.ingredients.map((item) => ({
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
@@ -194,6 +197,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     needsFridgeSpace,
     needsUtensils,
     utensilsNotes,
+    otherIngredients,
     editingSubmissionId,
     editingAsOrganizer,
     addMember,

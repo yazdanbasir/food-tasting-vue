@@ -15,6 +15,7 @@ export interface SubmissionPayload {
   needs_fridge_space?: string
   needs_utensils?: string
   utensils_notes?: string
+  other_ingredients?: string
   ingredients: { ingredient_id: number; quantity: number }[]
 }
 
@@ -48,6 +49,7 @@ export interface SubmissionResponse {
   needs_fridge_space?: string | null
   needs_utensils?: string | null
   utensils_notes?: string | null
+  other_ingredients?: string | null
   equipment_allocated?: string | null
   helper_driver_needed?: string | null
   fridge_location?: string | null
