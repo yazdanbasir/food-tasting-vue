@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import '@/styles/form-section.css'
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import type { Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
@@ -62,6 +62,10 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 
 const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'notifications'>('submissions')
 const groceryStore = ref<'giant' | 'other-stores'>('giant') // tab bar above aisles: Giant | Other Stores
+const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('fridges') // Kitchens & Utensils sub-tabs
+const addingKuType = ref<'fridge' | 'kitchen' | 'utensil' | 'helper_driver' | null>(null) // show add-card with input
+const kuAddInputRef = ref<HTMLInputElement | null>(null)
+const kuEditInputRef = ref<HTMLInputElement | null>(null)
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
 const expandedSubmissions = ref<Set<number>>(new Set())
@@ -422,8 +426,13 @@ function isKuEditing(kind: KuListKind, id: number) {
   return kuKey(kind, id) in kuEditing.value
 }
 
-function startKuEdit(kind: KuListKind, id: number, current: string) {
+async function startKuEdit(kind: KuListKind, id: number, current: string) {
   kuEditing.value[kuKey(kind, id)] = current
+  await nextTick()
+  // Ref inside v-for is an array; focus the (only) visible edit input, same timing as add
+  const el = kuEditInputRef.value
+  const input = Array.isArray(el) ? el[0] : el
+  setTimeout(() => (input as HTMLInputElement | undefined)?.focus(), 0)
 }
 
 function cancelKuEdit(kind: KuListKind, id: number) {
@@ -516,6 +525,57 @@ function addHelperDriverRow() {
     })
 }
 
+const kuSubTabToType = { fridges: 'fridge', kitchens: 'kitchen', utensils: 'utensil', helpers: 'helper_driver' } as const
+async function startAddingKu() {
+  const t = kuSubTabToType[kuSubTab.value]
+  addingKuType.value = t
+  if (t === 'fridge') newFridgeName.value = ''
+  else if (t === 'kitchen') newKitchenName.value = ''
+  else if (t === 'utensil') newUtensilName.value = ''
+  else newHelperDriverName.value = ''
+  await nextTick()
+  kuAddInputRef.value?.focus()
+}
+function cancelAddingKu() {
+  addingKuType.value = null
+}
+function commitAddFridge() {
+  if (addingKuType.value !== 'fridge') return
+  addingKuType.value = null
+  addFridgeRow()
+}
+function commitAddKitchen() {
+  if (addingKuType.value !== 'kitchen') return
+  addingKuType.value = null
+  addKitchenRow()
+}
+function commitAddUtensil() {
+  if (addingKuType.value !== 'utensil') return
+  addingKuType.value = null
+  addUtensilRow()
+}
+function commitAddHelperDriver() {
+  if (addingKuType.value !== 'helper_driver') return
+  addingKuType.value = null
+  addHelperDriverRow()
+}
+function onAddFridgeBlur() {
+  if (newFridgeName.value.trim()) commitAddFridge()
+  else cancelAddingKu()
+}
+function onAddKitchenBlur() {
+  if (newKitchenName.value.trim()) commitAddKitchen()
+  else cancelAddingKu()
+}
+function onAddUtensilBlur() {
+  if (newUtensilName.value.trim()) commitAddUtensil()
+  else cancelAddingKu()
+}
+function onAddHelperBlur() {
+  if (newHelperDriverName.value.trim()) commitAddHelperDriver()
+  else cancelAddingKu()
+}
+
 function deleteKuRow(kind: KuListKind, id: number) {
   const listRef = kuListRef(kind)
   const previous = listRef.value
@@ -603,6 +663,20 @@ function fridgeOptionsFor(sub: SubmissionResponse): string[] {
   })
 }
 
+/** Display value for fridge select: only show submission's fridge if it's still in the current fridge list. */
+function effectiveFridgeValue(sub: SubmissionResponse): string | null {
+  const val = (sub.fridge_location || '').trim()
+  if (!val) return null
+  return fridgeOptionsFor(sub).includes(val) ? sub.fridge_location : null
+}
+
+/** Display value for kitchen select: only show submission's kitchen if it's still in the current kitchen list. */
+function effectiveKitchenValue(sub: SubmissionResponse): string | null {
+  const val = (sub.cooking_location || '').trim()
+  if (!val) return null
+  return kitchenOptionsFor(sub).includes(val) ? sub.cooking_location : null
+}
+
 function helperOptions(sub: SubmissionResponse): string[] {
   const used = assignedHelperNames.value
   const current = (sub.helper_driver_needed || '').trim()
@@ -612,6 +686,13 @@ function helperOptions(sub: SubmissionResponse): string[] {
     if (!used.has(name)) return true
     return current === name
   })
+}
+
+/** Display value for helper select: only show submission's helper if it's still in the current helper list. */
+function effectiveHelperValue(sub: SubmissionResponse): string | null {
+  const val = (sub.helper_driver_needed || '').trim()
+  if (!val) return null
+  return helperOptions(sub).includes(val) ? sub.helper_driver_needed : null
 }
 
 </script>
@@ -716,7 +797,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
                 <template v-if="sub.needs_fridge_space === 'yes'">
                   <div class="form-section-pill kitchen-resource-pill">
                     <KitchenResourceSelect
-                      :model-value="sub.fridge_location || null"
+                      :model-value="effectiveFridgeValue(sub)"
                       :options="fridgeOptionsFor(sub)"
                       placeholder="Assign fridge"
                       clearable
@@ -758,7 +839,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
                 <template v-if="sub.has_cooking_place === 'no'">
                   <div class="form-section-pill kitchen-resource-pill">
                     <KitchenResourceSelect
-                      :model-value="sub.cooking_location || null"
+                      :model-value="effectiveKitchenValue(sub)"
                       :options="kitchenOptionsFor(sub)"
                       placeholder="Assign kitchen"
                       clearable
@@ -782,7 +863,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
                       @keyup.enter="saveKitchenField(sub, 'cooking_location')"
                       @keyup.escape="cancelKitchenEdit(sub.id, 'cooking_location')"
                     />
-                    <span v-else>{{ sub.cooking_location || '—' }}</span>
+                    <span v-else>{{ effectiveKitchenValue(sub) || '—' }}</span>
                   </div>
                 </template>
               </div>
@@ -791,7 +872,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
                 <div class="form-section-pill kitchen-resource-pill">
                   <KitchenResourceSelect
-                    :model-value="sub.helper_driver_needed || null"
+                    :model-value="effectiveHelperValue(sub)"
                     :options="helperOptions(sub)"
                     placeholder="Assign helper"
                     clearable
@@ -1023,266 +1104,219 @@ function helperOptions(sub: SubmissionResponse): string[] {
 
       <!-- Kitchens & Utensils Tab -->
       <div v-else-if="activeTab === 'kitchens'" class="ku-tab">
-        <div class="ku-tables-row">
-          <!-- Fridges Available table -->
-          <div class="ku-table-card">
-            <div class="ku-header-row">
-              <div class="ku-header-title">Fridges Available</div>
+        <!-- Tab bar row: tabs (in bar) + add button outside bar, all the way right -->
+        <div class="ku-tab-bar-row">
+          <div class="grocery-store-bar">
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="kuSubTab === 'fridges' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="kuSubTab = 'fridges'"
+            >
+              Fridges Available
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="kuSubTab === 'kitchens' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="kuSubTab = 'kitchens'"
+            >
+              Kitchens Available
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="kuSubTab === 'utensils' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="kuSubTab = 'utensils'"
+            >
+              Utensils / Equipment
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="kuSubTab === 'helpers' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="kuSubTab = 'helpers'"
+            >
+              Helpers / Drivers
+            </button>
+          </div>
+          <button type="button" class="btn-pill-primary ku-add-btn" aria-label="Add" @click="startAddingKu">{{ kuSubTab === 'fridges' ? 'Add Fridge' : kuSubTab === 'kitchens' ? 'Add Kitchen' : kuSubTab === 'utensils' ? 'Add Utensil' : 'Add Helper' }}</button>
+        </div>
+
+        <!-- Fridges -->
+        <div v-if="kuSubTab === 'fridges'" class="ku-section">
+          <div v-if="addingKuType === 'fridge'" class="grocery-aisle-card ku-item-card ku-add-card">
+            <div class="ku-item-row">
+              <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
+                <input
+                  ref="kuAddInputRef"
+                  v-model="newFridgeName"
+                  class="form-section-pill-input ku-cell-input"
+                  type="text"
+                  placeholder="Fridge location..."
+                  @keyup.enter="commitAddFridge"
+                  @blur="onAddFridgeBlur"
+                  @keyup.escape="cancelAddingKu"
+                />
+              </div>
             </div>
-            <div class="ku-add-row">
-              <input
-                v-model="newFridgeName"
-                class="ku-add-input"
-                type="text"
-                placeholder="Add fridge location..."
-                @keyup.enter="addFridgeRow"
-              />
-              <button
-                type="button"
-                class="btn-pill-primary ku-add-button"
-                @click="addFridgeRow"
-              >
-                +
-              </button>
-            </div>
-            <div v-if="fridgesAvailable.length" class="ku-rows">
-              <div
-                v-for="row in fridgesAvailable"
-                :key="row.id"
-                class="ku-data-row"
-              >
-                <div class="ku-cell">
+          </div>
+          <div v-if="fridgesAvailable.length" class="ku-card-list">
+            <div v-for="row in fridgesAvailable" :key="row.id" class="grocery-aisle-card ku-item-card">
+              <div class="ku-item-row">
+                <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
                   <input
+                    ref="kuEditInputRef"
                     v-if="isKuEditing('fridge', row.id)"
                     v-model="kuEditing[kuKey('fridge', row.id)]"
-                    class="ku-cell-input"
+                    class="form-section-pill-input ku-cell-input"
                     type="text"
-                    autofocus
                     @blur="saveKuName('fridge', row.id)"
                     @keyup.enter="saveKuName('fridge', row.id)"
                     @keyup.escape="cancelKuEdit('fridge', row.id)"
                   />
-                  <span v-else>{{ row.name }}</span>
+                  <span v-else class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
                 </div>
-                <div class="ku-actions">
-                  <button
-                    type="button"
-                    class="btn-pill-primary"
-                    aria-label="Edit fridge row"
-                    @click="startKuEdit('fridge', row.id, row.name)"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-pill-secondary btn-pill-danger"
-                    aria-label="Delete fridge row"
-                    @click="deleteKuRow('fridge', row.id)"
-                  >
-                    ✕
-                  </button>
+                <div class="ku-item-actions">
+                  <button type="button" class="btn-pill-primary" @click="startKuEdit('fridge', row.id, row.name)">Edit</button>
+                  <button type="button" class="btn-pill-primary" @click="deleteKuRow('fridge', row.id)">Delete</button>
                 </div>
               </div>
             </div>
-            <div v-else class="ku-empty">
-              No fridges added yet.
+          </div>
+          <div v-else class="ku-empty">No fridges added yet.</div>
+        </div>
+
+        <!-- Kitchens -->
+        <div v-if="kuSubTab === 'kitchens'" class="ku-section">
+          <div v-if="addingKuType === 'kitchen'" class="grocery-aisle-card ku-item-card ku-add-card">
+            <div class="ku-item-row">
+              <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
+                <input
+                  ref="kuAddInputRef"
+                  v-model="newKitchenName"
+                  class="form-section-pill-input ku-cell-input"
+                  type="text"
+                  placeholder="Kitchen location..."
+                  @keyup.enter="commitAddKitchen"
+                  @blur="onAddKitchenBlur"
+                  @keyup.escape="cancelAddingKu"
+                />
+              </div>
             </div>
           </div>
-
-          <!-- Kitchens Available table -->
-          <div class="ku-table-card">
-            <div class="ku-header-row">
-              <div class="ku-header-title">Kitchens Available</div>
-            </div>
-            <div class="ku-add-row">
-              <input
-                v-model="newKitchenName"
-                class="ku-add-input"
-                type="text"
-                placeholder="Add kitchen location..."
-                @keyup.enter="addKitchenRow"
-              />
-              <button
-                type="button"
-                class="btn-pill-primary ku-add-button"
-                @click="addKitchenRow"
-              >
-                +
-              </button>
-            </div>
-            <div v-if="kitchensAvailable.length" class="ku-rows">
-              <div
-                v-for="row in kitchensAvailable"
-                :key="row.id"
-                class="ku-data-row"
-              >
-                <div class="ku-cell">
+          <div v-if="kitchensAvailable.length" class="ku-card-list">
+            <div v-for="row in kitchensAvailable" :key="row.id" class="grocery-aisle-card ku-item-card">
+              <div class="ku-item-row">
+                <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
                   <input
+                    ref="kuEditInputRef"
                     v-if="isKuEditing('kitchen', row.id)"
                     v-model="kuEditing[kuKey('kitchen', row.id)]"
-                    class="ku-cell-input"
+                    class="form-section-pill-input ku-cell-input"
                     type="text"
-                    autofocus
                     @blur="saveKuName('kitchen', row.id)"
                     @keyup.enter="saveKuName('kitchen', row.id)"
                     @keyup.escape="cancelKuEdit('kitchen', row.id)"
                   />
-                  <span v-else>{{ row.name }}</span>
+                  <span v-else class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
                 </div>
-                <div class="ku-actions">
-                  <button
-                    type="button"
-                    class="btn-pill-primary"
-                    aria-label="Edit kitchen row"
-                    @click="startKuEdit('kitchen', row.id, row.name)"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-pill-secondary btn-pill-danger"
-                    aria-label="Delete kitchen row"
-                    @click="deleteKuRow('kitchen', row.id)"
-                  >
-                    ✕
-                  </button>
+                <div class="ku-item-actions">
+                  <button type="button" class="btn-pill-primary" @click="startKuEdit('kitchen', row.id, row.name)">Edit</button>
+                  <button type="button" class="btn-pill-primary" @click="deleteKuRow('kitchen', row.id)">Delete</button>
                 </div>
               </div>
             </div>
-            <div v-else class="ku-empty">
-              No kitchens added yet.
+          </div>
+          <div v-else class="ku-empty">No kitchens added yet.</div>
+        </div>
+
+        <!-- Utensils / Equipment -->
+        <div v-if="kuSubTab === 'utensils'" class="ku-section">
+          <div v-if="addingKuType === 'utensil'" class="grocery-aisle-card ku-item-card ku-add-card">
+            <div class="ku-item-row">
+              <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
+                <input
+                  ref="kuAddInputRef"
+                  v-model="newUtensilName"
+                  class="form-section-pill-input ku-cell-input"
+                  type="text"
+                  placeholder="Utensil or equipment..."
+                  @keyup.enter="commitAddUtensil"
+                  @blur="onAddUtensilBlur"
+                  @keyup.escape="cancelAddingKu"
+                />
+              </div>
             </div>
           </div>
-
-          <!-- Utensils/Equipment Available table -->
-          <div class="ku-table-card">
-            <div class="ku-header-row">
-              <div class="ku-header-title">Utensils / Equipment Available</div>
-            </div>
-            <div class="ku-add-row">
-              <input
-                v-model="newUtensilName"
-                class="ku-add-input"
-                type="text"
-                placeholder="Add utensil or equipment..."
-                @keyup.enter="addUtensilRow"
-              />
-              <button
-                type="button"
-                class="btn-pill-primary ku-add-button"
-                @click="addUtensilRow"
-              >
-                +
-              </button>
-            </div>
-            <div v-if="utensilsAvailable.length" class="ku-rows">
-              <div
-                v-for="row in utensilsAvailable"
-                :key="row.id"
-                class="ku-data-row"
-              >
-                <div class="ku-cell">
+          <div v-if="utensilsAvailable.length" class="ku-card-list">
+            <div v-for="row in utensilsAvailable" :key="row.id" class="grocery-aisle-card ku-item-card">
+              <div class="ku-item-row">
+                <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
                   <input
+                    ref="kuEditInputRef"
                     v-if="isKuEditing('utensil', row.id)"
                     v-model="kuEditing[kuKey('utensil', row.id)]"
-                    class="ku-cell-input"
+                    class="form-section-pill-input ku-cell-input"
                     type="text"
-                    autofocus
                     @blur="saveKuName('utensil', row.id)"
                     @keyup.enter="saveKuName('utensil', row.id)"
                     @keyup.escape="cancelKuEdit('utensil', row.id)"
                   />
-                  <span v-else>{{ row.name }}</span>
+                  <span v-else class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
                 </div>
-                <div class="ku-actions">
-                  <button
-                    type="button"
-                    class="btn-pill-primary"
-                    aria-label="Edit utensil row"
-                    @click="startKuEdit('utensil', row.id, row.name)"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-pill-secondary btn-pill-danger"
-                    aria-label="Delete utensil row"
-                    @click="deleteKuRow('utensil', row.id)"
-                  >
-                    ✕
-                  </button>
+                <div class="ku-item-actions">
+                  <button type="button" class="btn-pill-primary" @click="startKuEdit('utensil', row.id, row.name)">Edit</button>
+                  <button type="button" class="btn-pill-primary" @click="deleteKuRow('utensil', row.id)">Delete</button>
                 </div>
               </div>
             </div>
-            <div v-else class="ku-empty">
-              No utensils or equipment added yet.
+          </div>
+          <div v-else class="ku-empty">No utensils or equipment added yet.</div>
+        </div>
+
+        <!-- Helpers / Drivers -->
+        <div v-if="kuSubTab === 'helpers'" class="ku-section">
+          <div v-if="addingKuType === 'helper_driver'" class="grocery-aisle-card ku-item-card ku-add-card">
+            <div class="ku-item-row">
+              <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
+                <input
+                  ref="kuAddInputRef"
+                  v-model="newHelperDriverName"
+                  class="form-section-pill-input ku-cell-input"
+                  type="text"
+                  placeholder="Helper or driver..."
+                  @keyup.enter="commitAddHelperDriver"
+                  @blur="onAddHelperBlur"
+                  @keyup.escape="cancelAddingKu"
+                />
+              </div>
             </div>
           </div>
-
-          <!-- Helpers/Drivers Available table -->
-          <div class="ku-table-card">
-            <div class="ku-header-row">
-              <div class="ku-header-title">Helpers / Drivers Available</div>
-            </div>
-            <div class="ku-add-row">
-              <input
-                v-model="newHelperDriverName"
-                class="ku-add-input"
-                type="text"
-                placeholder="Add helper or driver..."
-                @keyup.enter="addHelperDriverRow"
-              />
-              <button
-                type="button"
-                class="btn-pill-primary ku-add-button"
-                @click="addHelperDriverRow"
-              >
-                +
-              </button>
-            </div>
-            <div v-if="helpersDriversAvailable.length" class="ku-rows">
-              <div
-                v-for="row in helpersDriversAvailable"
-                :key="row.id"
-                class="ku-data-row"
-              >
-                <div class="ku-cell">
+          <div v-if="helpersDriversAvailable.length" class="ku-card-list">
+            <div v-for="row in helpersDriversAvailable" :key="row.id" class="grocery-aisle-card ku-item-card">
+              <div class="ku-item-row">
+                <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
                   <input
+                    ref="kuEditInputRef"
                     v-if="isKuEditing('helper_driver', row.id)"
                     v-model="kuEditing[kuKey('helper_driver', row.id)]"
-                    class="ku-cell-input"
+                    class="form-section-pill-input ku-cell-input"
                     type="text"
-                    autofocus
                     @blur="saveKuName('helper_driver', row.id)"
                     @keyup.enter="saveKuName('helper_driver', row.id)"
                     @keyup.escape="cancelKuEdit('helper_driver', row.id)"
                   />
-                  <span v-else>{{ row.name }}</span>
+                  <span v-else class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
                 </div>
-                <div class="ku-actions">
-                  <button
-                    type="button"
-                    class="btn-pill-primary"
-                    aria-label="Edit helper/driver row"
-                    @click="startKuEdit('helper_driver', row.id, row.name)"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-pill-secondary btn-pill-danger"
-                    aria-label="Delete helper/driver row"
-                    @click="deleteKuRow('helper_driver', row.id)"
-                  >
-                    ✕
-                  </button>
+                <div class="ku-item-actions">
+                  <button type="button" class="btn-pill-primary" @click="startKuEdit('helper_driver', row.id, row.name)">Edit</button>
+                  <button type="button" class="btn-pill-primary" @click="deleteKuRow('helper_driver', row.id)">Delete</button>
                 </div>
               </div>
             </div>
-            <div v-else class="ku-empty">
-              No helpers or drivers added yet.
-            </div>
           </div>
+          <div v-else class="ku-empty">No helpers or drivers added yet.</div>
         </div>
       </div>
 
@@ -1762,14 +1796,17 @@ function helperOptions(sub: SubmissionResponse): string[] {
   flex: none;
 }
 
+/* Match submission-dish-pill height and styling (same min-height and no extra padding on input) */
 .grocery-aisle-dish-pill .form-section-pill-input {
+  width: 100%;
   min-width: 0;
-  min-height: 2rem;
-  padding: 0.25rem 0.75rem;
+  min-height: 2.25rem;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+  overflow: hidden;
   white-space: nowrap;
 }
 
@@ -2242,130 +2279,90 @@ function helperOptions(sub: SubmissionResponse): string[] {
   text-align: center;
 }
 
-/* ─── Kitchens & Utensils tab (standalone lists) ─────────────────────────── */
+/* ─── Kitchens & Utensils tab (tab bar + card rows) ──────────────────────── */
 
 .ku-tab {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0;
 }
 
-.ku-tables-row {
+.ku-tab-bar-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.ku-table-card {
-  flex: 1 1 20rem;
-  background: var(--color-menu-gray, #e5e3e0);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-natural, 6px 6px 9px rgba(0, 0, 0, 0.2));
-  padding: 0.75rem 0.75rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.ku-header-row {
-  background: var(--color-lafayette-red, #6b0f2a);
-  color: #fff;
-  border-radius: 1rem;
-  padding: 0.5rem 1.5rem;
-  min-height: 3rem;
-  font-size: 1.125rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ku-header-title {
-  text-align: center;
-}
-
-.ku-add-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.25rem 0;
-}
-
-.ku-add-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  border-radius: 9999px;
-  border: 1px solid var(--color-border, #e5e5e5);
-  padding: 0.4rem 1rem;
-  font-size: 1rem;
-  font-family: inherit;
-  background: #fff;
-  color: var(--color-lafayette-gray, #3c373c);
-}
-
-.ku-add-button {
-  flex: none;
-}
-
-.ku-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-}
-
-.ku-data-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.75rem;
-  padding: 0.75rem 1rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.15s, border-color 0.15s, background-color 0.15s;
+  width: 100%;
+}
+.ku-tab-bar-row .grocery-store-bar {
+  flex: none;
+}
+.ku-tab-bar-row .ku-add-btn {
+  margin-left: auto;
+  min-width: 2.5rem;
 }
 
-.ku-data-row:hover {
-  background: #fafafa;
-  border-color: #d5d5d5;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+.ku-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.ku-cell {
-  min-width: 0;
+/* Row inside card: same padding/gap as grocery-aisle-header and submission row */
+.ku-item-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.6rem 2rem 0.6rem 1rem;
+  border: 1px solid transparent;
+  background: none;
+  font-size: inherit;
+  color: #000;
+}
+
+.ku-item-pill {
+  flex: none;
+  max-width: 100%;
+}
+
+.ku-item-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.95rem;
 }
 
 .ku-cell-input {
   width: 100%;
-  border: none;
-  background: transparent;
-  outline: none;
-  font: inherit;
-  color: inherit;
+  min-width: 0;
 }
 
-.ku-actions {
-  display: inline-flex;
+.ku-item-actions {
+  display: flex;
   align-items: center;
-  align-self: stretch;
-  gap: 0.25rem;
-  border-left: 1px solid rgba(0, 0, 0, 0.15);
-  padding-left: 0.75rem;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.ku-add-card .ku-item-pill {
+  min-width: 12rem;
+}
+.ku-add-card .ku-cell-input {
+  min-width: 10rem;
+}
+
+.ku-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .ku-empty {
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-  opacity: 0.7;
+  padding: 1rem;
+  font-size: 0.95rem;
+  opacity: 0.75;
   text-align: center;
+  background: var(--color-menu-gray, #e5e3e0);
+  border-radius: 1rem;
 }
 </style>
