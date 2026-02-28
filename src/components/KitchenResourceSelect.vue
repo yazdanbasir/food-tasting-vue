@@ -120,11 +120,10 @@ onUnmounted(() => {
   justify-content: center;
   gap: 0.375rem;
   padding: 0.25rem 1rem;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   border: none;
   border-radius: 9999px;
   background: transparent;
-  color: #3c373c !important;
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -134,6 +133,10 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   outline: none;
+}
+
+.resource-select-btn:not(.resource-select-btn--placeholder) {
+  color: #000;
 }
 
 .resource-select-btn--placeholder {

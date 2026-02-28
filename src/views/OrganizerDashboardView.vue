@@ -1795,9 +1795,15 @@ function helperOptions(sub: SubmissionResponse): string[] {
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: #000;
+  color: #000 !important;
   white-space: normal;
   word-break: break-word;
+}
+
+.kitchen-cell *,
+.kitchen-cell .kitchen-cell-inner-editable,
+.kitchen-cell .kitchen-cell-inner-editable span {
+  color: #000 !important;
 }
 
 .kitchen-cell-editable {
@@ -1814,6 +1820,7 @@ function helperOptions(sub: SubmissionResponse): string[] {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #000 !important;
 }
 
 .kitchen-resource-pill {

@@ -115,15 +115,14 @@ onUnmounted(() => {
 
 .resource-select-btn {
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.375rem;
   padding: 0.25rem 1.25rem;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   border: none;
   border-radius: 1.5rem;
   background: transparent;
-  color: #3c373c !important;
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -137,16 +136,16 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 0.1rem;
   line-height: 1.4;
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
 }
 
 .resource-select-placeholder {
+  color: #3c373c;
   opacity: 0.7;
 }
 
 .resource-select-label-item {
   display: block;
+  color: #000;
 }
 
 
