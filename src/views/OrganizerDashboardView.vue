@@ -740,43 +740,53 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 <template>
   <LockOverlay>
   <div class="h-full flex flex-col dashboard">
-    <!-- Subtab bar: Dishes | Grocery List (only one active at a time) -->
-    <div class="dashboard-subtab-bar">
-      <div class="dashboard-subtab-row">
-        <button
-          type="button"
-          class="dashboard-subtab"
-          :class="activeTab === 'submissions' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="switchToSubmissions"
-        >
-          Submissions
-        </button>
-        <button
-          type="button"
-          class="dashboard-subtab"
-          :class="activeTab === 'grocery' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="switchToGrocery"
-        >
-          Grocery List
-        </button>
-        <button
-          type="button"
-          class="dashboard-subtab"
-          :class="activeTab === 'kitchens' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="switchToKitchens"
-        >
-          Assignments
-        </button>
-        <button
-          type="button"
-          class="dashboard-subtab"
-          :class="activeTab === 'notifications' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
-          @click="switchToNotifications"
-        >
-          Notifications
-          <span v-if="notifStore.unreadCount > 0" class="dashboard-notif-badge">{{ notifStore.unreadCount > 9 ? '9+' : notifStore.unreadCount }}</span>
-        </button>
+    <!-- Tab bar row: maroon pill bar + (when Notifications) Mark all read outside bar, far right -->
+    <div class="dashboard-subtab-bar-row">
+      <div class="dashboard-subtab-bar">
+        <div class="dashboard-subtab-row">
+          <button
+            type="button"
+            class="dashboard-subtab"
+            :class="activeTab === 'submissions' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+            @click="switchToSubmissions"
+          >
+            Submissions
+          </button>
+          <button
+            type="button"
+            class="dashboard-subtab"
+            :class="activeTab === 'grocery' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+            @click="switchToGrocery"
+          >
+            Grocery List
+          </button>
+          <button
+            type="button"
+            class="dashboard-subtab"
+            :class="activeTab === 'kitchens' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+            @click="switchToKitchens"
+          >
+            Assignments
+          </button>
+          <button
+            type="button"
+            class="dashboard-subtab"
+            :class="activeTab === 'notifications' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+            @click="switchToNotifications"
+          >
+            Notifications
+            <span v-if="notifStore.unreadCount > 0" class="dashboard-notif-badge">{{ notifStore.unreadCount > 9 ? '9+' : notifStore.unreadCount }}</span>
+          </button>
+        </div>
       </div>
+      <button
+        v-if="activeTab === 'notifications' && notifStore.unreadCount > 0"
+        type="button"
+        class="btn-pill-primary dashboard-notif-mark-read"
+        @click="notifStore.markAllRead()"
+      >
+        Mark all read
+      </button>
     </div>
 
     <!-- Body -->
@@ -1362,15 +1372,6 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 
       <!-- Notifications Tab -->
       <div v-else-if="activeTab === 'notifications'" class="notif-tab">
-        <div class="notif-tab-header">
-          <span class="notif-tab-header-title">Notifications</span>
-          <button
-            v-if="notifStore.unreadCount > 0"
-            type="button"
-            class="btn-pill-secondary"
-            @click="notifStore.markAllRead()"
-          >Mark all read</button>
-        </div>
         <div v-if="!notifStore.notifications.length" class="dashboard-empty">No notifications yet.</div>
         <div v-else class="submissions-list">
           <div
@@ -1415,15 +1416,29 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
   font-size: var(--body-font-size, 1.125rem);
 }
 
-/* Subtab bar: mini header — maroon pill bar */
+/* Tab bar row: bar + Mark all read outside, far right (like Add Fridge) */
+.dashboard-subtab-bar-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  width: 100%;
+  flex: none;
+  margin: 0.75rem 0;
+  padding: 0 1rem;
+  box-sizing: border-box;
+}
+
 .dashboard-subtab-bar {
   flex: none;
-  align-self: flex-start;
   padding: 0.5rem 0.75rem;
   background-color: var(--color-lafayette-red, #6b0f2a);
   border-radius: 1rem;
-  margin: 0.75rem 0 0.75rem 1rem;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dashboard-notif-mark-read {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .dashboard-subtab-row {
@@ -2092,24 +2107,6 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.notif-tab-header {
-  background: var(--color-lafayette-red, #6b0f2a);
-  color: #fff;
-  border-radius: 1rem;
-  padding: 0.5rem 1.5rem;
-  min-height: 3.75rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.notif-tab-header-title {
-  font-size: 1.25rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
 }
 
 /* Notification cards */
