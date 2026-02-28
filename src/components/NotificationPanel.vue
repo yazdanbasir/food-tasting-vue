@@ -15,9 +15,18 @@ function relativeTime(dateStr: string): string {
 }
 
 function dotColor(eventType: string): string {
-  if (eventType.startsWith('new_submission') || eventType.startsWith('submission')) return '#6b0f2a'
-  if (eventType.startsWith('ingredient')) return '#006690'
-  return '#059669'
+  const deletion = ['submission_deleted', 'ingredient_removed']
+  const edited = [
+    'ingredient_updated',
+    'submission_updated_organizer',
+    'submission_updated_user',
+    'grocery_qty_changed',
+    'grocery_item_checked',
+    'grocery_item_unchecked',
+  ]
+  if (deletion.includes(eventType)) return '#dc2626' /* red */
+  if (edited.includes(eventType)) return '#2563eb' /* blue */
+  return '#16a34a' /* green: new/add/default */
 }
 
 function handleDocClick(e: MouseEvent) {

@@ -184,12 +184,13 @@ async function loadSubmissions() {
 }
 
 async function loadGroceryList() {
+  const isFirstLoad = !groceryList.value
   isLoading.value = true
   error.value = null
   try {
     groceryList.value = await getGroceryList()
-    // Default all aisles to collapsed
-    expandedAisles.value = new Set()
+    // Default all aisles to collapsed on first load only (not on WebSocket reloads)
+    if (isFirstLoad) expandedAisles.value = new Set()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load'
   } finally {
@@ -235,9 +236,18 @@ function notifRelativeTime(dateStr: string): string {
 }
 
 function notifDotColor(eventType: string): string {
-  if (eventType === 'new_submission' || eventType === 'grocery_item_added') return '#059669'
-  if (eventType === 'submission_deleted' || eventType === 'ingredient_removed') return '#dc2626'
-  return '#006690'
+  const deletion = ['submission_deleted', 'ingredient_removed']
+  const edited = [
+    'ingredient_updated',
+    'submission_updated_organizer',
+    'submission_updated_user',
+    'grocery_qty_changed',
+    'grocery_item_checked',
+    'grocery_item_unchecked',
+  ]
+  if (deletion.includes(eventType)) return '#dc2626' /* red */
+  if (edited.includes(eventType)) return '#2563eb' /* blue */
+  return '#16a34a' /* green: new/add/default */
 }
 
 async function toggleCheck(item: GroceryItem) {
@@ -1046,7 +1056,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
               <div class="grocery-product-actions grocery-aisle-header-actions">
                 <span class="qty-controls">
                   <span class="tabular-nums qty-num grocery-aisle-header-val">{{ aisleQtySum(items) }}</span>
-                  <span class="qty-btn-stack" style="visibility: hidden;">
+                  <span class="qty-btn-stack grocery-aisle-header-qty-placeholder" style="visibility: hidden;">
                     <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
                     </button>
@@ -1138,7 +1148,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
             <div class="grocery-product-actions grocery-aisle-header-actions">
               <span class="qty-controls">
                 <span class="tabular-nums qty-num grocery-aisle-header-val">{{ grandTotalQty }}</span>
-                <span class="qty-btn-stack" style="visibility: hidden;">
+                <span class="qty-btn-stack grocery-aisle-header-qty-placeholder" style="visibility: hidden;">
                   <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
                   </button>
@@ -1379,16 +1389,19 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
             :key="n.id"
             class="submission-card notif-card"
             :class="{ 'notif-card-read': n.read }"
-            :style="{ borderLeftColor: notifDotColor(n.event_type) }"
           >
             <div class="notif-card-row">
-              <div class="notif-card-dot" :style="{ background: notifDotColor(n.event_type) }" />
-              <div class="notif-card-body">
-                <div class="notif-card-title">{{ n.title }}</div>
-                <div v-if="n.message" class="notif-card-message">{{ n.message }}</div>
+              <div
+                class="form-section-pill notif-dot-pill"
+                :style="{ background: notifDotColor(n.event_type) }"
+                aria-hidden="true"
+              />
+              <div class="form-section-pill submission-dish-pill">
+                <span class="form-section-pill-input submission-dish-text">{{ n.title }}</span>
               </div>
-              <div class="notif-card-time">{{ notifRelativeTime(n.created_at) }}</div>
+              <span class="notif-card-time tabular-nums qty-num grocery-aisle-header-val">{{ notifRelativeTime(n.created_at) }}</span>
             </div>
+            <div v-if="n.message" class="notif-card-detail">{{ n.message }}</div>
           </div>
         </div>
       </div>
@@ -1892,6 +1905,15 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
   align-self: center;
 }
 
+/* Collapse placeholder qty stack so header height matches ku-item-row (pill-driven, no overflow) */
+.grocery-aisle-header .grocery-aisle-header-qty-placeholder {
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
 .grocery-aisle-arrow {
   position: absolute;
   right: 0.5rem;
@@ -2110,55 +2132,57 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 }
 
 /* Notification cards */
-.notif-card {
-  border-left: 3px solid transparent;
-}
-
 .notif-card-read {
   opacity: 0.55;
 }
 
 .notif-card-row {
   display: flex;
-  align-items: flex-start;
-  gap: 0.875rem;
-  padding: 1rem 1.25rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 2rem 0.6rem 1rem;
 }
 
-.notif-card-dot {
-  width: 0.5rem;
-  height: 0.5rem;
+/* Circular color pill — same base as country pill (form-section-pill), filled with event color */
+.notif-dot-pill {
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
   border-radius: 9999px;
   flex-shrink: 0;
-  margin-top: 0.4rem;
+  padding: 0;
+  border: none;
 }
 
-.notif-card-body {
-  flex: 1;
-  min-width: 0;
+.notif-card-row .submission-dish-pill {
+  flex: none;
 }
 
-.notif-card-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-lafayette-gray, #3c373c);
-  line-height: 1.3;
-}
-
-.notif-card-message {
-  font-size: 0.9375rem;
-  color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.65;
-  margin-top: 0.125rem;
-  line-height: 1.3;
+.notif-card-row .submission-dish-pill .form-section-pill-input {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .notif-card-time {
-  font-size: 0.875rem;
   color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.45;
+  opacity: 0.7;
   flex-shrink: 0;
-  margin-top: 0.125rem;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* Subline beneath title row — detail of the change (same text styling as submission-dish-text) */
+.notif-card-detail {
+  padding: 0 2rem 0.6rem 1rem;
+  padding-left: calc(1rem + 2.25rem + 0.5rem);
+  font-size: inherit;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  color: #000 !important;
+  -webkit-text-fill-color: #000;
 }
 
 /* ─── Kitchen & Utensils Table ────────────────────────────────────────────── */
