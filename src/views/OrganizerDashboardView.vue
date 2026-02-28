@@ -65,7 +65,6 @@ const groceryStore = ref<'giant' | 'other-stores'>('giant') // tab bar above ais
 const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('fridges') // Kitchens & Utensils sub-tabs
 const addingKuType = ref<'fridge' | 'kitchen' | 'utensil' | 'helper_driver' | null>(null) // show add-card with input
 const kuAddInputRef = ref<HTMLInputElement | null>(null)
-const kuEditInputRef = ref<HTMLInputElement | null>(null)
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
 const expandedSubmissions = ref<Set<number>>(new Set())
@@ -426,29 +425,76 @@ const newFridgeName = ref('')
 const newKitchenName = ref('')
 const newUtensilName = ref('')
 const newHelperDriverName = ref('')
-const kuEditing = ref<Record<string, string>>({})
 
-function kuKey(kind: KuListKind, id: number) {
-  return `${kind}:${id}`
+// Full edit form in expanded section (name, point_person, phone, driver for helpers)
+const editingKuCard = ref<{ kind: KuListKind; id: number } | null>(null)
+const kuEditForm = ref<{ name: string; point_person: string; phone: string; is_driver: boolean | null }>({
+  name: '',
+  point_person: '',
+  phone: '',
+  is_driver: null,
+})
+
+function isKuCardEditing(kind: KuListKind, row: KitchenResourceItem) {
+  const c = editingKuCard.value
+  return c !== null && c.kind === kind && c.id === row.id
 }
 
-function isKuEditing(kind: KuListKind, id: number) {
-  return kuKey(kind, id) in kuEditing.value
+function startKuEdit(kind: KuListKind, row: KitchenResourceItem) {
+  editingKuCard.value = { kind, id: row.id }
+  kuEditForm.value = {
+    name: row.name,
+    point_person: (row.point_person ?? '').trim(),
+    phone: (row.phone ?? '').trim(),
+    is_driver: row.is_driver ?? null,
+  }
+  const key = kuCardKey(kind, row.id)
+  if (!expandedKuCards.value.has(key)) {
+    expandedKuCards.value = new Set([...expandedKuCards.value, key])
+  }
 }
 
-async function startKuEdit(kind: KuListKind, id: number, current: string) {
-  kuEditing.value[kuKey(kind, id)] = current
-  await nextTick()
-  // Ref inside v-for is an array; focus the (only) visible edit input, same timing as add
-  const el = kuEditInputRef.value
-  const input = Array.isArray(el) ? el[0] : el
-  setTimeout(() => (input as HTMLInputElement | undefined)?.focus(), 0)
+function cancelKuEditForm() {
+  editingKuCard.value = null
 }
 
-function cancelKuEdit(kind: KuListKind, id: number) {
-  const next = { ...kuEditing.value }
-  delete next[kuKey(kind, id)]
-  kuEditing.value = next
+const driverSelectValue = computed({
+  get: () => {
+    const v = kuEditForm.value.is_driver
+    return v === true ? 'yes' : v === false ? 'no' : ''
+  },
+  set: (val: string) => {
+    kuEditForm.value.is_driver = val === 'yes' ? true : val === 'no' ? false : null
+  },
+})
+
+async function saveKuEdit() {
+  const c = editingKuCard.value
+  if (!c) return
+  const { name, point_person, phone, is_driver } = kuEditForm.value
+  const trimmedName = name.trim()
+  if (!trimmedName) return
+  const payload: Parameters<typeof updateKitchenResource>[1] = {
+    name: trimmedName,
+    phone: phone.trim() || null,
+  }
+  if (c.kind !== 'helper_driver') {
+    payload.point_person = point_person.trim() || null
+  }
+  if (c.kind === 'helper_driver') {
+    payload.is_driver = is_driver
+  }
+  const listRef = kuListRef(c.kind)
+  const idx = listRef.value.findIndex((row) => row.id === c.id)
+  const original = idx >= 0 ? (listRef.value[idx] as KitchenResourceItem) : null
+  if (original) {
+    listRef.value[idx] = { ...original, ...payload } as KitchenResourceItem
+  }
+  editingKuCard.value = null
+  updateKitchenResource(c.id, payload).catch((err) => {
+    if (original && idx >= 0) listRef.value[idx] = original
+    console.error(err)
+  })
 }
 
 function kuListRef(kind: KuListKind): Ref<KitchenResourceItem[]> {
@@ -458,35 +504,10 @@ function kuListRef(kind: KuListKind): Ref<KitchenResourceItem[]> {
   return fridgesAvailable
 }
 
-function saveKuName(kind: KuListKind, id: number) {
-  const key = kuKey(kind, id)
-  const value = kuEditing.value[key]
-  if (value === undefined) return
-  const listRef = kuListRef(kind)
-  const trimmed = value.trim()
-  if (!trimmed) {
-    cancelKuEdit(kind, id)
-    return
-  }
-  const idx = listRef.value.findIndex((row) => row.id === id)
-  if (idx === -1) {
-    cancelKuEdit(kind, id)
-    return
-  }
-  const original: KitchenResourceItem = listRef.value[idx]!
-  listRef.value[idx] = { ...original, name: trimmed } as KitchenResourceItem
-  cancelKuEdit(kind, id)
-  updateKitchenResource(id, { name: trimmed }).catch((err) => {
-    // revert local change on error
-    listRef.value[idx] = original
-    console.error(err)
-  })
-}
-
 function addKitchenRow() {
   const name = newKitchenName.value.trim()
   if (!name) return
-  createKitchenResource('kitchen', name)
+  createKitchenResource({ kind: 'kitchen', name })
     .then((created) => {
       kitchensAvailable.value = [created, ...kitchensAvailable.value]
       newKitchenName.value = ''
@@ -500,7 +521,7 @@ function addKitchenRow() {
 function addFridgeRow() {
   const name = newFridgeName.value.trim()
   if (!name) return
-  createKitchenResource('fridge', name)
+  createKitchenResource({ kind: 'fridge', name })
     .then((created) => {
       fridgesAvailable.value = [created, ...fridgesAvailable.value]
       newFridgeName.value = ''
@@ -514,7 +535,7 @@ function addFridgeRow() {
 function addUtensilRow() {
   const name = newUtensilName.value.trim()
   if (!name) return
-  createKitchenResource('utensil', name)
+  createKitchenResource({ kind: 'utensil', name })
     .then((created) => {
       utensilsAvailable.value = [created, ...utensilsAvailable.value]
       newUtensilName.value = ''
@@ -528,7 +549,7 @@ function addUtensilRow() {
 function addHelperDriverRow() {
   const name = newHelperDriverName.value.trim()
   if (!name) return
-  createKitchenResource('helper_driver', name)
+  createKitchenResource({ kind: 'helper_driver', name })
     .then((created) => {
       helpersDriversAvailable.value = [created, ...helpersDriversAvailable.value]
       newHelperDriverName.value = ''
@@ -553,6 +574,21 @@ async function startAddingKu() {
 function cancelAddingKu() {
   addingKuType.value = null
 }
+
+// ─── KU cards expand/collapse + debug info ─────────────────────────────────
+const expandedKuCards = ref<Set<string>>(new Set())
+function kuCardKey(kind: KuListKind, id: number): string {
+  return `${kind}-${id}`
+}
+function toggleKuCardExpanded(kind: KuListKind, id: number) {
+  const key = kuCardKey(kind, id)
+  const next = new Set(expandedKuCards.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedKuCards.value = next
+}
+
+
 function commitAddFridge() {
   if (addingKuType.value !== 'fridge') return
   addFridgeRow()
@@ -629,7 +665,9 @@ function deleteKuRow(kind: KuListKind, id: number) {
   const deletedName = row.name.trim()
   const previous = listRef.value
   listRef.value = listRef.value.filter((r) => r.id !== id)
-  cancelKuEdit(kind, id)
+  if (editingKuCard.value && editingKuCard.value.kind === kind && editingKuCard.value.id === id) {
+    cancelKuEditForm()
+  }
   deleteKitchenResource(id)
     .then(() => clearSubmissionsAssignmentsForDeletedResource(kind, deletedName))
     .catch((err) => {
@@ -1223,23 +1261,59 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
           </div>
           <div v-if="fridgesAvailable.length" class="ku-card-list">
             <div v-for="row in fridgesAvailable" :key="row.id" class="grocery-aisle-card ku-item-card">
-              <div class="ku-item-row">
+              <button
+                type="button"
+                class="ku-item-row ku-item-row-toggle"
+                @click="toggleKuCardExpanded('fridge', row.id)"
+              >
                 <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
-                  <input
-                    ref="kuEditInputRef"
-                    v-if="isKuEditing('fridge', row.id)"
-                    v-model="kuEditing[kuKey('fridge', row.id)]"
-                    class="form-section-pill-input ku-cell-input"
-                    type="text"
-                    @blur="saveKuName('fridge', row.id)"
-                    @keyup.enter="saveKuName('fridge', row.id)"
-                    @keyup.escape="cancelKuEdit('fridge', row.id)"
-                  />
-                  <span v-else class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
+                  <span class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
                 </div>
-                <div class="ku-item-actions">
-                  <button type="button" class="btn-pill-primary" @click="startKuEdit('fridge', row.id, row.name)">Edit</button>
-                  <button type="button" class="btn-pill-primary" @click="deleteKuRow('fridge', row.id)">Delete</button>
+                <span class="ku-item-arrow" :class="{ 'ku-item-arrow-open': expandedKuCards.has(kuCardKey('fridge', row.id)) }">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </button>
+              <div
+                v-if="expandedKuCards.has(kuCardKey('fridge', row.id))"
+                class="ku-card-detail"
+              >
+                <div v-if="isKuCardEditing('fridge', row)" class="ku-card-meta ku-card-edit-form">
+                  <div class="ku-card-edit-fields">
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Name</label>
+                      <input v-model="kuEditForm.name" class="ku-card-edit-input" type="text" placeholder="Name" />
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Point Person</label>
+                      <input v-model="kuEditForm.point_person" class="ku-card-edit-input" type="text" placeholder="Point person" />
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Phone</label>
+                      <input v-model="kuEditForm.phone" class="ku-card-edit-input" type="text" placeholder="Phone" />
+                    </div>
+                    <div class="ku-card-meta-actions">
+                      <button type="button" class="btn-pill-primary" @click.stop="saveKuEdit">Save</button>
+                      <button type="button" class="btn-pill-primary" @click.stop="cancelKuEditForm">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="ku-card-meta">
+                  <div class="ku-card-meta-grid">
+                    <div class="ku-card-meta-item">
+                      <span class="ku-card-meta-label">Point Person</span>
+                      <span class="ku-card-meta-value">{{ (row.point_person || '').trim() || '—' }}</span>
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <span class="ku-card-meta-label">Phone</span>
+                      <span class="ku-card-meta-value">{{ (row.phone || '').trim() || '—' }}</span>
+                    </div>
+                    <div class="ku-card-meta-actions">
+                      <button type="button" class="btn-pill-primary" @click.stop="startKuEdit('fridge', row)">Edit</button>
+                      <button type="button" class="btn-pill-primary" @click.stop="deleteKuRow('fridge', row.id)">Delete</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1267,23 +1341,59 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
           </div>
           <div v-if="kitchensAvailable.length" class="ku-card-list">
             <div v-for="row in kitchensAvailable" :key="row.id" class="grocery-aisle-card ku-item-card">
-              <div class="ku-item-row">
+              <button
+                type="button"
+                class="ku-item-row ku-item-row-toggle"
+                @click="toggleKuCardExpanded('kitchen', row.id)"
+              >
                 <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
-                  <input
-                    ref="kuEditInputRef"
-                    v-if="isKuEditing('kitchen', row.id)"
-                    v-model="kuEditing[kuKey('kitchen', row.id)]"
-                    class="form-section-pill-input ku-cell-input"
-                    type="text"
-                    @blur="saveKuName('kitchen', row.id)"
-                    @keyup.enter="saveKuName('kitchen', row.id)"
-                    @keyup.escape="cancelKuEdit('kitchen', row.id)"
-                  />
-                  <span v-else class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
+                  <span class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
                 </div>
-                <div class="ku-item-actions">
-                  <button type="button" class="btn-pill-primary" @click="startKuEdit('kitchen', row.id, row.name)">Edit</button>
-                  <button type="button" class="btn-pill-primary" @click="deleteKuRow('kitchen', row.id)">Delete</button>
+                <span class="ku-item-arrow" :class="{ 'ku-item-arrow-open': expandedKuCards.has(kuCardKey('kitchen', row.id)) }">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </button>
+              <div
+                v-if="expandedKuCards.has(kuCardKey('kitchen', row.id))"
+                class="ku-card-detail"
+              >
+                <div v-if="isKuCardEditing('kitchen', row)" class="ku-card-meta ku-card-edit-form">
+                  <div class="ku-card-edit-fields">
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Name</label>
+                      <input v-model="kuEditForm.name" class="ku-card-edit-input" type="text" placeholder="Name" />
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Point Person</label>
+                      <input v-model="kuEditForm.point_person" class="ku-card-edit-input" type="text" placeholder="Point person" />
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Phone</label>
+                      <input v-model="kuEditForm.phone" class="ku-card-edit-input" type="text" placeholder="Phone" />
+                    </div>
+                    <div class="ku-card-meta-actions">
+                      <button type="button" class="btn-pill-primary" @click.stop="saveKuEdit">Save</button>
+                      <button type="button" class="btn-pill-primary" @click.stop="cancelKuEditForm">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="ku-card-meta">
+                  <div class="ku-card-meta-grid">
+                    <div class="ku-card-meta-item">
+                      <span class="ku-card-meta-label">Point Person</span>
+                      <span class="ku-card-meta-value">{{ (row.point_person || '').trim() || '—' }}</span>
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <span class="ku-card-meta-label">Phone</span>
+                      <span class="ku-card-meta-value">{{ (row.phone || '').trim() || '—' }}</span>
+                    </div>
+                    <div class="ku-card-meta-actions">
+                      <button type="button" class="btn-pill-primary" @click.stop="startKuEdit('kitchen', row)">Edit</button>
+                      <button type="button" class="btn-pill-primary" @click.stop="deleteKuRow('kitchen', row.id)">Delete</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1311,23 +1421,59 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
           </div>
           <div v-if="utensilsAvailable.length" class="ku-card-list">
             <div v-for="row in utensilsAvailable" :key="row.id" class="grocery-aisle-card ku-item-card">
-              <div class="ku-item-row">
+              <button
+                type="button"
+                class="ku-item-row ku-item-row-toggle"
+                @click="toggleKuCardExpanded('utensil', row.id)"
+              >
                 <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
-                  <input
-                    ref="kuEditInputRef"
-                    v-if="isKuEditing('utensil', row.id)"
-                    v-model="kuEditing[kuKey('utensil', row.id)]"
-                    class="form-section-pill-input ku-cell-input"
-                    type="text"
-                    @blur="saveKuName('utensil', row.id)"
-                    @keyup.enter="saveKuName('utensil', row.id)"
-                    @keyup.escape="cancelKuEdit('utensil', row.id)"
-                  />
-                  <span v-else class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
+                  <span class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
                 </div>
-                <div class="ku-item-actions">
-                  <button type="button" class="btn-pill-primary" @click="startKuEdit('utensil', row.id, row.name)">Edit</button>
-                  <button type="button" class="btn-pill-primary" @click="deleteKuRow('utensil', row.id)">Delete</button>
+                <span class="ku-item-arrow" :class="{ 'ku-item-arrow-open': expandedKuCards.has(kuCardKey('utensil', row.id)) }">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </button>
+              <div
+                v-if="expandedKuCards.has(kuCardKey('utensil', row.id))"
+                class="ku-card-detail"
+              >
+                <div v-if="isKuCardEditing('utensil', row)" class="ku-card-meta ku-card-edit-form">
+                  <div class="ku-card-edit-fields">
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Name</label>
+                      <input v-model="kuEditForm.name" class="ku-card-edit-input" type="text" placeholder="Name" />
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Point Person</label>
+                      <input v-model="kuEditForm.point_person" class="ku-card-edit-input" type="text" placeholder="Point person" />
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Phone</label>
+                      <input v-model="kuEditForm.phone" class="ku-card-edit-input" type="text" placeholder="Phone" />
+                    </div>
+                    <div class="ku-card-meta-actions">
+                      <button type="button" class="btn-pill-primary" @click.stop="saveKuEdit">Save</button>
+                      <button type="button" class="btn-pill-primary" @click.stop="cancelKuEditForm">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="ku-card-meta">
+                  <div class="ku-card-meta-grid">
+                    <div class="ku-card-meta-item">
+                      <span class="ku-card-meta-label">Point Person</span>
+                      <span class="ku-card-meta-value">{{ (row.point_person || '').trim() || '—' }}</span>
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <span class="ku-card-meta-label">Phone</span>
+                      <span class="ku-card-meta-value">{{ (row.phone || '').trim() || '—' }}</span>
+                    </div>
+                    <div class="ku-card-meta-actions">
+                      <button type="button" class="btn-pill-primary" @click.stop="startKuEdit('utensil', row)">Edit</button>
+                      <button type="button" class="btn-pill-primary" @click.stop="deleteKuRow('utensil', row.id)">Delete</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1355,23 +1501,67 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
           </div>
           <div v-if="helpersDriversAvailable.length" class="ku-card-list">
             <div v-for="row in helpersDriversAvailable" :key="row.id" class="grocery-aisle-card ku-item-card">
-              <div class="ku-item-row">
+              <button
+                type="button"
+                class="ku-item-row ku-item-row-toggle"
+                @click="toggleKuCardExpanded('helper_driver', row.id)"
+              >
                 <div class="form-section-pill grocery-aisle-dish-pill ku-item-pill">
-                  <input
-                    ref="kuEditInputRef"
-                    v-if="isKuEditing('helper_driver', row.id)"
-                    v-model="kuEditing[kuKey('helper_driver', row.id)]"
-                    class="form-section-pill-input ku-cell-input"
-                    type="text"
-                    @blur="saveKuName('helper_driver', row.id)"
-                    @keyup.enter="saveKuName('helper_driver', row.id)"
-                    @keyup.escape="cancelKuEdit('helper_driver', row.id)"
-                  />
-                  <span v-else class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
+                  <span class="form-section-pill-input grocery-aisle-dish-text ku-item-name">{{ row.name }}</span>
                 </div>
-                <div class="ku-item-actions">
-                  <button type="button" class="btn-pill-primary" @click="startKuEdit('helper_driver', row.id, row.name)">Edit</button>
-                  <button type="button" class="btn-pill-primary" @click="deleteKuRow('helper_driver', row.id)">Delete</button>
+                <span class="ku-item-arrow" :class="{ 'ku-item-arrow-open': expandedKuCards.has(kuCardKey('helper_driver', row.id)) }">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </button>
+              <div
+                v-if="expandedKuCards.has(kuCardKey('helper_driver', row.id))"
+                class="ku-card-detail"
+              >
+                <div v-if="isKuCardEditing('helper_driver', row)" class="ku-card-meta ku-card-edit-form">
+                  <div class="ku-card-edit-fields">
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Name</label>
+                      <input v-model="kuEditForm.name" class="ku-card-edit-input" type="text" placeholder="Name" />
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Phone</label>
+                      <input v-model="kuEditForm.phone" class="ku-card-edit-input" type="text" placeholder="Phone" />
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <label class="ku-card-meta-label">Driver</label>
+                      <select v-model="driverSelectValue" class="ku-card-driver-select">
+                        <option value="">—</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div class="ku-card-meta-actions">
+                      <button type="button" class="btn-pill-primary" @click.stop="saveKuEdit">Save</button>
+                      <button type="button" class="btn-pill-primary" @click.stop="cancelKuEditForm">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="ku-card-meta">
+                  <div class="ku-card-meta-grid">
+                    <div class="ku-card-meta-item">
+                      <span class="ku-card-meta-label">Phone</span>
+                      <span class="ku-card-meta-value">{{ (row.phone || '').trim() || '—' }}</span>
+                    </div>
+                    <div class="ku-card-meta-item">
+                      <span class="ku-card-meta-label">Driver</span>
+                      <span class="ku-card-meta-value ku-card-meta-driver" :class="{ 'ku-card-driver-yes': row.is_driver === true, 'ku-card-driver-no': row.is_driver === false }">
+                        <template v-if="row.is_driver === true">Yes</template>
+                        <template v-else-if="row.is_driver === false">No</template>
+                        <template v-else>—</template>
+                      </span>
+                    </div>
+                    <div class="ku-card-meta-actions">
+                      <button type="button" class="btn-pill-primary" @click.stop="startKuEdit('helper_driver', row)">Edit</button>
+                      <button type="button" class="btn-pill-primary" @click.stop="deleteKuRow('helper_driver', row.id)">Delete</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2381,6 +2571,116 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
   color: #000;
 }
 
+.ku-item-row-toggle {
+  position: relative;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.15s;
+}
+.ku-item-row-toggle:hover {
+  opacity: 0.85;
+}
+
+.ku-item-arrow {
+  position: absolute;
+  right: 0.5rem;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.82;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.ku-item-arrow-open {
+  transform: rotate(180deg);
+}
+
+.ku-card-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.ku-card-meta {
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 1rem;
+  font-size: var(--body-font-size, 1.125rem);
+}
+.ku-card-edit-form .ku-card-edit-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 2rem;
+}
+.ku-card-edit-input {
+  min-width: 12rem;
+  padding: 0.4rem 0.6rem;
+  font-size: inherit;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 0.5rem;
+}
+.ku-card-driver-select {
+  min-width: 8rem;
+  padding: 0.4rem 0.6rem;
+  font-size: inherit;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 0.5rem;
+  background: #fff;
+  cursor: pointer;
+}
+.ku-card-meta-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.75rem 3.5rem;
+  overflow-x: auto;
+}
+.ku-card-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ku-card-meta-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+.ku-card-meta-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+.ku-card-meta-value {
+  font-size: inherit;
+  font-weight: 500;
+  color: var(--color-lafayette-gray, #3c373c);
+  line-height: 1.5;
+}
+.ku-card-meta-driver.ku-card-driver-yes {
+  color: #0a6b0a;
+}
+.ku-card-meta-driver.ku-card-driver-no {
+  color: #c00;
+}
+.ku-driver-icon {
+  margin-right: 0.25rem;
+}
+.ku-driver-yes {
+  color: #0a6b0a;
+}
+.ku-driver-no {
+  color: #c00;
+}
+
 .ku-item-pill {
   flex: none;
   max-width: 100%;
@@ -2395,14 +2695,6 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 .ku-cell-input {
   width: 100%;
   min-width: 0;
-}
-
-.ku-item-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-  margin-left: auto;
 }
 
 .ku-add-card .ku-item-pill {

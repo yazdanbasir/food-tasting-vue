@@ -43,7 +43,7 @@ class Api::V1::KitchenResourcesController < ApplicationController
   private
 
   def resource_params
-    params.permit(:kind, :name, :position)
+    params.permit(:kind, :name, :position, :point_person, :phone, :is_driver)
   end
 
   def next_position_for(kind)
@@ -55,7 +55,10 @@ class Api::V1::KitchenResourcesController < ApplicationController
       id: resource.id,
       kind: resource.kind,
       name: resource.name,
-      position: resource.position
+      position: resource.position,
+      point_person: resource.point_person.presence,
+      phone: resource.phone.presence,
+      is_driver: resource.is_driver
     }
   end
 end

@@ -53,6 +53,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_094500) do
     t.string "kind", null: false
     t.string "name", null: false
     t.integer "position"
+    t.string "point_person"
+    t.string "phone"
+    t.boolean "is_driver"
     t.datetime "updated_at", null: false
     t.index ["kind"], name: "index_kitchen_resources_on_kind"
   end

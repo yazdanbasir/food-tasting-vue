@@ -203,6 +203,12 @@ export interface KitchenResourceItem {
   kind: KitchenResourceKind
   name: string
   position: number | null
+  /** Point person / contact name (optional, for Fridge/Kitchen/Utensils) */
+  point_person?: string | null
+  /** Contact phone (optional) */
+  phone?: string | null
+  /** For Helpers/Drivers: whether this person is a driver (optional) */
+  is_driver?: boolean | null
 }
 
 export async function getKitchenResources(): Promise<KitchenResourceItem[]> {
@@ -220,14 +226,26 @@ export async function getKitchenResources(): Promise<KitchenResourceItem[]> {
   return body as KitchenResourceItem[]
 }
 
+export type CreateKitchenResourcePayload = {
+  kind: KitchenResourceKind
+  name: string
+  point_person?: string | null
+  phone?: string | null
+  is_driver?: boolean | null
+}
+
 export async function createKitchenResource(
-  kind: KitchenResourceKind,
-  name: string,
+  payload: CreateKitchenResourcePayload,
 ): Promise<KitchenResourceItem> {
+  const { kind, name, point_person, phone, is_driver } = payload
+  const requestBody: Record<string, unknown> = { kind, name }
+  if (point_person != null) requestBody.point_person = point_person
+  if (phone != null) requestBody.phone = phone
+  if (is_driver != null && kind === 'helper_driver') requestBody.is_driver = is_driver
   const res = await fetch(`${BASE}/api/v1/kitchen_resources`, {
     method: 'POST',
     headers: organizerHeaders(),
-    body: JSON.stringify({ kind, name }),
+    body: JSON.stringify(requestBody),
   })
   const body = await res.json().catch(() => ({}))
   if (res.status === 401) {
@@ -242,7 +260,7 @@ export async function createKitchenResource(
 
 export async function updateKitchenResource(
   id: number,
-  attrs: Partial<Pick<KitchenResourceItem, 'name' | 'position'>>,
+  attrs: Partial<Pick<KitchenResourceItem, 'name' | 'position' | 'point_person' | 'phone' | 'is_driver'>>,
 ): Promise<KitchenResourceItem> {
   const res = await fetch(`${BASE}/api/v1/kitchen_resources/${id}`, {
     method: 'PATCH',
