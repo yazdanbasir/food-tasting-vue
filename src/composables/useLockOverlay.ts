@@ -30,9 +30,8 @@ async function handleSessionExpired(): Promise<void> {
       localStorage.setItem('organizer_username', result.username)
     }
   } catch {
-    // Re-auth failed (wrong creds, server down, etc.) — only NOW re-lock
-    if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY)
-    isLocked.value = true
+    // Re-auth failed — but do NOT re-lock. The user already proved they know the password.
+    console.warn('[Organizer Auth] Silent re-auth failed, but keeping overlay unlocked.')
   } finally {
     isReauthing = false
   }

@@ -4,7 +4,7 @@ class Organizer < ApplicationRecord
   validates :username, presence: true, uniqueness: true
 
   def regenerate_token
-    update!(token: SecureRandom.hex(32))
+    update!(token: SecureRandom.hex(32)) if token.blank?
     token
   end
 
