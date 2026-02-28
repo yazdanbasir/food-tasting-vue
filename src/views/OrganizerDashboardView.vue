@@ -18,6 +18,7 @@ import { useSubmissionStore } from '@/stores/submission'
 import { useNotificationStore } from '@/stores/notifications'
 import type { NotificationItem } from '@/api/notifications'
 import type { Ingredient, IngredientDietary } from '@/types/ingredient'
+import { usePlacardExport } from '@/composables/usePlacardExport'
 
 const router = useRouter()
 const submissionStore = useSubmissionStore()
@@ -60,13 +61,15 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 }
 
 
-const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'notifications'>('submissions')
+const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'placards' | 'notifications'>('submissions')
 const groceryStore = ref<'giant' | 'other-stores'>('giant') // tab bar above aisles: Giant | Other Stores
 const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('fridges') // Kitchens & Utensils sub-tabs
 const addingKuType = ref<'fridge' | 'kitchen' | 'utensil' | 'helper_driver' | null>(null) // show add-card with input
 const kuAddInputRef = ref<HTMLInputElement | null>(null)
 const submissions = ref<SubmissionResponse[]>([])
 const groceryList = ref<GroceryListResponse | null>(null)
+const selectedPlacardIds = ref<Set<number>>(new Set())
+const { isExporting, exportProgress, exportPDF, exportPNG } = usePlacardExport()
 const expandedSubmissions = ref<Set<number>>(new Set())
 
 function toggleSubmissionExpanded(id: number) {
@@ -217,6 +220,38 @@ async function switchToKitchens() {
   if (!kitchensAvailable.value.length && !utensilsAvailable.value.length) {
     await loadKitchenResources()
   }
+}
+
+function switchToPlacards() {
+  activeTab.value = 'placards'
+  addProductError.value = null
+  // Default: select all submissions
+  selectedPlacardIds.value = new Set(submissions.value.map((s) => s.id))
+}
+
+function togglePlacardSelection(id: number) {
+  const next = new Set(selectedPlacardIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedPlacardIds.value = next
+}
+
+function toggleAllPlacards() {
+  if (selectedPlacardIds.value.size === submissions.value.length) {
+    selectedPlacardIds.value = new Set()
+  } else {
+    selectedPlacardIds.value = new Set(submissions.value.map((s) => s.id))
+  }
+}
+
+function handleExportPDF() {
+  const selected = submissions.value.filter((s) => selectedPlacardIds.value.has(s.id))
+  exportPDF(selected)
+}
+
+function handleExportPNG() {
+  const selected = submissions.value.filter((s) => selectedPlacardIds.value.has(s.id))
+  exportPNG(selected)
 }
 
 function switchToNotifications() {
@@ -824,6 +859,14 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
             @click="switchToKitchens"
           >
             Assignments
+          </button>
+          <button
+            type="button"
+            class="dashboard-subtab"
+            :class="activeTab === 'placards' ? 'dashboard-subtab-active' : 'dashboard-subtab-inactive'"
+            @click="switchToPlacards"
+          >
+            Placards
           </button>
           <button
             type="button"
@@ -1580,6 +1623,70 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
             </div>
           </div>
           <div v-else class="ku-empty">No helpers or drivers added yet.</div>
+        </div>
+      </div>
+
+      <!-- Placards Tab -->
+      <div v-else-if="activeTab === 'placards'" class="placards-tab">
+        <!-- Toolbar: select-all toggle + export buttons -->
+        <div class="placard-toolbar">
+          <button
+            type="button"
+            class="btn-pill-secondary placard-select-all-btn"
+            @click="toggleAllPlacards"
+          >
+            {{ selectedPlacardIds.size === submissions.length ? 'Deselect All' : 'Select All' }}
+          </button>
+          <div class="placard-toolbar-actions">
+            <button
+              type="button"
+              class="btn-pill-primary"
+              :disabled="isExporting || !selectedPlacardIds.size"
+              @click="handleExportPDF"
+            >
+              Export PDF
+            </button>
+            <button
+              type="button"
+              class="btn-pill-primary"
+              :disabled="isExporting || !selectedPlacardIds.size"
+              @click="handleExportPNG"
+            >
+              Export PNG
+            </button>
+          </div>
+        </div>
+
+        <!-- Export progress indicator -->
+        <div v-if="isExporting" class="placard-progress">
+          <span class="placard-progress-spinner" />
+          <span>{{ exportProgress }}</span>
+        </div>
+
+        <!-- Submission list -->
+        <div v-if="!submissions.length" class="dashboard-empty">No submissions yet.</div>
+        <div v-else class="placard-list">
+          <div
+            v-for="sub in submissions"
+            :key="sub.id"
+            class="placard-card"
+            :class="{ 'placard-card-selected': selectedPlacardIds.has(sub.id) }"
+            @click="togglePlacardSelection(sub.id)"
+          >
+            <input
+              type="checkbox"
+              class="placard-checkbox"
+              :checked="selectedPlacardIds.has(sub.id)"
+              @click.stop
+              @change="togglePlacardSelection(sub.id)"
+            />
+            <div class="form-section-pill submission-country-pill">
+              <span class="form-section-pill-input">{{ countryLabel(sub.country_code) }}</span>
+            </div>
+            <div class="form-section-pill submission-dish-pill">
+              <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2739,5 +2846,90 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
   text-align: center;
   background: var(--color-menu-gray, #e5e3e0);
   border-radius: 1rem;
+}
+
+/* ===== Placards Tab ===== */
+.placards-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.placard-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.placard-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.placard-select-all-btn {
+  font-size: 0.95rem;
+}
+
+.placard-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  opacity: 0.85;
+  padding: 0.25rem 0;
+}
+
+.placard-progress-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--color-lafayette-red, #6b0f2a);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: placard-spin 0.7s linear infinite;
+}
+
+@keyframes placard-spin {
+  to { transform: rotate(360deg); }
+}
+
+.placard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.placard-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-menu-gray, #e5e3e0);
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow 0.15s;
+  border: 2px solid transparent;
+}
+
+.placard-card:hover {
+  background-color: #dbd8d4;
+}
+
+.placard-card-selected {
+  border-color: var(--color-lafayette-red, #6b0f2a);
+  background-color: #f3eded;
+}
+
+.placard-card-selected:hover {
+  background-color: #ede5e5;
+}
+
+.placard-checkbox {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-lafayette-red, #6b0f2a);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 </style>

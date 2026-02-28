@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@rails/actioncable": "^8.1.200",
+    "html2canvas-pro": "^2.0.2",
+    "jspdf": "^4.2.0",
     "lucide-vue-next": "^0.575.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.28",

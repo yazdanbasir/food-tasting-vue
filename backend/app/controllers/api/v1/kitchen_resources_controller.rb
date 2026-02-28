@@ -22,11 +22,16 @@ class Api::V1::KitchenResourcesController < ApplicationController
   # PATCH /api/v1/kitchen_resources/:id
   def update
     resource = KitchenResource.find(params[:id])
-    if resource.update(resource_params)
-      render json: serialize_resource(resource), status: :ok
-    else
-      render json: { error: resource.errors.full_messages.to_sentence }, status: :unprocessable_entity
-    end
+    attrs = {}
+    attrs[:name] = params[:name] if params.key?(:name)
+    attrs[:position] = params[:position] if params.key?(:position)
+    attrs[:point_person] = params[:point_person] if params.key?(:point_person)
+    attrs[:phone] = params[:phone] if params.key?(:phone)
+    attrs[:is_driver] = params[:is_driver] if params.key?(:is_driver)
+    resource.update!(attrs)
+    render json: serialize_resource(resource.reload), status: :ok
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Not found" }, status: :not_found
   end
