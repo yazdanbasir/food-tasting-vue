@@ -154,7 +154,7 @@ async function handleSubmit() {
               :class="{ 'home-reminders-chevron-open': remindersExpanded }"
               aria-hidden="true"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </span>
@@ -504,6 +504,7 @@ async function handleSubmit() {
   display: inline-flex;
   margin-left: 0.65rem;
   color: #fff;
+  opacity: 0.82;
   transition: transform 0.2s;
 }
 
