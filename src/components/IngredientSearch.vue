@@ -118,7 +118,7 @@ onUnmounted(() => {
         >
           <IngredientThumb :ingredient="ingredient" />
           <div class="search-result-info">
-            <div class="search-result-name truncate">{{ ingredient.name }}</div>
+            <div class="search-result-name">{{ ingredient.name }}</div>
             <div class="search-result-size">{{ ingredient.size }}</div>
           </div>
           <div v-if="!hidePrice" class="search-result-price tabular-nums">

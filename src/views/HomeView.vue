@@ -684,7 +684,7 @@ async function handleSubmit() {
                 </Teleport>
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
-                Thanks! Feel free to edit your form later if needed
+                Thanks! Feel free to edit your form later
               </div>
             </div>
           </div>
@@ -697,13 +697,13 @@ async function handleSubmit() {
                 <input
                   v-model="cookingLocation"
                   type="text"
-                  placeholder="Where? Please specify building + floor"
+                  placeholder="Pls specify building + floor"
                   size="27"
                   class="form-section-pill-input pill-input-center"
                 />
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
-                No worries! We will assign a kitchen and notify your group
+                No worries! We'll assign one and notify you
               </div>
             </div>
           </div>
@@ -722,7 +722,7 @@ async function handleSubmit() {
                   aria-haspopup="dialog"
                   @click="toggleUtensilsDropdown"
                 >
-                  {{ validUtensilEntries.length >= 1 ? `${validUtensilEntries.length} item(s) listed` : 'What do you need? (e.g. large pot, strainer, ladle)' }}
+                  {{ validUtensilEntries.length >= 1 ? `${validUtensilEntries.length} item(s) listed` : 'What do you need? (Pot, strainer, etc)' }}
                   <span
                     class="home-contact-chevron"
                     :class="{ 'home-contact-chevron-open': utensilsDropdownOpen }"
@@ -804,7 +804,7 @@ async function handleSubmit() {
                 </Teleport>
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
-                Thanks! Feel free to edit your form later if needed
+                Thanks! Feel free to edit your form later
               </div>
             </div>
           </div>
@@ -814,10 +814,10 @@ async function handleSubmit() {
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Fridge Space</div>
               <div v-if="needsFridgeSpace === 'yes'" class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
-                No worries! We will assign you fridge space and notify your group
+                No worries! We'll assign one and notify you
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
-                Thanks! Feel free to edit your form later if needed
+                Thanks! Feel free to edit your form later
               </div>
             </div>
           </div>

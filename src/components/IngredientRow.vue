@@ -63,7 +63,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEsc))
       @click="openLightbox"
     />
     <div class="ingredient-row-info">
-      <div class="ingredient-row-name truncate">{{ ingredient.name }}</div>
+      <div class="ingredient-row-name">{{ ingredient.name }}</div>
       <div class="ingredient-row-size">{{ ingredient.size }}</div>
     </div>
     <div class="ingredient-row-dietary">
