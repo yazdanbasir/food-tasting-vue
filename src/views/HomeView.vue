@@ -7,7 +7,7 @@ import CountrySelect from '@/components/CountrySelect.vue'
 import YesNoSelect from '@/components/YesNoSelect.vue'
 import { TriangleAlert } from 'lucide-vue-next'
 import { useSubmissionStore } from '@/stores/submission'
-import { createSubmission, updateSubmission } from '@/api/submissions'
+import { createSubmission, lookupSubmissionByPhone, updateSubmission } from '@/api/submissions'
 
 const IngredientSearch = defineAsyncComponent(
   () => import('@/components/IngredientSearch.vue')
@@ -72,7 +72,46 @@ function toggleContactDropdown() {
   contactDropdownOpen.value = !contactDropdownOpen.value
 }
 
-function handleContactSave() {
+function normalizedConflictPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length >= 10) return digits.slice(-10)
+  return digits || raw.trim()
+}
+
+function conflictMessageForPhone(raw: string): string {
+  return `${normalizedConflictPhone(raw)} has already been added to another group`
+}
+
+async function hasPhoneConflictWithAnotherGroup(): Promise<boolean> {
+  if (validPhoneNumbers.value.length === 0) return false
+  const editingId = store.editingSubmissionId
+  isCheckingPhoneConflicts.value = true
+  try {
+    for (const phone of validPhoneNumbers.value) {
+      try {
+        const { submission } = await lookupSubmissionByPhone(phone)
+        if (editingId == null || submission.id !== editingId) {
+          contactPhoneConflictError.value = conflictMessageForPhone(phone)
+          return true
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : ''
+        if (/submission not found/i.test(message)) continue
+      }
+    }
+    return false
+  } finally {
+    isCheckingPhoneConflicts.value = false
+  }
+}
+
+async function handleContactSave() {
+  contactPhoneConflictError.value = null
+  const hasConflict = await hasPhoneConflictWithAnotherGroup()
+  if (hasConflict) {
+    contactDropdownOpen.value = true
+    return
+  }
   if (hasValidContact.value) groupInfoCommitted.value = true
   contactDropdownOpen.value = false
 }
@@ -156,6 +195,16 @@ const currentPage = ref(1)
 
 const isSubmitting = ref(false)
 const submitError = ref<string | null>(null)
+const contactPhoneConflictError = ref<string | null>(null)
+const isCheckingPhoneConflicts = ref(false)
+
+watch(
+  contacts,
+  () => {
+    if (contactPhoneConflictError.value) contactPhoneConflictError.value = null
+  },
+  { deep: true },
+)
 
 function handleNext() {
   if (!canAdvancePage1.value) return
@@ -172,6 +221,15 @@ async function handleSubmit() {
 
   isSubmitting.value = true
   submitError.value = null
+  contactPhoneConflictError.value = null
+
+  const hasConflict = await hasPhoneConflictWithAnotherGroup()
+  if (hasConflict) {
+    submitError.value = contactPhoneConflictError.value ?? 'Phone number has already been added to another group'
+    contactDropdownOpen.value = true
+    isSubmitting.value = false
+    return
+  }
 
   console.log('[Other ingredients] Submit — store otherIngredientEntries:', JSON.parse(JSON.stringify(otherIngredientEntries.value)))
   console.log('[Other ingredients] Submit — foundAllIngredients:', foundAllIngredients.value)
@@ -188,9 +246,12 @@ async function handleSubmit() {
     has_cooking_place: hasCookingPlace.value || undefined,
     cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
     found_all_ingredients: foundAllIngredients.value || undefined,
+    // Always send other_ingredients when section is active: list when 'no', null when 'yes' so backend can save or clear
     other_ingredients: foundAllIngredients.value === 'no'
       ? JSON.stringify(otherIngredientEntries.value)
-      : undefined,
+      : foundAllIngredients.value === 'yes'
+        ? null
+        : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
     needs_utensils: needsUtensils.value || undefined,
     utensils_notes: needsUtensils.value === 'yes' && utensilEntries.value.length > 0
@@ -211,6 +272,7 @@ async function handleSubmit() {
       const asOrganizer = store.editingAsOrganizer
       store.clearEdit()
       if (asOrganizer) {
+        store.setPendingOrganizerMerge(result)
         router.push('/organizer')
       } else {
         store.setLastSubmitted(result)
@@ -224,7 +286,14 @@ async function handleSubmit() {
       router.push('/confirmation')
     }
   } catch (err) {
-    submitError.value = err instanceof Error ? err.message : 'Submission failed'
+    const rawMessage = err instanceof Error ? err.message : 'Submission failed'
+    if (/already been added to another group/i.test(rawMessage)) {
+      const cleaned = rawMessage.replace(/^Validation failed:\s*/i, '').trim()
+      submitError.value = cleaned
+      contactPhoneConflictError.value = cleaned
+    } else {
+      submitError.value = rawMessage
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -383,11 +452,15 @@ async function handleSubmit() {
                   <span class="home-contact-btn-icon" aria-hidden="true">+</span>
                 </button>
               </div>
+              <div v-if="contactPhoneConflictError" class="home-contact-error" role="alert" aria-live="polite">
+                <TriangleAlert class="home-phone-hazard" aria-hidden="true" />
+                <span>{{ contactPhoneConflictError }}</span>
+              </div>
               <div class="home-contact-dropdown-footer">
                 <button
                   type="button"
                   class="btn-pill-primary"
-                  :disabled="!hasValidContact"
+                  :disabled="!hasValidContact || isCheckingPhoneConflicts"
                   @click="handleContactSave"
                 >
                   Save
@@ -718,7 +791,10 @@ async function handleSubmit() {
           >
             ← Back
           </button>
-          <span v-if="submitError" class="home-page2-error">{{ submitError }}</span>
+          <span v-if="submitError" class="home-page2-error" role="alert" aria-live="polite">
+            <TriangleAlert class="home-page2-error-icon" aria-hidden="true" />
+            <span>{{ submitError }}</span>
+          </span>
           <button
             v-if="(canSubmit && groupInfoCommitted) || isSubmitting"
             type="button"
@@ -1003,6 +1079,16 @@ async function handleSubmit() {
   display: flex;
   justify-content: flex-end;
   margin-top: 0.25rem;
+}
+
+.home-contact-error {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  color: #b91c1c;
+  font-size: 1rem;
+  padding: 0 0.25rem;
 }
 .home-phone-remove {
   flex-shrink: 0;
@@ -1341,6 +1427,16 @@ async function handleSubmit() {
   flex: 1;
   font-size: 1rem;
   color: #b91c1c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   text-align: center;
+}
+
+.home-page2-error-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
 }
 </style>

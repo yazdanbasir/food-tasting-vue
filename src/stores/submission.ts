@@ -44,6 +44,12 @@ export const useSubmissionStore = defineStore('submission', () => {
   /** Submission just created; used on confirmation page for "Edit Submission" */
   const lastSubmittedSubmission = ref<SubmissionResponse | null>(null)
 
+  /** After organizer saves an edit, hold the API result here so the dashboard can merge it into the list (ensures other_ingredients etc. show without waiting for refetch). */
+  const pendingOrganizerMerge = ref<SubmissionResponse | null>(null)
+  function setPendingOrganizerMerge(sub: SubmissionResponse | null) {
+    pendingOrganizerMerge.value = sub
+  }
+
   function addMember(name: string) {
     const trimmed = name.trim()
     if (trimmed && !members.value.includes(trimmed)) {
@@ -357,6 +363,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     clearEdit,
     lastSubmittedSubmission,
     setLastSubmitted,
+    pendingOrganizerMerge,
+    setPendingOrganizerMerge,
     isUSPhoneNumber,
   }
 })

@@ -98,7 +98,7 @@ function parseOtherIngredients(sub: SubmissionResponse): Array<{ item: string; s
         item: String(row?.item ?? '').trim(),
         size: String(row?.size ?? '').trim(),
         quantity: String(row?.quantity ?? '').trim(),
-        additionalDetails: String(row?.additionalDetails ?? '').trim(),
+        additionalDetails: String(row?.additionalDetails ?? row?.additional_details ?? '').trim(),
       }))
     }
   } catch {
@@ -240,6 +240,12 @@ async function loadSubmissions() {
   error.value = null
   try {
     submissions.value = await getAllSubmissions()
+    const pending = submissionStore.pendingOrganizerMerge
+    if (pending) {
+      const idx = submissions.value.findIndex((s) => s.id === pending.id)
+      if (idx !== -1) submissions.value[idx] = pending
+      submissionStore.setPendingOrganizerMerge(null)
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load'
   } finally {
@@ -1212,11 +1218,11 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                   </div>
                   <div v-if="sub.needs_fridge_space" class="submission-detail-meta-item submission-detail-meta-col-4">
                     <span class="submission-detail-meta-label">Fridge</span>
-                    <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needed ⚠️' : 'Has Fridge ✅' }}</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needed ⚠️' : 'Yes ✅' }}</span>
                   </div>
                   <div v-if="sub.needs_utensils" class="submission-detail-meta-item submission-detail-meta-col-5">
                     <span class="submission-detail-meta-label">Utensils</span>
-                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needed ⚠️' : 'Has Utensils ✅' }}</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needed ⚠️' : 'Yes ✅' }}</span>
                   </div>
                   <div class="submission-detail-meta-actions submission-detail-meta-col-8">
                     <button

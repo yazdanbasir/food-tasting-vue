@@ -109,6 +109,7 @@ class Api::V1::SubmissionsController < ApplicationController
     raw_country = params[:country_code] || params["country_code"]
     raw_members = params[:members] || params["members"]
 
+    Rails.logger.info "[Submissions#update] other_ingredients=#{params[:other_ingredients].inspect}"
     submission.assign_attributes(
       dish_name: params[:dish_name],
       team_name: params[:team_name],
@@ -119,11 +120,11 @@ class Api::V1::SubmissionsController < ApplicationController
       has_cooking_place: params[:has_cooking_place].presence,
       cooking_location: params[:cooking_location].presence,
       found_all_ingredients: params[:found_all_ingredients].presence,
+      other_ingredients: params[:other_ingredients].presence,
       needs_fridge_space: params[:needs_fridge_space].presence,
       needs_utensils: params[:needs_utensils].presence,
       utensils_notes: params[:utensils_notes].presence
     )
-    submission.other_ingredients = params[:other_ingredients].presence if params.key?(:other_ingredients)
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
 
@@ -225,7 +226,10 @@ class Api::V1::SubmissionsController < ApplicationController
     Rails.logger.info "[lookup] input_tail=#{input_tail.inspect} (length #{input_tail.length})"
     return render json: { error: "Phone required" }, status: :unprocessable_entity if input_tail.length < 7
 
-    submission = Submission.includes(submission_ingredients: :ingredient).all.find do |s|
+    matches = Submission
+      .includes(submission_ingredients: :ingredient)
+      .order(updated_at: :desc, created_at: :desc)
+      .select do |s|
       # Support comma-separated numbers: match if user's input matches any stored number
       raw_stored = s.phone_number.to_s
       parts = raw_stored.split(/\s*,\s*/).map(&:strip).reject(&:blank?)
@@ -238,6 +242,9 @@ class Api::V1::SubmissionsController < ApplicationController
       Rails.logger.info "[lookup] submission id=#{s.id} phone_number=#{s.phone_number.inspect} input_tail=#{input_tail.inspect} match=#{match}"
       match
     end
+
+    submission = matches.first
+    Rails.logger.info "[lookup] total_matches=#{matches.length} chosen_submission_id=#{submission&.id}"
 
     return render json: { error: "No submission found for that phone number" }, status: :not_found unless submission
 
