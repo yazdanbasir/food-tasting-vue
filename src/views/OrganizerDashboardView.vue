@@ -916,10 +916,10 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
           <div class="submission-table-header">
             <div class="sub-header-cell sub-header-center">Country &amp; Dish</div>
             <div class="sub-header-cell sub-header-center">Members</div>
+            <div class="sub-header-cell sub-header-center">Kitchen</div>
             <div class="sub-header-cell sub-header-center">Fridge Needed</div>
             <div class="sub-header-cell sub-header-center">Requested</div>
             <div class="sub-header-cell sub-header-center">Allocated</div>
-            <div class="sub-header-cell sub-header-center">Kitchen</div>
             <div class="sub-header-cell sub-header-center">Helper/Driver</div>
             <div class="sub-header-cell"></div>
           </div>
@@ -950,49 +950,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 {{ (sub.members || []).join(', ') || '—' }}
               </div>
 
-              <!-- Col 3: Fridge Needed -->
-              <div class="kitchen-cell kitchen-cell-editable" @click.stop>
-                <template v-if="sub.needs_fridge_space === 'yes'">
-                  <div class="form-section-pill kitchen-resource-pill">
-                    <KitchenResourceSelect
-                      :model-value="(sub.fridge_location || '').trim() || null"
-                      :options="fridgeOptionsForSelect(sub)"
-                      placeholder="Assign fridge"
-                      clearable
-                      @update:model-value="(val) => assignKitchenField(sub, 'fridge_location', val)"
-                    />
-                  </div>
-                </template>
-                <template v-else>
-                  <span v-if="sub.needs_fridge_space === 'no'">No</span>
-                  <span v-else>—</span>
-                </template>
-              </div>
-
-              <!-- Col 4: Equipment Requested (read-only) -->
-              <div class="kitchen-cell">
-                <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes">{{ sub.utensils_notes }}</span>
-                <span v-else-if="sub.needs_utensils === 'yes'">Needs utensils</span>
-                <span v-else-if="sub.needs_utensils === 'no'">—</span>
-                <span v-else>—</span>
-              </div>
-
-              <!-- Col 5: Equipment Allocated (editable) -->
-              <div class="kitchen-cell kitchen-cell-editable" @click.stop>
-                <template v-if="sub.needs_utensils === 'yes'">
-                  <div class="form-section-pill kitchen-resource-pill">
-                    <KitchenResourceMultiSelect
-                      :model-value="parseEquipmentAllocated(sub.equipment_allocated)"
-                      :options="equipmentOptionsForSelect(sub)"
-                      placeholder="Assign equipment"
-                      @update:model-value="(vals) => assignEquipmentMulti(sub, vals)"
-                    />
-                  </div>
-                </template>
-                <span v-else>—</span>
-              </div>
-
-              <!-- Col 6: Kitchen / Location (editable) -->
+              <!-- Col 3: Kitchen / Location (editable) -->
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
                 <template v-if="sub.has_cooking_place === 'no'">
                   <div class="form-section-pill kitchen-resource-pill">
@@ -1024,6 +982,48 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                     <span v-else>{{ (sub.cooking_location || '').trim() || '—' }}</span>
                   </div>
                 </template>
+              </div>
+
+              <!-- Col 4: Fridge Needed -->
+              <div class="kitchen-cell kitchen-cell-editable" @click.stop>
+                <template v-if="sub.needs_fridge_space === 'yes'">
+                  <div class="form-section-pill kitchen-resource-pill">
+                    <KitchenResourceSelect
+                      :model-value="(sub.fridge_location || '').trim() || null"
+                      :options="fridgeOptionsForSelect(sub)"
+                      placeholder="Assign fridge"
+                      clearable
+                      @update:model-value="(val) => assignKitchenField(sub, 'fridge_location', val)"
+                    />
+                  </div>
+                </template>
+                <template v-else>
+                  <span v-if="sub.needs_fridge_space === 'no'">No</span>
+                  <span v-else>—</span>
+                </template>
+              </div>
+
+              <!-- Col 5: Equipment Requested (read-only) -->
+              <div class="kitchen-cell">
+                <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes">{{ sub.utensils_notes }}</span>
+                <span v-else-if="sub.needs_utensils === 'yes'">Needs utensils</span>
+                <span v-else-if="sub.needs_utensils === 'no'">—</span>
+                <span v-else>—</span>
+              </div>
+
+              <!-- Col 6: Equipment Allocated (editable) -->
+              <div class="kitchen-cell kitchen-cell-editable" @click.stop>
+                <template v-if="sub.needs_utensils === 'yes'">
+                  <div class="form-section-pill kitchen-resource-pill">
+                    <KitchenResourceMultiSelect
+                      :model-value="parseEquipmentAllocated(sub.equipment_allocated)"
+                      :options="equipmentOptionsForSelect(sub)"
+                      placeholder="Assign equipment"
+                      @update:model-value="(vals) => assignEquipmentMulti(sub, vals)"
+                    />
+                  </div>
+                </template>
+                <span v-else>—</span>
               </div>
 
               <!-- Col 7: Helper / Driver? (Assign helper dropdown) -->
@@ -1062,13 +1062,13 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                     <span class="submission-detail-meta-label">Fridge</span>
                     <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needs Fridge ⚠️' : 'Has Fridge ✅' }}</span>
                   </div>
-                  <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Ingredients</span>
-                    <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'Has Ingredients ✅' : 'Missing Ingredients ⚠️' }}</span>
-                  </div>
                   <div v-if="sub.needs_utensils" class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Utensils</span>
                     <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needs Utensils ⚠️' : 'Has Utensils ✅' }}</span>
+                  </div>
+                  <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item">
+                    <span class="submission-detail-meta-label">Ingredients</span>
+                    <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'Has Ingredients ✅' : 'Missing Ingredients ⚠️' }}</span>
                   </div>
                   <div class="submission-detail-meta-item">
                     <span class="submission-detail-meta-label">Dietary Flags</span>
