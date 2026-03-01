@@ -122,6 +122,7 @@ onUnmounted(() => {
   min-height: 2.75rem;
   width: 100%;
   border: none;
+  /* Match parent pill: fixed 1.5rem so multi-line keeps same curvature as single-line (stays pill, not rounder) */
   border-radius: 1.5rem;
   background: transparent;
   font: inherit;

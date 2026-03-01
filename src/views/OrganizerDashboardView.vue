@@ -3024,6 +3024,8 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 
 .kitchen-resource-pill {
   margin: 0;
+  /* Fixed radius so multi-line doesn’t make corners rounder; 1.5rem keeps pill shape like single-line */
+  border-radius: 1.5rem;
 }
 
 .kitchen-cell-active {
