@@ -27,8 +27,10 @@ const {
   foundAllIngredients,
   needsFridgeSpace,
   needsUtensils,
-  utensilsNotes,
-  otherIngredients,
+  utensilEntries,
+  validUtensilEntries,
+  otherIngredientEntries,
+  validOtherIngredientEntries,
   validPhoneNumbers,
   validContacts,
   contacts,
@@ -39,6 +41,12 @@ const {
 const contactDropdownOpen = ref(false)
 const contactDropdownRef = ref<HTMLElement | null>(null)
 const contactTriggerRef = ref<HTMLElement | null>(null)
+const otherIngredientsDropdownOpen = ref(false)
+const otherIngredientsDropdownRef = ref<HTMLElement | null>(null)
+const otherIngredientsTriggerRef = ref<HTMLElement | null>(null)
+const utensilsDropdownOpen = ref(false)
+const utensilsDropdownRef = ref<HTMLElement | null>(null)
+const utensilsTriggerRef = ref<HTMLElement | null>(null)
 
 /** True only after user has clicked Save in the group info dropdown with at least one valid contact. Cleared when contacts become invalid. */
 const groupInfoCommitted = ref(false)
@@ -83,6 +91,36 @@ function handleContactClickOutside(e: MouseEvent) {
   ) {
     contactDropdownOpen.value = false
   }
+  if (
+    otherIngredientsDropdownOpen.value &&
+    otherIngredientsDropdownRef.value && !otherIngredientsDropdownRef.value.contains(target) &&
+    otherIngredientsTriggerRef.value && !otherIngredientsTriggerRef.value.contains(target)
+  ) {
+    otherIngredientsDropdownOpen.value = false
+  }
+  if (
+    utensilsDropdownOpen.value &&
+    utensilsDropdownRef.value && !utensilsDropdownRef.value.contains(target) &&
+    utensilsTriggerRef.value && !utensilsTriggerRef.value.contains(target)
+  ) {
+    utensilsDropdownOpen.value = false
+  }
+}
+
+function toggleOtherIngredientsDropdown() {
+  otherIngredientsDropdownOpen.value = !otherIngredientsDropdownOpen.value
+}
+
+function handleOtherIngredientsSave() {
+  otherIngredientsDropdownOpen.value = false
+}
+
+function toggleUtensilsDropdown() {
+  utensilsDropdownOpen.value = !utensilsDropdownOpen.value
+}
+
+function handleUtensilsSave() {
+  utensilsDropdownOpen.value = false
 }
 
 onMounted(() => document.addEventListener('click', handleContactClickOutside))
@@ -146,10 +184,14 @@ async function handleSubmit() {
     has_cooking_place: hasCookingPlace.value || undefined,
     cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
     found_all_ingredients: foundAllIngredients.value || undefined,
-    other_ingredients: foundAllIngredients.value === 'no' ? otherIngredients.value.trim() || undefined : undefined,
+    other_ingredients: foundAllIngredients.value === 'no' && otherIngredientEntries.value.length > 0
+      ? JSON.stringify(otherIngredientEntries.value)
+      : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
     needs_utensils: needsUtensils.value || undefined,
-    utensils_notes: needsUtensils.value === 'yes' ? utensilsNotes.value.trim() || undefined : undefined,
+    utensils_notes: needsUtensils.value === 'yes' && utensilEntries.value.length > 0
+      ? JSON.stringify(utensilEntries.value)
+      : undefined,
     ingredients: ingredients.value.map((item) => ({
       ingredient_id: item.ingredient.id,
       quantity: item.quantity,
@@ -426,13 +468,101 @@ async function handleSubmit() {
           <div v-if="foundAllIngredients !== ''" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Other Ingredients</div>
-              <div v-if="foundAllIngredients === 'no'" class="form-section-pill home-dish-pill home-dish-pill-grow">
-                <input
-                  v-model="otherIngredients"
-                  type="text"
-                  placeholder="Please list what you need and we will get it from other stores if possible"
-                  class="form-section-pill-input pill-input-center"
-                />
+              <div v-if="foundAllIngredients === 'no'" class="form-section-pill home-dish-pill home-dish-pill-grow home-other-ingredients-pill-wrap">
+                <button
+                  ref="otherIngredientsTriggerRef"
+                  type="button"
+                  class="home-contact-trigger"
+                  :class="{ 'home-contact-trigger--saved': validOtherIngredientEntries.length >= 1 }"
+                  :aria-expanded="otherIngredientsDropdownOpen"
+                  aria-haspopup="dialog"
+                  @click="toggleOtherIngredientsDropdown"
+                >
+                  {{ validOtherIngredientEntries.length >= 1 ? `${validOtherIngredientEntries.length} item(s) listed` : 'List items you could not find on the previous page' }}
+                  <span
+                    class="home-contact-chevron"
+                    :class="{ 'home-contact-chevron-open': otherIngredientsDropdownOpen }"
+                    aria-hidden="true"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </span>
+                </button>
+                <div
+                  v-show="otherIngredientsDropdownOpen"
+                  ref="otherIngredientsDropdownRef"
+                  class="home-other-ingredients-dropdown"
+                  role="dialog"
+                >
+                  <div
+                    v-for="(entry, i) in otherIngredientEntries"
+                    :key="i"
+                    class="home-other-ingredients-dropdown-row"
+                  >
+                    <div class="home-other-ingredients-pill home-other-ingredients-pill-item">
+                      <input
+                        v-model="entry.item"
+                        type="text"
+                        placeholder="Item (PLEASE BE SPECIFIC!)"
+                        class="home-contact-input"
+                      />
+                    </div>
+                    <div class="home-other-ingredients-pill home-other-ingredients-pill-size">
+                      <input
+                        v-model="entry.size"
+                        type="text"
+                        placeholder="Size"
+                        class="home-contact-input"
+                      />
+                    </div>
+                    <div class="home-other-ingredients-pill home-other-ingredients-pill-qty">
+                      <input
+                        v-model="entry.quantity"
+                        type="text"
+                        placeholder="Quantity"
+                        class="home-contact-input"
+                      />
+                    </div>
+                    <div class="home-other-ingredients-pill home-other-ingredients-pill-details">
+                      <input
+                        v-model="entry.additionalDetails"
+                        type="text"
+                        placeholder="Additional Details"
+                        class="home-contact-input"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      class="home-phone-remove"
+                      :aria-label="`Remove row ${i + 1}`"
+                      @click.stop="store.removeOtherIngredientEntry(i)"
+                    >
+                      <span class="home-contact-btn-icon" aria-hidden="true">×</span>
+                    </button>
+                  </div>
+                  <div class="home-contact-dropdown-row home-contact-add-row-wrap">
+                    <span class="home-other-ingredients-add-spacer" />
+                    <button
+                      type="button"
+                      class="home-contact-add-btn-circle"
+                      aria-label="Add row"
+                      @click="store.addOtherIngredientEntry()"
+                    >
+                      <span class="home-contact-btn-icon" aria-hidden="true">+</span>
+                    </button>
+                  </div>
+                  <div class="home-contact-dropdown-footer">
+                    <button
+                      type="button"
+                      class="btn-pill-primary"
+                      :disabled="validOtherIngredientEntries.length < 1"
+                      @click="handleOtherIngredientsSave"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
                 Thanks! Feel free to edit your form later if needed
@@ -459,17 +589,97 @@ async function handleSubmit() {
             </div>
           </div>
 
-          <!-- Utensils / Equipment section (shows when needsUtensils answered; input if yes, message pill if no) -->
+          <!-- Utensils / Equipment section (shows when needsUtensils answered; dropdown if yes, message pill if no) -->
           <div v-if="needsUtensils !== ''" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Utensils / Equipment</div>
-              <div v-if="needsUtensils === 'yes'" class="form-section-pill home-dish-pill home-dish-pill-grow">
-                <input
-                  v-model="utensilsNotes"
-                  type="text"
-                  placeholder="What do you need? (e.g. large pot, strainer, ladle)"
-                  class="form-section-pill-input pill-input-center"
-                />
+              <div v-if="needsUtensils === 'yes'" class="form-section-pill home-dish-pill home-dish-pill-grow home-utensils-pill-wrap">
+                <button
+                  ref="utensilsTriggerRef"
+                  type="button"
+                  class="home-contact-trigger"
+                  :class="{ 'home-contact-trigger--saved': validUtensilEntries.length >= 1 }"
+                  :aria-expanded="utensilsDropdownOpen"
+                  aria-haspopup="dialog"
+                  @click="toggleUtensilsDropdown"
+                >
+                  {{ validUtensilEntries.length >= 1 ? `${validUtensilEntries.length} item(s) listed` : 'What do you need? (e.g. large pot, strainer, ladle)' }}
+                  <span
+                    class="home-contact-chevron"
+                    :class="{ 'home-contact-chevron-open': utensilsDropdownOpen }"
+                    aria-hidden="true"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </span>
+                </button>
+                <div
+                  v-show="utensilsDropdownOpen"
+                  ref="utensilsDropdownRef"
+                  class="home-utensils-dropdown"
+                  role="dialog"
+                >
+                  <div
+                    v-for="(entry, i) in utensilEntries"
+                    :key="i"
+                    class="home-utensils-dropdown-row"
+                  >
+                    <div class="home-utensils-pill home-utensils-pill-utensil">
+                      <input
+                        v-model="entry.utensil"
+                        type="text"
+                        placeholder="Utensil/Equipment needed"
+                        class="home-contact-input"
+                      />
+                    </div>
+                    <div class="home-utensils-pill home-utensils-pill-size">
+                      <input
+                        v-model="entry.size"
+                        type="text"
+                        placeholder="Size"
+                        class="home-contact-input"
+                      />
+                    </div>
+                    <div class="home-utensils-pill home-utensils-pill-qty">
+                      <input
+                        v-model="entry.quantity"
+                        type="text"
+                        placeholder="Quantity"
+                        class="home-contact-input"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      class="home-phone-remove"
+                      :aria-label="`Remove row ${i + 1}`"
+                      @click.stop="store.removeUtensilEntry(i)"
+                    >
+                      <span class="home-contact-btn-icon" aria-hidden="true">×</span>
+                    </button>
+                  </div>
+                  <div class="home-contact-dropdown-row home-contact-add-row-wrap">
+                    <span class="home-utensils-add-spacer" />
+                    <button
+                      type="button"
+                      class="home-contact-add-btn-circle"
+                      aria-label="Add row"
+                      @click="store.addUtensilEntry()"
+                    >
+                      <span class="home-contact-btn-icon" aria-hidden="true">+</span>
+                    </button>
+                  </div>
+                  <div class="home-contact-dropdown-footer">
+                    <button
+                      type="button"
+                      class="btn-pill-primary"
+                      :disabled="validUtensilEntries.length < 1"
+                      @click="handleUtensilsSave"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
                 Thanks! Feel free to edit your form later if needed
@@ -814,6 +1024,131 @@ async function handleSubmit() {
 .home-phone-remove:focus {
   outline: none;
 }
+
+/* Other ingredients dropdown (same pattern as contact, 4 pills: Item, Size, Quantity, Additional Details) */
+.home-other-ingredients-pill-wrap {
+  position: relative;
+  padding: 0;
+  min-width: 0;
+}
+.home-other-ingredients-dropdown {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-width: 100%;
+  max-height: 22rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+.home-other-ingredients-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+}
+.home-other-ingredients-pill {
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border, #e5e5e5);
+  padding: 0.25rem 0.75rem;
+  background: #fff;
+  overflow: visible;
+  min-width: 0;
+}
+.home-other-ingredients-pill-item {
+  flex: 1 1 28%;
+  min-width: 5rem;
+}
+.home-other-ingredients-pill-size {
+  flex: 0 1 15%;
+  min-width: 4rem;
+}
+.home-other-ingredients-pill-qty {
+  flex: 0 1 12%;
+  min-width: 3.5rem;
+}
+.home-other-ingredients-pill-details {
+  flex: 1 1 30%;
+  min-width: 5rem;
+}
+.home-other-ingredients-add-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Utensils dropdown (Utensil/Equipment, Size, Quantity) */
+.home-utensils-pill-wrap {
+  position: relative;
+  padding: 0;
+  min-width: 0;
+}
+.home-utensils-dropdown {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-width: 100%;
+  max-height: 22rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+.home-utensils-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+}
+.home-utensils-pill {
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border, #e5e5e5);
+  padding: 0.25rem 0.75rem;
+  background: #fff;
+  overflow: visible;
+  min-width: 0;
+}
+.home-utensils-pill-utensil {
+  flex: 1 1 50%;
+  min-width: 8rem;
+}
+.home-utensils-pill-size {
+  flex: 0 1 20%;
+  min-width: 4rem;
+}
+.home-utensils-pill-qty {
+  flex: 0 1 15%;
+  min-width: 3.5rem;
+}
+.home-utensils-add-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .home-phone-remove:focus-visible {
   outline: none;
 }

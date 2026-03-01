@@ -48,6 +48,31 @@ function toIngredient(raw: SubmissionResponse['ingredients'][0]['ingredient']): 
   }
 }
 
+/** Format utensils_notes for display: if JSON array of {utensil, size, quantity}, show readable list; else show raw string */
+function formatUtensilsNotes(notes: string | null | undefined): string {
+  if (!notes || !notes.trim()) return ''
+  try {
+    const parsed = JSON.parse(notes) as unknown
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((row: { utensil?: string; size?: string; quantity?: string }) => {
+          const u = String(row?.utensil ?? '').trim()
+          if (!u) return ''
+          const s = String(row?.size ?? '').trim()
+          const q = String(row?.quantity ?? '').trim()
+          const parts = [u]
+          if (s || q) parts.push([s, q].filter(Boolean).join(', '))
+          return parts.join(' (') + (parts.length > 1 ? ')' : '')
+        })
+        .filter(Boolean)
+        .join('; ') || notes
+    }
+  } catch {
+    /* fall through to raw */
+  }
+  return notes
+}
+
 /** Aggregate dietary flags for a submission: true if any ingredient has that flag */
 function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
   const keys = [
@@ -1073,7 +1098,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 
               <!-- Col 5: Equipment Requested (read-only) -->
               <div class="kitchen-cell">
-                <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes">{{ sub.utensils_notes }}</span>
+                <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes">{{ formatUtensilsNotes(sub.utensils_notes) }}</span>
                 <span v-else-if="sub.needs_utensils === 'yes'">Needs utensils</span>
                 <span v-else-if="sub.needs_utensils === 'no'">—</span>
                 <span v-else>—</span>

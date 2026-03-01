@@ -4,6 +4,9 @@ import type { Ingredient } from '@/types/ingredient'
 import type { MasterListItem, SubmissionIngredient } from '@/types/submission'
 import type { SubmissionResponse } from '@/api/submissions'
 
+export type OtherIngredientEntry = { item: string; size: string; quantity: string; additionalDetails: string }
+export type UtensilEntry = { utensil: string; size: string; quantity: string }
+
 function isUSPhoneNumber(value: string): boolean {
   const digits = value.replace(/\D/g, '')
   if (digits.length === 10) return true
@@ -27,8 +30,10 @@ export const useSubmissionStore = defineStore('submission', () => {
   const foundAllIngredients = ref<'yes' | 'no' | ''>('')
   const needsFridgeSpace = ref<'yes' | 'no' | ''>('')
   const needsUtensils = ref<'yes' | 'no' | ''>('')
-  const utensilsNotes = ref('')
-  const otherIngredients = ref('')
+  /** Utensil/equipment entries when needs_utensils is 'yes'. Each entry: utensil, size, quantity. Start with one empty row. */
+  const utensilEntries = ref<UtensilEntry[]>([{ utensil: '', size: '', quantity: '' }])
+  /** Other-store items when found_all_ingredients is 'no'. Each entry: item, size, quantity, additionalDetails. Start with one empty row. */
+  const otherIngredientEntries = ref<OtherIngredientEntry[]>([{ item: '', size: '', quantity: '', additionalDetails: '' }])
 
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
@@ -143,15 +148,45 @@ export const useSubmissionStore = defineStore('submission', () => {
       ingredients.value.length > 0,
   )
 
+  /** Entries with at least item filled (required to submit when found_all_ingredients is 'no'). */
+  const validOtherIngredientEntries = computed(() =>
+    otherIngredientEntries.value.filter((e) => e.item.trim() !== ''),
+  )
+
+  /** Entries with at least utensil filled (required to submit when needs_utensils is 'yes'). */
+  const validUtensilEntries = computed(() =>
+    utensilEntries.value.filter((e) => e.utensil.trim() !== ''),
+  )
+
   const canSubmit = computed(
     () =>
       canAdvancePage1.value &&
       foundAllIngredients.value !== '' &&
+      (foundAllIngredients.value !== 'no' || validOtherIngredientEntries.value.length >= 1) &&
       hasCookingPlace.value !== '' &&
       (hasCookingPlace.value !== 'yes' || cookingLocation.value.trim().length > 0) &&
       needsFridgeSpace.value !== '' &&
-      needsUtensils.value !== '',
+      needsUtensils.value !== '' &&
+      (needsUtensils.value !== 'yes' || validUtensilEntries.value.length >= 1),
   )
+
+  function addOtherIngredientEntry() {
+    otherIngredientEntries.value = [...otherIngredientEntries.value, { item: '', size: '', quantity: '', additionalDetails: '' }]
+  }
+
+  function removeOtherIngredientEntry(index: number) {
+    if (otherIngredientEntries.value.length <= 1) return
+    otherIngredientEntries.value = otherIngredientEntries.value.filter((_, i) => i !== index)
+  }
+
+  function addUtensilEntry() {
+    utensilEntries.value = [...utensilEntries.value, { utensil: '', size: '', quantity: '' }]
+  }
+
+  function removeUtensilEntry(index: number) {
+    if (utensilEntries.value.length <= 1) return
+    utensilEntries.value = utensilEntries.value.filter((_, i) => i !== index)
+  }
 
   function addContact() {
     contacts.value = [...contacts.value, { name: '', phone: '' }]
@@ -177,8 +212,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     foundAllIngredients.value = ''
     needsFridgeSpace.value = ''
     needsUtensils.value = ''
-    utensilsNotes.value = ''
-    otherIngredients.value = ''
+    utensilEntries.value = [{ utensil: '', size: '', quantity: '' }]
+    otherIngredientEntries.value = [{ item: '', size: '', quantity: '', additionalDetails: '' }]
     ingredients.value = []
   }
 
@@ -217,8 +252,45 @@ export const useSubmissionStore = defineStore('submission', () => {
     foundAllIngredients.value = (sub.found_all_ingredients as 'yes' | 'no' | '') ?? ''
     needsFridgeSpace.value = (sub.needs_fridge_space as 'yes' | 'no' | '') ?? ''
     needsUtensils.value = (sub.needs_utensils as 'yes' | 'no' | '') ?? ''
-    utensilsNotes.value = sub.utensils_notes ?? ''
-    otherIngredients.value = sub.other_ingredients ?? ''
+    const rawUtensils = (sub.utensils_notes ?? '').trim()
+    if (rawUtensils) {
+      try {
+        const parsed = JSON.parse(rawUtensils) as unknown
+        if (Array.isArray(parsed)) {
+          utensilEntries.value = parsed.map((row) => ({
+            utensil: String((row as { utensil?: string }).utensil ?? ''),
+            size: String((row as { size?: string }).size ?? ''),
+            quantity: String((row as { quantity?: string }).quantity ?? ''),
+          }))
+        } else {
+          utensilEntries.value = [{ utensil: rawUtensils, size: '', quantity: '' }]
+        }
+      } catch {
+        utensilEntries.value = [{ utensil: rawUtensils, size: '', quantity: '' }]
+      }
+    } else {
+      utensilEntries.value = [{ utensil: '', size: '', quantity: '' }]
+    }
+    const rawOther = (sub.other_ingredients ?? '').trim()
+    if (rawOther) {
+      try {
+        const parsed = JSON.parse(rawOther) as unknown
+        if (Array.isArray(parsed)) {
+          otherIngredientEntries.value = parsed.map((row) => ({
+            item: String((row as { item?: string }).item ?? ''),
+            size: String((row as { size?: string }).size ?? ''),
+            quantity: String((row as { quantity?: string }).quantity ?? ''),
+            additionalDetails: String((row as { additionalDetails?: string }).additionalDetails ?? ''),
+          }))
+        } else {
+          otherIngredientEntries.value = [{ item: rawOther, size: '', quantity: '', additionalDetails: '' }]
+        }
+      } catch {
+        otherIngredientEntries.value = [{ item: rawOther, size: '', quantity: '', additionalDetails: '' }]
+      }
+    } else {
+      otherIngredientEntries.value = [{ item: '', size: '', quantity: '', additionalDetails: '' }]
+    }
     ingredients.value = sub.ingredients.map((item) => ({
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
@@ -250,8 +322,14 @@ export const useSubmissionStore = defineStore('submission', () => {
     foundAllIngredients,
     needsFridgeSpace,
     needsUtensils,
-    utensilsNotes,
-    otherIngredients,
+    utensilEntries,
+    validUtensilEntries,
+    addUtensilEntry,
+    removeUtensilEntry,
+    otherIngredientEntries,
+    validOtherIngredientEntries,
+    addOtherIngredientEntry,
+    removeOtherIngredientEntry,
     editingSubmissionId,
     editingAsOrganizer,
     addMember,
