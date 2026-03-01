@@ -107,9 +107,9 @@ export function usePlacardExport() {
       const pageW = 297
       const pageH = 210
 
-      for (let i = 0; i < submissions.length; i++) {
+      for (const [i, sub] of submissions.entries()) {
         exportProgress.value = `Generating placard ${i + 1} of ${submissions.length}…`
-        const canvas = await renderToCanvas(submissions[i], html2canvas)
+        const canvas = await renderToCanvas(sub, html2canvas)
 
         const imgData = canvas.toDataURL('image/png')
         if (i > 0) pdf.addPage()
@@ -118,8 +118,9 @@ export function usePlacardExport() {
 
       exportProgress.value = 'Saving PDF…'
       const ts = dateTimeSuffix()
-      const pdfName = submissions.length === 1
-        ? `${safeDishName(submissions[0].dish_name)}_${ts}.pdf`
+      const firstSubmission = submissions[0]
+      const pdfName = submissions.length === 1 && firstSubmission
+        ? `${safeDishName(firstSubmission.dish_name)}_${ts}.pdf`
         : `placards_${ts}.pdf`
       pdf.save(pdfName)
     } catch (err) {
@@ -140,9 +141,9 @@ export function usePlacardExport() {
     try {
       const { default: html2canvas } = await import('html2canvas-pro')
 
-      for (let i = 0; i < submissions.length; i++) {
+      for (const [i, sub] of submissions.entries()) {
         exportProgress.value = `Generating placard ${i + 1} of ${submissions.length}…`
-        const canvas = await renderToCanvas(submissions[i], html2canvas)
+        const canvas = await renderToCanvas(sub, html2canvas)
 
         // Convert canvas to blob and download
         const blob = await new Promise<Blob>((resolve, reject) => {
@@ -155,7 +156,7 @@ export function usePlacardExport() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${safeDishName(submissions[i].dish_name)}_${dateTimeSuffix()}.png`
+        a.download = `${safeDishName(sub.dish_name)}_${dateTimeSuffix()}.png`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
