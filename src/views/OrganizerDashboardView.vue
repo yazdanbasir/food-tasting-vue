@@ -506,10 +506,11 @@ const driverSelectValue = computed({
 })
 
 const kuEditError = ref<string | null>(null)
+const kuSaving = ref(false)
 
 async function saveKuEdit() {
   const c = editingKuCard.value
-  if (!c) return
+  if (!c || kuSaving.value) return
   kuEditError.value = null
   const { name, point_person, phone, is_driver } = kuEditForm.value
   const trimmedName = name.trim()
@@ -524,20 +525,21 @@ async function saveKuEdit() {
   if (c.kind === 'helper_driver') {
     payload.is_driver = is_driver
   }
-  const listRef = kuListRef(c.kind)
-  const idx = listRef.value.findIndex((row) => row.id === c.id)
-  const original = idx >= 0 ? (listRef.value[idx] as KitchenResourceItem) : null
-  if (original) {
-    listRef.value[idx] = { ...original, ...payload } as KitchenResourceItem
-  }
-  editingKuCard.value = null
+  kuSaving.value = true
   try {
-    await updateKitchenResource(c.id, payload)
+    const updated = await updateKitchenResource(c.id, payload)
+    // Update local list with server-confirmed data
+    const listRef = kuListRef(c.kind)
+    const idx = listRef.value.findIndex((row) => row.id === c.id)
+    if (idx >= 0) {
+      listRef.value[idx] = updated
+    }
+    editingKuCard.value = null
   } catch (err) {
-    if (original && idx >= 0) listRef.value[idx] = original
-    editingKuCard.value = c
     kuEditError.value = err instanceof Error ? err.message : 'Failed to save. Run backend migration: cd backend && bundle exec rails db:migrate'
     console.error(err)
+  } finally {
+    kuSaving.value = false
   }
 }
 
@@ -1347,8 +1349,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                       <input v-model="kuEditForm.phone" class="ku-card-edit-input" type="text" placeholder="Phone" />
                     </div>
                     <div class="ku-card-meta-actions">
-                      <button type="button" class="btn-pill-primary" @click.stop="saveKuEdit">Save</button>
-                      <button type="button" class="btn-pill-primary" @click.stop="cancelKuEditForm">Cancel</button>
+                      <button type="button" class="btn-pill-primary" :disabled="kuSaving" @click.stop="saveKuEdit">{{ kuSaving ? 'Saving…' : 'Save' }}</button>
+                      <button type="button" class="btn-pill-primary" :disabled="kuSaving" @click.stop="cancelKuEditForm">Cancel</button>
                     </div>
                   </div>
                 </div>
@@ -1428,8 +1430,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                       <input v-model="kuEditForm.phone" class="ku-card-edit-input" type="text" placeholder="Phone" />
                     </div>
                     <div class="ku-card-meta-actions">
-                      <button type="button" class="btn-pill-primary" @click.stop="saveKuEdit">Save</button>
-                      <button type="button" class="btn-pill-primary" @click.stop="cancelKuEditForm">Cancel</button>
+                      <button type="button" class="btn-pill-primary" :disabled="kuSaving" @click.stop="saveKuEdit">{{ kuSaving ? 'Saving…' : 'Save' }}</button>
+                      <button type="button" class="btn-pill-primary" :disabled="kuSaving" @click.stop="cancelKuEditForm">Cancel</button>
                     </div>
                   </div>
                 </div>
@@ -1509,8 +1511,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                       <input v-model="kuEditForm.phone" class="ku-card-edit-input" type="text" placeholder="Phone" />
                     </div>
                     <div class="ku-card-meta-actions">
-                      <button type="button" class="btn-pill-primary" @click.stop="saveKuEdit">Save</button>
-                      <button type="button" class="btn-pill-primary" @click.stop="cancelKuEditForm">Cancel</button>
+                      <button type="button" class="btn-pill-primary" :disabled="kuSaving" @click.stop="saveKuEdit">{{ kuSaving ? 'Saving…' : 'Save' }}</button>
+                      <button type="button" class="btn-pill-primary" :disabled="kuSaving" @click.stop="cancelKuEditForm">Cancel</button>
                     </div>
                   </div>
                 </div>
@@ -1594,8 +1596,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                       </select>
                     </div>
                     <div class="ku-card-meta-actions">
-                      <button type="button" class="btn-pill-primary" @click.stop="saveKuEdit">Save</button>
-                      <button type="button" class="btn-pill-primary" @click.stop="cancelKuEditForm">Cancel</button>
+                      <button type="button" class="btn-pill-primary" :disabled="kuSaving" @click.stop="saveKuEdit">{{ kuSaving ? 'Saving…' : 'Save' }}</button>
+                      <button type="button" class="btn-pill-primary" :disabled="kuSaving" @click.stop="cancelKuEditForm">Cancel</button>
                     </div>
                   </div>
                 </div>
@@ -1628,22 +1630,26 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 
       <!-- Placards Tab -->
       <div v-else-if="activeTab === 'placards'" class="placards-tab">
-        <!-- Dietary flags legend -->
-        <div class="submission-detail-meta placard-legend-card">
-          <div class="submission-detail-meta-grid placard-legend-grid">
-            <div
-              v-for="{ key, label, icon } in DIETARY_FLAGS"
-              :key="key"
-              class="submission-detail-meta-item"
-            >
-              <component :is="icon" :size="18" class="placard-legend-icon" aria-hidden="true" />
-              <span class="submission-detail-meta-label">{{ label }}</span>
+        <!-- Dietary flags bar (same shape as submission-table-header, background matches placard cards) -->
+        <div class="submission-table-header placard-dietary-bar">
+          <div class="form-section-pill submission-dish-pill placard-dietary-title">
+              <span class="form-section-pill-input submission-dish-text">Dietary Flags</span>
             </div>
+          <div
+            v-for="{ key, label, icon } in DIETARY_FLAGS"
+            :key="key"
+            class="sub-header-cell placard-dietary-cell"
+          >
+            <component :is="icon" :size="18" class="placard-dietary-icon" aria-hidden="true" />
+            <span>{{ label }}</span>
           </div>
         </div>
 
-        <!-- Toolbar: select-all toggle + export buttons -->
-        <div class="placard-toolbar">
+        <!-- Tool bar row: Generate Placards bar (same style as submission-table-header) + buttons outside, right-aligned -->
+        <div class="ku-tab-bar-row placard-toolbar-row">
+          <div class="submission-table-header placard-generate-bar">
+            <span class="placard-generate-title">Generate Placards</span>
+          </div>
           <div class="placard-toolbar-actions">
             <button
               type="button"
@@ -2886,26 +2892,66 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 }
 
 /* Dietary legend card */
-.placard-legend-card {
-  /* extends .submission-detail-meta */
+.placard-dietary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem 2rem;
+  grid-template-columns: unset;
+  background: var(--color-menu-gray, #e5e3e0);
+  color: #000;
 }
 
-.placard-legend-grid {
-  flex-wrap: wrap !important;
-  gap: 0.75rem 2.5rem !important;
+/* Same font and font-size as placard card dish pill (dashboard uses body-font-size; bar overrides to 1.25rem) */
+.placard-dietary-title,
+.placard-dietary-title .form-section-pill-input,
+.placard-dietary-title .submission-dish-text {
+  font-size: var(--body-font-size, 1.125rem);
+  font-family: inherit;
+}
+.placard-dietary-title {
+  margin: 0;
+  flex: none;
 }
 
-.placard-legend-icon {
+.placard-dietary-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: #000;
+}
+
+.placard-dietary-icon {
   flex-shrink: 0;
-  color: var(--color-lafayette-gray, #3c373c);
+  color: #000;
 }
 
-.placard-toolbar {
+/* Generate Placards bar: same look as submission-table-header, width fits content */
+.placard-toolbar-row {
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.placard-toolbar-row .placard-generate-bar {
+  flex: none;
+  width: fit-content;
+  min-height: 3.75rem;
+  margin-bottom: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  grid-template-columns: unset;
+}
+
+.placard-generate-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+
+.placard-toolbar-row .placard-toolbar-actions {
+  margin-left: auto;
 }
 
 .placard-toolbar-actions {
