@@ -1954,8 +1954,6 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
   flex: none;
   width: fit-content;
   min-width: 0;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .submission-dish-pill .form-section-pill-input {
