@@ -3,35 +3,82 @@ import type { IngredientDietary } from '@/types/ingredient'
 
 const BASE = import.meta.env.VITE_API_BASE_URL
 
-let onUnauthorized: (() => void) | null = null
+let onUnauthorized: (() => void | Promise<void>) | null = null
+let reauthInFlight: Promise<boolean> | null = null
 
 /** Register a callback invoked on any 401 response. Called once from useLockOverlay to avoid circular imports. */
-export function setOnUnauthorized(cb: () => void): void {
+export function setOnUnauthorized(cb: () => void | Promise<void>): void {
   onUnauthorized = cb
 }
 
+function getStorage(): Storage | null {
+  return typeof localStorage !== 'undefined' ? localStorage : null
+}
+
 export function organizerHeaders(): HeadersInit {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('organizer_token') : null
+  const token = getStorage()?.getItem('organizer_token') ?? null
   const headers = new Headers({ 'Content-Type': 'application/json' })
   if (token) headers.set('Authorization', `Bearer ${token}`)
   return headers
 }
 
-function handleUnauthorized(): void {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem('organizer_token')
-    localStorage.removeItem('organizer_username')
-  }
-  onUnauthorized?.()
+async function silentOrganizerReauth(): Promise<boolean> {
+  if (reauthInFlight) return reauthInFlight
+  reauthInFlight = (async () => {
+    try {
+      const username = (import.meta.env.VITE_ORGANIZER_API_USERNAME as string | undefined) ?? 'organizer'
+      const password = (import.meta.env.VITE_ORGANIZER_API_PASSWORD as string | undefined) ?? 'disney1994'
+      const result = await organizerLogin(username, password)
+      const storage = getStorage()
+      storage?.setItem('organizer_token', result.token)
+      storage?.setItem('organizer_username', result.username)
+      return true
+    } catch {
+      return false
+    } finally {
+      reauthInFlight = null
+    }
+  })()
+  return reauthInFlight
 }
 
-/** @deprecated use handleUnauthorized internally; exported only for submissions.ts */
-export const clearStaleOrganizerToken = handleUnauthorized
+function withFreshAuthHeaders(initHeaders?: HeadersInit): Headers {
+  const headers = new Headers(initHeaders)
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  const token = getStorage()?.getItem('organizer_token')
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  else headers.delete('Authorization')
+  return headers
+}
+
+export async function organizerFetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  const first = await fetch(url, {
+    ...init,
+    headers: withFreshAuthHeaders(init.headers),
+  })
+  if (first.status !== 401) return first
+
+  await silentOrganizerReauth()
+
+  const second = await fetch(url, {
+    ...init,
+    headers: withFreshAuthHeaders(init.headers),
+  })
+
+  if (second.status === 401) {
+    await onUnauthorized?.()
+  }
+  return second
+}
+
+/** @deprecated compatibility export; prefer organizerFetchWithRetry */
+export const clearStaleOrganizerToken = (): void => {
+  void onUnauthorized?.()
+}
 
 /** Check if the current client has an organizer token (e.g. before update). */
 export function hasOrganizerToken(): boolean {
-  if (typeof localStorage === 'undefined') return false
-  return !!localStorage.getItem('organizer_token')
+  return !!getStorage()?.getItem('organizer_token')
 }
 
 export async function organizerLogin(
@@ -118,7 +165,7 @@ export async function addSubmissionIngredient(
   ingredientId: number,
   quantity: number,
 ): Promise<void> {
-  const res = await fetch(`${BASE}/api/v1/submissions/by_id/${submissionId}/ingredients`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/by_id/${submissionId}/ingredients`, {
     method: 'POST',
     headers: organizerHeaders(),
     body: JSON.stringify({ ingredient_id: ingredientId, quantity }),
@@ -134,7 +181,7 @@ export async function updateSubmissionIngredientQuantity(
   ingredientId: number,
   quantity: number,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await organizerFetchWithRetry(
     `${BASE}/api/v1/submissions/by_id/${submissionId}/ingredients/${ingredientId}`,
     {
       method: 'PATCH',
@@ -161,35 +208,26 @@ export async function updateKitchenAllocation(
   id: number,
   fields: KitchenAllocationPayload,
 ): Promise<SubmissionResponse> {
-  const res = await fetch(`${BASE}/api/v1/submissions/by_id/${id}/kitchen_allocation`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/by_id/${id}/kitchen_allocation`, {
     method: 'PATCH',
     headers: organizerHeaders(),
     body: JSON.stringify(fields),
   })
   const body = await res.json().catch(() => ({}))
-  if (res.status === 401) {
-    handleUnauthorized()
-    throw new Error('Session expired. Please log in again from the Organizer tab.')
-  }
-  if (!res.ok) throw new Error((body as { error?: string }).error || `Kitchen update failed: ${res.status}`)
+  if (!res.ok) throw new Error((body as { error?: string }).error || 'Could not save assignment right now. Please try again.')
   return body as SubmissionResponse
 }
 
 export async function deleteSubmission(submissionId: number): Promise<void> {
   const headers = organizerHeaders()
   console.log('[Organizer Auth]', 'deleteSubmission:', submissionId)
-  const res = await fetch(`${BASE}/api/v1/submissions/by_id/${submissionId}`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/by_id/${submissionId}`, {
     method: 'DELETE',
     headers,
   })
   const body = await res.json().catch(() => ({}))
-  if (res.status === 401) {
-    console.error('[Organizer Auth]', 'deleteSubmission 401 Unauthorized - backend rejected token or no token sent. Body:', body)
-    handleUnauthorized()
-    throw new Error('Session expired. Please log in again from the Organizer tab.')
-  }
   if (!res.ok) {
-    throw new Error((body as { error?: string }).error || `Failed to delete submission: ${res.status}`)
+    throw new Error((body as { error?: string }).error || 'Could not delete this submission right now. Please try again.')
   }
   console.log('[Organizer Auth]', 'deleteSubmission SUCCESS:', submissionId)
 }
@@ -212,14 +250,10 @@ export interface KitchenResourceItem {
 }
 
 export async function getKitchenResources(): Promise<KitchenResourceItem[]> {
-  const res = await fetch(`${BASE}/api/v1/kitchen_resources`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/kitchen_resources`, {
     headers: organizerHeaders(),
   })
   const body = await res.json().catch(() => ({}))
-  if (res.status === 401) {
-    handleUnauthorized()
-    throw new Error('Session expired. Please log in again from the Organizer tab.')
-  }
   if (!res.ok) {
     throw new Error((body as { error?: string }).error || `Failed to load kitchen resources: ${res.status}`)
   }
@@ -242,18 +276,14 @@ export async function createKitchenResource(
   if (point_person != null) requestBody.point_person = point_person
   if (phone != null) requestBody.phone = phone
   if (is_driver != null && kind === 'helper_driver') requestBody.is_driver = is_driver
-  const res = await fetch(`${BASE}/api/v1/kitchen_resources`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/kitchen_resources`, {
     method: 'POST',
     headers: organizerHeaders(),
     body: JSON.stringify(requestBody),
   })
   const body = await res.json().catch(() => ({}))
-  if (res.status === 401) {
-    handleUnauthorized()
-    throw new Error('Session expired. Please log in again from the Organizer tab.')
-  }
   if (!res.ok) {
-    throw new Error((body as { error?: string }).error || `Failed to create kitchen resource: ${res.status}`)
+    throw new Error((body as { error?: string }).error || 'Could not add this resource right now. Please try again.')
   }
   return body as KitchenResourceItem
 }
@@ -267,7 +297,7 @@ export async function updateKitchenResource(
     attrs,
     hasAuthToken: hasOrganizerToken(),
   })
-  const res = await fetch(`${BASE}/api/v1/kitchen_resources/${id}`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/kitchen_resources/${id}`, {
     method: 'PATCH',
     headers: organizerHeaders(),
     body: JSON.stringify(attrs),
@@ -294,29 +324,19 @@ export async function updateKitchenResource(
       })
     }
   }
-  if (res.status === 401) {
-    handleUnauthorized()
-    throw new Error('Session expired. Please log in again from the Organizer tab.')
-  }
   if (!res.ok) {
-    throw new Error((body as { error?: string }).error || `Failed to update kitchen resource: ${res.status}`)
+    throw new Error((body as { error?: string }).error || 'Could not save this resource right now. Please try again.')
   }
   return body as KitchenResourceItem
 }
 
 export async function deleteKitchenResource(id: number): Promise<void> {
-  const res = await fetch(`${BASE}/api/v1/kitchen_resources/${id}`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/kitchen_resources/${id}`, {
     method: 'DELETE',
     headers: organizerHeaders(),
   })
-  if (res.status === 401) {
-    const body = await res.json().catch(() => ({}))
-    console.error('[Organizer Auth]', 'deleteKitchenResource 401 Unauthorized - backend rejected token or no token sent. Body:', body)
-    handleUnauthorized()
-    throw new Error('Session expired. Please log in again from the Organizer tab.')
-  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error((body as { error?: string }).error || `Failed to delete kitchen resource: ${res.status}`)
+    throw new Error((body as { error?: string }).error || 'Could not delete this resource right now. Please try again.')
   }
 }
