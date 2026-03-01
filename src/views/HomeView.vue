@@ -34,19 +34,38 @@ const {
   contacts,
   countryCode,
   dishName,
+  editingSubmissionId,
 } = storeToRefs(store)
 const contactDropdownOpen = ref(false)
 const contactDropdownRef = ref<HTMLElement | null>(null)
 const contactTriggerRef = ref<HTMLElement | null>(null)
 
+/** True only after user has clicked Save in the group info dropdown with at least one valid contact. Cleared when contacts become invalid. */
+const groupInfoCommitted = ref(false)
+
 /** At least one valid name+phone pair (for grocery section and Save button). */
 const hasValidContact = computed(() => validContacts.value.length > 0)
+
+watch(hasValidContact, (valid) => {
+  if (!valid) groupInfoCommitted.value = false
+})
+
+watch(
+  [editingSubmissionId, validContacts],
+  () => {
+    if (editingSubmissionId.value != null && validContacts.value.length > 0) {
+      groupInfoCommitted.value = true
+    }
+  },
+  { immediate: true },
+)
 
 function toggleContactDropdown() {
   contactDropdownOpen.value = !contactDropdownOpen.value
 }
 
 function handleContactSave() {
+  if (hasValidContact.value) groupInfoCommitted.value = true
   contactDropdownOpen.value = false
 }
 
@@ -84,7 +103,7 @@ const membersText = computed({
 const showGrocerySection = computed(() =>
   Boolean(countryCode.value) &&
   Boolean(dishName.value.trim()) &&
-  members.value.length > 0 &&
+  groupInfoCommitted.value &&
   hasValidContact.value,
 )
 
@@ -120,7 +139,7 @@ async function handleSubmit() {
     dish_name: store.dishName,
     notes: '',
     country_code: store.countryCode || '',
-    members: [...members.value],
+    members: validContacts.value.map((c) => c.name.trim()),
     phone_number: validPhoneNumbers.value.length > 0
       ? validPhoneNumbers.value.join(', ')
       : undefined,
@@ -239,11 +258,12 @@ async function handleSubmit() {
               ref="contactTriggerRef"
               type="button"
               class="home-contact-trigger"
+              :class="{ 'home-contact-trigger--saved': hasValidContact }"
               :aria-expanded="contactDropdownOpen"
               aria-haspopup="dialog"
               @click="toggleContactDropdown"
             >
-              Add Contact Info
+              {{ hasValidContact ? 'Group Info Added' : 'Add Group Info' }}
               <span
                 class="home-contact-chevron"
                 :class="{ 'home-contact-chevron-open': contactDropdownOpen }"
@@ -483,7 +503,7 @@ async function handleSubmit() {
           </button>
           <span v-if="submitError" class="home-page2-error">{{ submitError }}</span>
           <button
-            v-if="canSubmit || isSubmitting"
+            v-if="(canSubmit && groupInfoCommitted) || isSubmitting"
             type="button"
             :disabled="isSubmitting"
             class="btn-pill-primary"
@@ -625,6 +645,13 @@ async function handleSubmit() {
   gap: 0.5rem;
 }
 .home-contact-trigger:hover {
+  opacity: 0.9;
+}
+.home-contact-trigger--saved {
+  color: #000;
+  opacity: 1;
+}
+.home-contact-trigger--saved:hover {
   opacity: 0.9;
 }
 .home-contact-trigger:focus,

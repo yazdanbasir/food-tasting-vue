@@ -60,9 +60,13 @@ export const useSubmissionStore = defineStore('submission', () => {
       (i) => i.ingredient.product_id === ingredient.product_id,
     )
     if (existing) {
-      existing.quantity += qty
+      ingredients.value = ingredients.value.map((i) =>
+        i.ingredient.product_id === ingredient.product_id
+          ? { ...i, quantity: i.quantity + qty }
+          : i,
+      )
     } else {
-      ingredients.value.push({ ingredient, quantity: qty })
+      ingredients.value = [...ingredients.value, { ingredient, quantity: qty }]
     }
   }
 
@@ -135,7 +139,6 @@ export const useSubmissionStore = defineStore('submission', () => {
     () =>
       !!countryCode.value &&
       dishName.value.trim().length > 0 &&
-      members.value.length > 0 &&
       validContacts.value.length > 0 &&
       ingredients.value.length > 0,
   )
@@ -194,19 +197,21 @@ export const useSubmissionStore = defineStore('submission', () => {
     dishName.value = sub.dish_name
     countryCode.value = sub.country_code ?? ''
     members.value = [...(sub.members || [])]
+    const names = sub.members || []
     const raw = (sub.phone_number ?? '').trim()
     const phones = raw ? raw.split(/\s*,\s*/).map((s) => s.trim()).filter(Boolean) : []
-    const fromPhones =
-      phones.length > 0 ? phones.map((phone) => ({ name: '', phone })) : []
+    const maxLen = Math.max(names.length, phones.length, 1)
+    const zipped = Array.from({ length: maxLen }, (_, i) => ({
+      name: (names[i] ?? '').trim(),
+      phone: phones[i] ?? '',
+    }))
     const defaultRows = [
       { name: '', phone: '' },
       { name: '', phone: '' },
       { name: '', phone: '' },
     ]
     contacts.value =
-      fromPhones.length >= 3
-        ? fromPhones
-        : [...fromPhones, ...defaultRows.slice(fromPhones.length)]
+      zipped.length >= 3 ? zipped : [...zipped, ...defaultRows.slice(zipped.length)]
     hasCookingPlace.value = (sub.has_cooking_place as 'yes' | 'no' | '') ?? ''
     cookingLocation.value = sub.cooking_location ?? ''
     foundAllIngredients.value = (sub.found_all_ingredients as 'yes' | 'no' | '') ?? ''
