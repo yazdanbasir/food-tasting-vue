@@ -1111,7 +1111,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                       <span class="submission-detail-meta-label">Phone</span>
                       <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.phone_number || '').trim() }">{{ (sub.phone_number || '').trim() || '—' }}</span>
                     </div>
-                    <div class="submission-detail-meta-item submission-detail-meta-dietary-flags">
+                    <div v-if="Object.values(aggregateDietary(sub)).some(Boolean)" class="submission-detail-meta-item submission-detail-meta-dietary-flags">
                       <span class="submission-detail-meta-label">Dietary Flags</span>
                       <DietaryIcons :dietary="aggregateDietary(sub)" :size="18" />
                     </div>
