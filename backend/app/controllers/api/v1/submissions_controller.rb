@@ -220,10 +220,16 @@ class Api::V1::SubmissionsController < ApplicationController
     return render json: { error: "Phone required" }, status: :unprocessable_entity if input_tail.length < 7
 
     submission = Submission.includes(submission_ingredients: :ingredient).all.find do |s|
-      stored = s.phone_number.to_s.gsub(/\D/, '')
-      stored_tail = stored.last(10)
-      match = stored.length >= 7 && stored_tail == input_tail
-      Rails.logger.info "[lookup] submission id=#{s.id} phone_number=#{s.phone_number.inspect} stored_digits=#{stored.inspect} stored_tail=#{stored_tail.inspect} match=#{match}"
+      # Support comma-separated numbers: match if user's input matches any stored number
+      raw_stored = s.phone_number.to_s
+      parts = raw_stored.split(/\s*,\s*/).map(&:strip).reject(&:blank?)
+      parts = [raw_stored] if parts.empty?
+      match = parts.any? do |part|
+        stored = part.gsub(/\D/, '')
+        stored_tail = stored.last(10)
+        stored.length >= 7 && stored_tail == input_tail
+      end
+      Rails.logger.info "[lookup] submission id=#{s.id} phone_number=#{s.phone_number.inspect} input_tail=#{input_tail.inspect} match=#{match}"
       match
     end
 

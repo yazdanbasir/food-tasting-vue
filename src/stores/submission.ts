@@ -16,7 +16,8 @@ export const useSubmissionStore = defineStore('submission', () => {
   const dishName = ref('')
   const countryCode = ref('')
   const members = ref<string[]>([])
-  const phoneNumber = ref('')
+  /** One or more US phone numbers. At least one valid number required to advance. */
+  const phoneNumbers = ref<string[]>([''])
   const hasCookingPlace = ref<'yes' | 'no' | ''>('')
   const cookingLocation = ref('')
   const foundAllIngredients = ref<'yes' | 'no' | ''>('')
@@ -111,12 +112,18 @@ export const useSubmissionStore = defineStore('submission', () => {
     )
   })
 
+  const validPhoneNumbers = computed(() =>
+    phoneNumbers.value
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0 && isUSPhoneNumber(n)),
+  )
+
   const canAdvancePage1 = computed(
     () =>
       !!countryCode.value &&
       dishName.value.trim().length > 0 &&
       members.value.length > 0 &&
-      isUSPhoneNumber(phoneNumber.value) &&
+      validPhoneNumbers.value.length > 0 &&
       ingredients.value.length > 0,
   )
 
@@ -130,12 +137,21 @@ export const useSubmissionStore = defineStore('submission', () => {
       needsUtensils.value !== '',
   )
 
+  function addPhone() {
+    phoneNumbers.value = [...phoneNumbers.value, '']
+  }
+
+  function removePhone(index: number) {
+    if (phoneNumbers.value.length <= 1) return
+    phoneNumbers.value = phoneNumbers.value.filter((_, i) => i !== index)
+  }
+
   function reset() {
     teamName.value = ''
     dishName.value = ''
     countryCode.value = ''
     members.value = []
-    phoneNumber.value = ''
+    phoneNumbers.value = ['']
     hasCookingPlace.value = ''
     cookingLocation.value = ''
     foundAllIngredients.value = ''
@@ -161,7 +177,9 @@ export const useSubmissionStore = defineStore('submission', () => {
     dishName.value = sub.dish_name
     countryCode.value = sub.country_code ?? ''
     members.value = [...(sub.members || [])]
-    phoneNumber.value = sub.phone_number ?? ''
+    const raw = (sub.phone_number ?? '').trim()
+    phoneNumbers.value = raw ? raw.split(/\s*,\s*/).map((s) => s.trim()).filter(Boolean) : ['']
+    if (phoneNumbers.value.length === 0) phoneNumbers.value = ['']
     hasCookingPlace.value = (sub.has_cooking_place as 'yes' | 'no' | '') ?? ''
     cookingLocation.value = sub.cooking_location ?? ''
     foundAllIngredients.value = (sub.found_all_ingredients as 'yes' | 'no' | '') ?? ''
@@ -190,7 +208,10 @@ export const useSubmissionStore = defineStore('submission', () => {
     dishName,
     countryCode,
     members,
-    phoneNumber,
+    phoneNumbers,
+    validPhoneNumbers,
+    addPhone,
+    removePhone,
     hasCookingPlace,
     cookingLocation,
     foundAllIngredients,

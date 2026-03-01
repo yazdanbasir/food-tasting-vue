@@ -262,12 +262,38 @@ export async function updateKitchenResource(
   id: number,
   attrs: Partial<Pick<KitchenResourceItem, 'name' | 'position' | 'point_person' | 'phone' | 'is_driver'>>,
 ): Promise<KitchenResourceItem> {
+  console.log('[KU TRACE][API] updateKitchenResource request', {
+    id,
+    attrs,
+    hasAuthToken: hasOrganizerToken(),
+  })
   const res = await fetch(`${BASE}/api/v1/kitchen_resources/${id}`, {
     method: 'PATCH',
     headers: organizerHeaders(),
     body: JSON.stringify(attrs),
   })
   const body = await res.json().catch(() => ({}))
+  console.log('[KU TRACE][API] updateKitchenResource response', {
+    id,
+    status: res.status,
+    ok: res.ok,
+    body,
+  })
+  if (res.ok) {
+    const responseObj = body as Partial<KitchenResourceItem>
+    const missingEchoedFields: string[] = []
+    if ('phone' in attrs && responseObj.phone === undefined) missingEchoedFields.push('phone')
+    if ('point_person' in attrs && responseObj.point_person === undefined) missingEchoedFields.push('point_person')
+    if ('is_driver' in attrs && responseObj.is_driver === undefined) missingEchoedFields.push('is_driver')
+    if (missingEchoedFields.length) {
+      console.warn('[KU TRACE][API] response missing edited fields', {
+        id,
+        missingEchoedFields,
+        attrs,
+        body,
+      })
+    }
+  }
   if (res.status === 401) {
     handleUnauthorized()
     throw new Error('Session expired. Please log in again from the Organizer tab.')

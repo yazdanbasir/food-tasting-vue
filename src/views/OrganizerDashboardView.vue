@@ -525,19 +525,65 @@ async function saveKuEdit() {
   if (c.kind === 'helper_driver') {
     payload.is_driver = is_driver
   }
+  console.log('[KU TRACE][VIEW] saveKuEdit start', {
+    id: c.id,
+    kind: c.kind,
+    form: {
+      name,
+      point_person,
+      phone,
+      is_driver,
+    },
+    payload,
+  })
   kuSaving.value = true
   try {
     const updated = await updateKitchenResource(c.id, payload)
+    console.log('[KU TRACE][VIEW] saveKuEdit response', {
+      id: c.id,
+      kind: c.kind,
+      updated,
+    })
     // Update local list with server-confirmed data
     const listRef = kuListRef(c.kind)
     const idx = listRef.value.findIndex((row) => row.id === c.id)
     if (idx >= 0) {
-      listRef.value[idx] = updated
+      const previous = listRef.value[idx] as KitchenResourceItem
+      const merged: KitchenResourceItem = {
+        ...previous,
+        ...updated,
+      }
+      if ('phone' in payload && updated.phone === undefined) merged.phone = payload.phone ?? null
+      if ('point_person' in payload && updated.point_person === undefined) merged.point_person = payload.point_person ?? null
+      if ('is_driver' in payload && updated.is_driver === undefined) merged.is_driver = payload.is_driver ?? null
+      listRef.value[idx] = merged
+      console.log('[KU TRACE][VIEW] local list row replaced', {
+        id: c.id,
+        kind: c.kind,
+        rowAfterReplace: listRef.value[idx],
+      })
+      if (
+        ('phone' in payload && updated.phone === undefined) ||
+        ('point_person' in payload && updated.point_person === undefined) ||
+        ('is_driver' in payload && updated.is_driver === undefined)
+      ) {
+        console.warn('[KU TRACE][VIEW] backend response missing edited contact fields; likely outdated backend deploy or missing migration', {
+          id: c.id,
+          kind: c.kind,
+          payload,
+          updated,
+        })
+      }
     }
     editingKuCard.value = null
   } catch (err) {
     kuEditError.value = err instanceof Error ? err.message : 'Failed to save. Run backend migration: cd backend && bundle exec rails db:migrate'
-    console.error(err)
+    console.error('[KU TRACE][VIEW] saveKuEdit failed', {
+      id: c.id,
+      kind: c.kind,
+      payload,
+      error: err,
+    })
   } finally {
     kuSaving.value = false
   }
@@ -725,12 +771,23 @@ function deleteKuRow(kind: KuListKind, id: number) {
 async function loadKitchenResources() {
   try {
     const all = await getKitchenResources()
+    console.log('[KU TRACE][VIEW] loadKitchenResources response', {
+      count: all.length,
+      sample: all.slice(0, 6).map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        name: r.name,
+        point_person: r.point_person,
+        phone: r.phone,
+        is_driver: r.is_driver,
+      })),
+    })
     fridgesAvailable.value = all.filter((r) => r.kind === 'fridge')
     kitchensAvailable.value = all.filter((r) => r.kind === 'kitchen')
     utensilsAvailable.value = all.filter((r) => r.kind === 'utensil')
     helpersDriversAvailable.value = all.filter((r) => r.kind === 'helper_driver')
   } catch (err) {
-    console.error('[KitchenResources] load FAILED:', err)
+    console.error('[KU TRACE][VIEW] loadKitchenResources FAILED', err)
   }
 }
 
