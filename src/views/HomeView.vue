@@ -112,6 +112,7 @@ function toggleOtherIngredientsDropdown() {
 }
 
 function handleOtherIngredientsSave() {
+  console.log('[Other ingredients] Save clicked — current store entries:', JSON.parse(JSON.stringify(otherIngredientEntries.value)))
   otherIngredientsDropdownOpen.value = false
 }
 
@@ -172,6 +173,9 @@ async function handleSubmit() {
   isSubmitting.value = true
   submitError.value = null
 
+  console.log('[Other ingredients] Submit — store otherIngredientEntries:', JSON.parse(JSON.stringify(otherIngredientEntries.value)))
+  console.log('[Other ingredients] Submit — foundAllIngredients:', foundAllIngredients.value)
+
   const payload = {
     team_name: store.teamName,
     dish_name: store.dishName,
@@ -198,6 +202,8 @@ async function handleSubmit() {
     })),
   }
 
+  console.log('[Other ingredients] Submit — payload.other_ingredients:', payload.other_ingredients != null ? payload.other_ingredients : '(undefined)')
+
   try {
     const editingId = store.editingSubmissionId
     if (editingId != null) {
@@ -212,6 +218,7 @@ async function handleSubmit() {
       }
     } else {
       const { submission } = await createSubmission(payload)
+      console.log('[Other ingredients] Create response — submission.other_ingredients:', (submission as { other_ingredients?: string }).other_ingredients ?? '(undefined)')
       store.reset()
       store.setLastSubmitted(submission)
       router.push('/confirmation')

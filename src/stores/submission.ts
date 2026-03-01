@@ -272,6 +272,7 @@ export const useSubmissionStore = defineStore('submission', () => {
       utensilEntries.value = [{ utensil: '', size: '', quantity: '' }]
     }
     const rawOther = (sub.other_ingredients ?? '').trim()
+    console.log('[Other ingredients] loadForEdit — sub.other_ingredients (raw):', rawOther || '(empty)')
     if (rawOther) {
       try {
         const parsed = JSON.parse(rawOther) as unknown
@@ -291,10 +292,13 @@ export const useSubmissionStore = defineStore('submission', () => {
         } else {
           otherIngredientEntries.value = [{ item: rawOther, size: '', quantity: '', additionalDetails: '' }]
         }
-      } catch {
+        console.log('[Other ingredients] loadForEdit — parsed entries:', JSON.parse(JSON.stringify(otherIngredientEntries.value)))
+      } catch (e) {
+        console.log('[Other ingredients] loadForEdit — JSON parse error:', e)
         otherIngredientEntries.value = [{ item: rawOther, size: '', quantity: '', additionalDetails: '' }]
       }
     } else {
+      console.log('[Other ingredients] loadForEdit — no raw value, setting default empty row')
       otherIngredientEntries.value = [{ item: '', size: '', quantity: '', additionalDetails: '' }]
     }
     ingredients.value = sub.ingredients.map((item) => ({

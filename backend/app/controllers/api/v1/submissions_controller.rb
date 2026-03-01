@@ -22,7 +22,9 @@ class Api::V1::SubmissionsController < ApplicationController
       needs_utensils: params[:needs_utensils].presence,
       utensils_notes: params[:utensils_notes].presence
     }
+    Rails.logger.info "[Submissions#create] other_ingredients param: #{params[:other_ingredients].inspect}"
     @submission = Submission.new(attrs)
+    Rails.logger.info "[Submissions#create] @submission.other_ingredients after new: #{@submission.other_ingredients.inspect}"
 
     Submission.transaction do
       @submission.save!
@@ -44,7 +46,9 @@ class Api::V1::SubmissionsController < ApplicationController
       message: "by #{members_str} \u00b7 #{n} ingredient#{n == 1 ? '' : 's'}"
     )
 
-    render json: { submission: submission_json(@submission) }, status: :created
+    json = submission_json(@submission)
+    Rails.logger.info "[Submissions#create] submission_json other_ingredients: #{json[:other_ingredients].inspect}"
+    render json: { submission: json }, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
