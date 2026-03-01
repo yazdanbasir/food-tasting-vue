@@ -1951,8 +1951,11 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 }
 
 .submission-bar .submission-dish-pill {
-  flex: 1;
+  flex: none;
+  width: fit-content;
   min-width: 0;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .submission-dish-pill .form-section-pill-input {
