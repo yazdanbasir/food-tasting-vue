@@ -50,7 +50,12 @@ function toIngredient(raw: SubmissionResponse['ingredients'][0]['ingredient']): 
 
 /** Format utensils_notes for display: if JSON array of {utensil, size, quantity}, show readable list; else show raw string */
 function formatUtensilsNotes(notes: string | null | undefined): string {
-  if (!notes || !notes.trim()) return ''
+  return formatUtensilsNotesLines(notes).join('; ')
+}
+
+/** Same as formatUtensilsNotes but returns one line per item (for one-per-line display) */
+function formatUtensilsNotesLines(notes: string | null | undefined): string[] {
+  if (!notes || !notes.trim()) return []
   try {
     const parsed = JSON.parse(notes) as unknown
     if (Array.isArray(parsed)) {
@@ -65,12 +70,21 @@ function formatUtensilsNotes(notes: string | null | undefined): string {
           return parts.join(' (') + (parts.length > 1 ? ')' : '')
         })
         .filter(Boolean)
-        .join('; ') || notes
     }
   } catch {
     /* fall through to raw */
   }
-  return notes
+  return [notes]
+}
+
+/** Phone numbers in same order as members (for meta box aligned with Members column) */
+function submissionPhoneNumbers(sub: SubmissionResponse): string[] {
+  const raw = (sub.phone_number ?? '').trim()
+  const phones = raw ? raw.split(/\s*,\s*/).map((s) => s.trim()).filter(Boolean) : []
+  const members = sub.members || []
+  if (members.length === 0 && phones.length === 0) return []
+  const max = Math.max(members.length, phones.length, 1)
+  return Array.from({ length: max }, (_, i) => phones[i] ?? '—')
 }
 
 /** Aggregate dietary flags for a submission: true if any ingredient has that flag */
@@ -1039,9 +1053,12 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 </div>
               </div>
 
-              <!-- Col 2: Members -->
-              <div class="kitchen-cell">
-                {{ (sub.members || []).join(', ') || '—' }}
+              <!-- Col 2: Members (one per line) -->
+              <div class="kitchen-cell kitchen-cell-members">
+                <template v-if="(sub.members || []).length">
+                  <span v-for="(m, i) in (sub.members || [])" :key="i" class="kitchen-cell-member">{{ m }}</span>
+                </template>
+                <span v-else>—</span>
               </div>
 
               <!-- Col 3: Kitchen / Location (editable) -->
@@ -1096,9 +1113,11 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 </template>
               </div>
 
-              <!-- Col 5: Equipment Requested (read-only) -->
-              <div class="kitchen-cell">
-                <span v-if="sub.needs_utensils === 'yes' && sub.utensils_notes">{{ formatUtensilsNotes(sub.utensils_notes) }}</span>
+              <!-- Col 5: Equipment Requested (read-only, one per line) -->
+              <div class="kitchen-cell kitchen-cell-equipment">
+                <template v-if="sub.needs_utensils === 'yes' && formatUtensilsNotesLines(sub.utensils_notes).length">
+                  <span v-for="(line, i) in formatUtensilsNotesLines(sub.utensils_notes)" :key="i" class="kitchen-cell-equipment-line">{{ line }}</span>
+                </template>
                 <span v-else-if="sub.needs_utensils === 'yes'">Needs utensils</span>
                 <span v-else-if="sub.needs_utensils === 'no'">—</span>
                 <span v-else>—</span>
@@ -1144,30 +1163,38 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
               <div class="submission-detail-meta">
                 <div class="submission-detail-meta-grid">
                   <div class="submission-detail-meta-left submission-detail-meta-col-1">
-                    <div class="submission-detail-meta-item">
-                      <span class="submission-detail-meta-label">Phone</span>
-                      <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.phone_number || '').trim() }">{{ (sub.phone_number || '').trim() || '—' }}</span>
-                    </div>
-                    <div v-if="Object.values(aggregateDietary(sub)).some(Boolean)" class="submission-detail-meta-item submission-detail-meta-dietary-flags">
+                    <div class="submission-detail-meta-item submission-detail-meta-dietary-flags">
                       <span class="submission-detail-meta-label">Dietary Flags</span>
-                      <DietaryIcons :dietary="aggregateDietary(sub)" :size="18" />
+                      <DietaryIcons v-if="Object.values(aggregateDietary(sub)).some(Boolean)" :dietary="aggregateDietary(sub)" :size="18" />
+                      <span v-else class="submission-detail-meta-value submission-detail-meta-empty">—</span>
                     </div>
+                    <!-- Ingredients display (commented out for now)
                     <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item submission-detail-meta-ingredients">
                       <span class="submission-detail-meta-label">Ingredients</span>
-                      <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'Has Ingredients ✅' : 'Missing Ingredients ⚠️' }}</span>
+                      <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'Has Ingredients ✅' : 'Missing Items ⚠️' }}</span>
+                    </div>
+                    -->
+                  </div>
+                  <div class="submission-detail-meta-item submission-detail-meta-col-2 submission-detail-meta-phone">
+                    <span class="submission-detail-meta-label">Phone</span>
+                    <div class="submission-detail-meta-value submission-detail-meta-phone-lines">
+                      <template v-if="submissionPhoneNumbers(sub).length">
+                        <span v-for="(phone, i) in submissionPhoneNumbers(sub)" :key="i" class="submission-detail-meta-phone-line">{{ phone }}</span>
+                      </template>
+                      <span v-else class="submission-detail-meta-empty">—</span>
                     </div>
                   </div>
                   <div class="submission-detail-meta-item submission-detail-meta-col-3">
                     <span class="submission-detail-meta-label">Kitchen</span>
-                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.has_cooking_place }">{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Has Kitchen ✅' : 'Needs Kitchen ⚠️') : '—' }}</span>
+                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.has_cooking_place }">{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Yes ✅' : 'Needed ⚠️') : '—' }}</span>
                   </div>
                   <div v-if="sub.needs_fridge_space" class="submission-detail-meta-item submission-detail-meta-col-4">
                     <span class="submission-detail-meta-label">Fridge</span>
-                    <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needs Fridge ⚠️' : 'Has Fridge ✅' }}</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needed ⚠️' : 'Has Fridge ✅' }}</span>
                   </div>
                   <div v-if="sub.needs_utensils" class="submission-detail-meta-item submission-detail-meta-col-5">
                     <span class="submission-detail-meta-label">Utensils</span>
-                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needs Utensils ⚠️' : 'Has Utensils ✅' }}</span>
+                    <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needed ⚠️' : 'Has Utensils ✅' }}</span>
                   </div>
                   <div class="submission-detail-meta-actions submission-detail-meta-col-8">
                     <button
@@ -2146,6 +2173,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem 2rem;
   min-width: 0;
 }
@@ -2192,6 +2220,18 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.7;
   font-style: italic;
+}
+
+.submission-detail-meta-phone .submission-detail-meta-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.15em;
+}
+.submission-detail-meta-phone-line {
+  display: block;
 }
 
 .submission-detail-ingredients {
@@ -2772,6 +2812,28 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   color: #000 !important;
   white-space: normal;
   word-break: break-word;
+}
+
+.kitchen-cell-members {
+  flex-direction: column;
+  gap: 0.15em;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.kitchen-cell-member {
+  display: block;
+}
+
+.kitchen-cell-equipment {
+  flex-direction: column;
+  gap: 0.15em;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.kitchen-cell-equipment-line {
+  display: block;
 }
 
 .kitchen-cell *,
