@@ -10,7 +10,7 @@ import DietaryIcons from '@/components/DietaryIcons.vue'
 import { DIETARY_FLAGS } from '@/data/dietaryFlags'
 import KitchenResourceSelect from '@/components/KitchenResourceSelect.vue'
 import KitchenResourceMultiSelect from '@/components/KitchenResourceMultiSelect.vue'
-import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
+import { getAllSubmissions, updateSubmission, type SubmissionResponse } from '@/api/submissions'
 import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, getKitchenResources, createKitchenResource, updateKitchenResource, deleteKitchenResource, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload, type KitchenResourceItem } from '@/api/organizer'
 import LockOverlay from '@/components/LockOverlay.vue'
 import { useLockOverlay } from '@/composables/useLockOverlay'
@@ -105,6 +105,30 @@ function parseOtherIngredients(sub: SubmissionResponse): Array<{ item: string; s
     /* fall through */
   }
   return []
+}
+
+const EMPTY_DIETARY: IngredientDietary = Object.fromEntries(
+  DIETARY_FLAGS.map((f) => [f.key, false])
+) as IngredientDietary
+
+/** Map an "other stores" entry to a minimal Ingredient for IngredientRow (placeholder thumb, name, size, qty) */
+function otherEntryToIngredient(
+  entry: { item: string; size: string; quantity: string; additionalDetails: string },
+  index: number
+): Ingredient {
+  const sizePart = [entry.size, entry.additionalDetails].filter(Boolean).join(' · ') || null
+  return {
+    id: -index - 1,
+    product_id: `other-${index}`,
+    name: entry.item || '—',
+    size: sizePart,
+    aisle: null,
+    category: null,
+    image_url: null,
+    price_cents: 0,
+    price: 0,
+    dietary: EMPTY_DIETARY,
+  }
 }
 
 /** Aggregate dietary flags for a submission: true if any ingredient has that flag */
@@ -382,6 +406,59 @@ async function handleSubmissionIngredientQty(
   addProductError.value = null
   try {
     await updateSubmissionIngredientQuantity(submissionId, ingredientId, newQty)
+    await loadSubmissions()
+  } catch (err) {
+    addProductError.value = err instanceof Error ? err.message : 'Failed to update quantity'
+  }
+}
+
+/** Build submission payload for PATCH (only other_ingredients is updated when changing other-store qty) */
+function submissionToPayload(sub: SubmissionResponse): Parameters<typeof updateSubmission>[1] {
+  return {
+    team_name: sub.team_name,
+    dish_name: sub.dish_name,
+    notes: sub.notes ?? undefined,
+    country_code: sub.country_code ?? undefined,
+    members: sub.members ?? [],
+    phone_number: sub.phone_number ?? undefined,
+    has_cooking_place: sub.has_cooking_place ?? undefined,
+    cooking_location: sub.cooking_location ?? undefined,
+    found_all_ingredients: sub.found_all_ingredients ?? undefined,
+    other_ingredients: sub.other_ingredients ?? undefined,
+    needs_fridge_space: sub.needs_fridge_space ?? undefined,
+    needs_utensils: sub.needs_utensils ?? undefined,
+    utensils_notes: sub.utensils_notes ?? undefined,
+    ingredients: (sub.ingredients ?? []).map((item) => ({
+      ingredient_id: item.ingredient.id,
+      quantity: item.quantity,
+    })),
+  }
+}
+
+async function handleOtherIngredientQty(
+  sub: SubmissionResponse,
+  entryIndex: number,
+  currentQty: number,
+  delta: number,
+) {
+  const newQty = Math.max(0, currentQty + delta)
+  addProductError.value = null
+  const entries = parseOtherIngredients(sub)
+  if (entryIndex < 0 || entryIndex >= entries.length) return
+  const updated = entries.map((e, i) =>
+    i === entryIndex ? { ...e, quantity: String(newQty) } : e
+  )
+  const otherIngredientsJson = JSON.stringify(
+    updated.map((e) => ({
+      item: e.item,
+      size: e.size,
+      quantity: e.quantity,
+      ...(e.additionalDetails ? { additionalDetails: e.additionalDetails } : {}),
+    }))
+  )
+  try {
+    const payload = submissionToPayload(sub)
+    await updateSubmission(sub.id, { ...payload, other_ingredients: otherIngredientsJson })
     await loadSubmissions()
   } catch (err) {
     addProductError.value = err instanceof Error ? err.message : 'Failed to update quantity'
@@ -1277,15 +1354,15 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 <template v-else>
                   <div class="submission-detail-list submission-detail-other-stores-list">
                     <template v-if="parseOtherIngredients(sub).length">
-                      <div
+                      <IngredientRow
                         v-for="(entry, i) in parseOtherIngredients(sub)"
                         :key="i"
-                        class="submission-detail-other-stores-row"
-                      >
-                        <span class="submission-detail-other-stores-item">{{ entry.item || '—' }}</span>
-                        <span class="submission-detail-other-stores-meta">{{ [entry.size, entry.quantity].filter(Boolean).join(' · ') || '—' }}</span>
-                        <span v-if="entry.additionalDetails" class="submission-detail-other-stores-details">{{ entry.additionalDetails }}</span>
-                      </div>
+                        :ingredient="otherEntryToIngredient(entry, i)"
+                        :quantity="Number(entry.quantity) || 0"
+                        :editable="true"
+                        :show-price="false"
+                        @change-qty="(delta) => handleOtherIngredientQty(sub, i, Number(entry.quantity) || 0, delta)"
+                      />
                     </template>
                     <div v-else class="submission-detail-other-stores-empty">No items from other stores</div>
                   </div>
@@ -2315,32 +2392,6 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-.submission-detail-other-stores-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 1rem;
-  padding: 0.35rem 0;
-  border-bottom: 1px solid var(--color-border, #e5e5e5);
-  font-size: inherit;
-  color: var(--color-lafayette-gray, #3c373c);
-}
-.submission-detail-other-stores-row:last-child {
-  border-bottom: none;
-}
-.submission-detail-other-stores-item {
-  font-weight: 500;
-  color: #1a1a1a;
-}
-.submission-detail-other-stores-meta {
-  font-size: 0.9375rem;
-  opacity: 0.9;
-}
-.submission-detail-other-stores-details {
-  width: 100%;
-  font-size: 0.875rem;
-  opacity: 0.85;
 }
 .submission-detail-other-stores-empty {
   padding: 0.75rem 0;
