@@ -59,6 +59,13 @@
     height: 100%;
   }
 
+  @media (max-width: 600px) {
+    html, body, #app {
+      height: auto;
+      min-height: 100%;
+    }
+  }
+
   /* Remove default macOS/browser focus outline everywhere */
   *:focus,
   *:focus-visible {

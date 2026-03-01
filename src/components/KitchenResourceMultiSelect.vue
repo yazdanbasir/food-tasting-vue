@@ -108,8 +108,8 @@ onUnmounted(() => {
 <style scoped>
 .resource-select-wrap {
   position: relative;
-  display: inline-block;
-  width: max-content;
+  display: block;
+  width: 100%;
   min-width: 0;
 }
 
@@ -120,6 +120,7 @@ onUnmounted(() => {
   gap: 0.375rem;
   padding: 0.25rem 1.25rem;
   min-height: 2.75rem;
+  width: 100%;
   border: none;
   border-radius: 1.5rem;
   background: transparent;
@@ -127,7 +128,9 @@ onUnmounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: opacity 0.15s;
-  text-align: left;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
   outline: none;
 }
 

@@ -124,4 +124,44 @@ const route = useRoute()
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+
+/* ── Mobile: stack title row + nav row ── */
+@media (max-width: 600px) {
+  .app-header {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+    gap: 0.4rem;
+  }
+
+  .app-header-spacer {
+    display: none;
+  }
+
+  .app-header-center {
+    width: 100%;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .app-header-event {
+    font-size: 1.4rem;
+  }
+
+  .app-header-isa {
+    height: 1.85rem;
+  }
+
+  .app-header-right {
+    width: 100%;
+    justify-content: center;
+    flex: none;
+  }
+
+  .app-header-link {
+    font-size: 1.1rem;
+    padding: 0.4rem 1.25rem;
+    min-height: 2.25rem;
+  }
+}
 </style>

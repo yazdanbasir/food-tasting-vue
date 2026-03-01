@@ -66,7 +66,7 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="lock-container relative w-full h-full">
+  <div class="lock-container relative w-full md:h-full">
     <slot />
 
     <Teleport to="body">

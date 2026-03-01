@@ -9,11 +9,11 @@ onMounted(() => { ingredientCache.preload() })
 </script>
 
 <template>
-  <div class="h-screen flex flex-col overflow-hidden">
+  <div class="app-outer min-h-screen flex flex-col md:h-screen md:overflow-hidden">
     <div class="app-header-wrap">
       <AppHeader />
     </div>
-    <main class="flex-1 min-h-0 overflow-hidden">
+    <main class="app-main flex-col flex-1 min-h-0 md:overflow-hidden">
       <RouterView />
     </main>
   </div>

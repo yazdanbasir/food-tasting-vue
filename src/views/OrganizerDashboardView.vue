@@ -475,7 +475,7 @@ function isKuCardEditing(kind: KuListKind, row: KitchenResourceItem) {
   return c !== null && c.kind === kind && c.id === row.id
 }
 
-function startKuEdit(kind: KuListKind, row: KitchenResourceItem) {
+async function startKuEdit(kind: KuListKind, row: KitchenResourceItem) {
   kuEditError.value = null
   editingKuCard.value = { kind, id: row.id }
   kuEditForm.value = {
@@ -487,6 +487,14 @@ function startKuEdit(kind: KuListKind, row: KitchenResourceItem) {
   const key = kuCardKey(kind, row.id)
   if (!expandedKuCards.value.has(key)) {
     expandedKuCards.value = new Set([...expandedKuCards.value, key])
+  }
+  await nextTick()
+  // Find the visible edit form (v-show hides inactive ones with display:none) and focus its first input
+  for (const el of document.querySelectorAll<HTMLElement>('.ku-card-edit-form')) {
+    if (el.style.display !== 'none') {
+      el.querySelector<HTMLInputElement>('.ku-card-edit-input')?.focus()
+      break
+    }
   }
 }
 
@@ -604,6 +612,7 @@ function addKitchenRow() {
       kitchensAvailable.value = [created, ...kitchensAvailable.value]
       newKitchenName.value = ''
       addingKuType.value = null
+      startKuEdit('kitchen', created)
     })
     .catch((err) => {
       console.error(err)
@@ -618,6 +627,7 @@ function addFridgeRow() {
       fridgesAvailable.value = [created, ...fridgesAvailable.value]
       newFridgeName.value = ''
       addingKuType.value = null
+      startKuEdit('fridge', created)
     })
     .catch((err) => {
       console.error(err)
@@ -632,6 +642,7 @@ function addUtensilRow() {
       utensilsAvailable.value = [created, ...utensilsAvailable.value]
       newUtensilName.value = ''
       addingKuType.value = null
+      startKuEdit('utensil', created)
     })
     .catch((err) => {
       console.error(err)
@@ -646,6 +657,7 @@ function addHelperDriverRow() {
       helpersDriversAvailable.value = [created, ...helpersDriversAvailable.value]
       newHelperDriverName.value = ''
       addingKuType.value = null
+      startKuEdit('helper_driver', created)
     })
     .catch((err) => {
       console.error(err)
@@ -896,7 +908,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 
 <template>
   <LockOverlay>
-  <div class="h-full flex flex-col dashboard">
+  <div class="md:h-full flex flex-col dashboard">
     <!-- Tab bar row: maroon pill bar + (when Notifications) Mark all read outside bar, far right -->
     <div class="dashboard-subtab-bar-row">
       <div class="dashboard-subtab-bar">
@@ -3180,14 +3192,19 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 /* ── Mobile: submissions table horizontal scroll ── */
 @media (max-width: 600px) {
   .dashboard-subtab-bar-row {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
   }
 
   .dashboard-subtab-bar {
-    flex: 1;
+    flex: 1 1 auto;
     min-width: 0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-notif-mark-read {
+    margin-left: 0;
+    width: 100%;
   }
 
   .dashboard-subtab-row {
@@ -3200,15 +3217,12 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
     flex: none;
   }
 
-  .dashboard {
-    height: auto;
-    min-height: 100%;
-  }
-
   .dashboard-body {
-    overflow-y: visible;
+    overflow-y: visible !important;
     padding: 1rem;
-    flex: none;
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+    flex: none !important;
+    height: max-content;
   }
 
   .submissions-scroll-wrap {
@@ -3217,8 +3231,8 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
     border-radius: 1rem;
   }
 
-  .submission-table-header,
-  .submissions-list {
+  .submission-table-header:not(.placard-generate-bar):not(.placard-dietary-bar),
+  .submissions-scroll-wrap .submissions-list {
     min-width: 90rem;
   }
 
@@ -3227,6 +3241,65 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
     overflow: visible;
     text-overflow: unset;
     word-break: break-word;
+  }
+
+  /* Assignments tab: stack add-button below the scrollable sub-tab bar */
+  .ku-tab-bar-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ku-tab-bar-row .grocery-store-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    flex-wrap: nowrap;
+  }
+
+  .ku-tab-bar-row .grocery-store-bar .grocery-store-tab {
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .ku-tab-bar-row .ku-add-btn {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Placards tab: dietary flag bar scrolls horizontally; toolbar row stacks buttons below */
+  .placard-dietary-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .placard-dietary-cell {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .placard-toolbar-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .placard-toolbar-row .placard-generate-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: fit-content;
+    margin-bottom: 0.75rem;
+  }
+
+  .placard-toolbar-row .placard-toolbar-actions {
+    margin-left: 0;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .placard-toolbar-actions .btn-pill-primary {
+    flex: 1;
   }
 }
 

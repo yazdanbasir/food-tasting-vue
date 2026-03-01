@@ -109,8 +109,8 @@ onUnmounted(() => {
 <style scoped>
 .resource-select-wrap {
   position: relative;
-  display: inline-block;
-  width: max-content;
+  display: block;
+  width: 100%;
   min-width: 0;
 }
 
@@ -128,10 +128,9 @@ onUnmounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: opacity 0.15s;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
   outline: none;
 }
 
