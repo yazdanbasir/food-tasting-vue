@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import '@/styles/form-section.css'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useIngredientSearch } from '@/composables/useIngredientSearch'
 import { useSubmissionStore } from '@/stores/submission'
 import type { Ingredient } from '@/types/ingredient'
@@ -19,6 +19,8 @@ const { query, results, isLoading, error, clear, selectedCategory, availableCate
 const store = useSubmissionStore()
 
 const searchWrapRef = ref<HTMLElement | null>(null)
+const dropdownRef = ref<HTMLElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 
 const showDropdown = computed(
   () =>
@@ -27,6 +29,21 @@ const showDropdown = computed(
     (query.value.length >= 2 && results.value.length === 0) ||
     results.value.length > 0
 )
+
+watch(showDropdown, async (visible) => {
+  if (visible) {
+    await nextTick()
+    if (searchWrapRef.value) {
+      const rect = searchWrapRef.value.getBoundingClientRect()
+      dropdownStyle.value = {
+        position: 'fixed',
+        top: `${rect.bottom + 4}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+      }
+    }
+  }
+})
 
 function closeDropdown() {
   clear()
@@ -42,7 +59,11 @@ function addAndClose(ingredient: Ingredient) {
 }
 
 function handleClickOutside(e: MouseEvent) {
-  if (searchWrapRef.value && !searchWrapRef.value.contains(e.target as Node)) {
+  const target = e.target as Node
+  if (
+    searchWrapRef.value && !searchWrapRef.value.contains(target) &&
+    (!dropdownRef.value || !dropdownRef.value.contains(target))
+  ) {
     closeDropdown()
   }
 }
@@ -65,7 +86,8 @@ onUnmounted(() => {
       @keydown.escape="clear()"
     />
 
-    <div v-if="showDropdown" class="search-dropdown">
+    <Teleport to="body">
+      <div v-if="showDropdown" ref="dropdownRef" class="search-dropdown" :style="dropdownStyle">
       <div v-if="availableCategories.length > 1" class="search-category-bar">
         <button
           class="search-category-pill"
@@ -104,7 +126,8 @@ onUnmounted(() => {
           </div>
         </li>
       </ul>
-    </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -113,7 +136,9 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
 }
+</style>
 
+<style>
 .search-input {
   width: 100%;
   background: #fff;
@@ -131,12 +156,8 @@ onUnmounted(() => {
   opacity: 0.7;
 }
 
-/* Results box: same styling as country dropdown */
+/* Results box: teleported to body, needs unscoped styles */
 .search-dropdown {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  right: 0;
   min-width: 18rem;
   max-height: 38rem;
   display: flex;
@@ -146,7 +167,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   border-radius: 0.75rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 50;
+  z-index: 9999;
   outline: none;
 }
 
@@ -204,7 +225,6 @@ onUnmounted(() => {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Result items: same hover as country dropdown options */
 .search-result-item {
   display: flex;
   align-items: center;

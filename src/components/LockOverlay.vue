@@ -73,7 +73,7 @@ function onKeydown(e: KeyboardEvent) {
       <Transition name="lock-fade">
         <div
           v-if="isLocked"
-          class="lock-overlay fixed inset-0 z-[2147483647] flex items-center justify-center"
+          class="lock-overlay fixed inset-x-0 top-0 z-[2147483647] flex items-center justify-center"
           role="dialog"
           aria-modal="true"
           aria-label="Unlock app"
@@ -162,20 +162,31 @@ function onKeydown(e: KeyboardEvent) {
   backdrop-filter: blur(8px) brightness(0.7);
   -webkit-backdrop-filter: blur(8px) brightness(0.7);
   pointer-events: auto;
+  /* 100svh = smallest stable viewport height (visible area with browser chrome showing)
+     Falls back to 100vh for older browsers */
+  height: 100svh;
+  height: 100dvh;
 }
 
 .lock-password-wrapper {
   position: relative;
   display: inline-flex;
-  min-height: 60px;
+  min-height: 52px;
   min-width: min(460px, 90vw);
   width: 90vw;
   max-width: 460px;
-  padding: 0 24px;
+  padding: 0 20px;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 480px) {
+  .lock-password-wrapper {
+    min-height: 44px;
+    padding: 0 16px;
+  }
 }
 
 .lock-password-text-layer {
@@ -184,8 +195,14 @@ function onKeydown(e: KeyboardEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px;
+  padding: 0 20px;
   pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .lock-password-text-layer {
+    padding: 0 16px;
+  }
 }
 
 /* When typing, align dots to the left to match input/caret */
@@ -206,19 +223,29 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .lock-password-dots {
-  font-size: 2rem;
+  font-size: 1.75rem;
   letter-spacing: 0.15em;
   color: var(--color-lafayette-gray, #3c373c);
+}
+
+@media (max-width: 480px) {
+  .lock-password-placeholder {
+    font-size: 1.25rem;
+  }
+
+  .lock-password-dots {
+    font-size: 1.375rem;
+  }
 }
 
 .lock-password-input {
   position: absolute;
   inset: 0;
   width: 100%;
-  padding: 0 24px;
+  padding: 0 20px;
   border: none;
   border-radius: 12px;
-  font-size: 2rem;
+  font-size: 1.75rem;
   letter-spacing: 0.15em;
   font-family: inherit;
   color: transparent;
@@ -226,6 +253,13 @@ function onKeydown(e: KeyboardEvent) {
   caret-color: var(--color-lafayette-gray, #3c373c);
   outline: none;
   box-shadow: none;
+}
+
+@media (max-width: 480px) {
+  .lock-password-input {
+    font-size: 1.375rem;
+    padding: 0 16px;
+  }
 }
 
 .lock-password-input:focus,
@@ -279,12 +313,18 @@ function onKeydown(e: KeyboardEvent) {
 
 .lock-back-caption {
   padding-top: 0.375rem;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 500;
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.6;
   text-align: center;
   max-width: 90vw;
   line-height: 1.3;
+}
+
+@media (max-width: 480px) {
+  .lock-back-caption {
+    font-size: 0.9375rem;
+  }
 }
 </style>

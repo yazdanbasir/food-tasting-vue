@@ -8,6 +8,7 @@ const { countryCode } = storeToRefs(useSubmissionStore())
 const open = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 const countrySearchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 
@@ -34,6 +35,21 @@ watch(open, async (isOpen) => {
 
 function toggle() {
   open.value = !open.value
+  if (open.value) {
+    nextTick(() => {
+      if (buttonRef.value) {
+        const rect = buttonRef.value.getBoundingClientRect()
+        const dropdownWidth = Math.min(352, window.innerWidth * 0.95)
+        // Clamp left so the dropdown doesn't overflow the right edge
+        const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 8)
+        dropdownStyle.value = {
+          position: 'fixed',
+          top: `${rect.bottom + 4}px`,
+          left: `${Math.max(8, left)}px`,
+        }
+      }
+    })
+  }
 }
 
 function select(code: string) {
@@ -78,18 +94,21 @@ onUnmounted(() => {
         </svg>
       </span>
     </button>
-    <div
-      v-show="open"
-      ref="dropdownRef"
-      class="country-select-dropdown"
-      role="listbox"
-      tabindex="-1"
-    >
+    <Teleport to="body">
+      <div
+        v-show="open"
+        ref="dropdownRef"
+        class="country-select-dropdown"
+        :style="dropdownStyle"
+        role="listbox"
+        tabindex="-1"
+      >
       <div class="country-select-search-wrap">
         <input
           ref="searchInputRef"
           v-model="countrySearchQuery"
           type="text"
+          autocomplete="off"
           placeholder="Search countries..."
           class="search-input"
           aria-label="Search countries"
@@ -106,7 +125,8 @@ onUnmounted(() => {
       >
         {{ flagEmoji(c.code) }} {{ c.name }}
       </button>
-    </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -163,11 +183,10 @@ onUnmounted(() => {
 .country-select-chevron-open {
   transform: rotate(180deg);
 }
+</style>
 
+<style>
 .country-select-dropdown {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
   min-width: 18rem;
   width: max-content;
   max-width: min(22rem, 95vw);
@@ -178,7 +197,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   border-radius: 0.75rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 50;
+  z-index: 9999;
   padding: 0.25rem 0;
   outline: none;
 }
@@ -192,7 +211,7 @@ onUnmounted(() => {
 }
 
 /* Same as IngredientSearch / other app search bars */
-.search-input {
+.country-select-dropdown .search-input {
   width: 100%;
   background: #fff;
   border-radius: 9999px;
@@ -204,7 +223,7 @@ onUnmounted(() => {
   font-family: inherit;
 }
 
-.search-input::placeholder {
+.country-select-dropdown .search-input::placeholder {
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.7;
 }

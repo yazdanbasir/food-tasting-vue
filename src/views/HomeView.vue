@@ -41,12 +41,15 @@ const {
 const contactDropdownOpen = ref(false)
 const contactDropdownRef = ref<HTMLElement | null>(null)
 const contactTriggerRef = ref<HTMLElement | null>(null)
+const contactDropdownStyle = ref<Record<string, string>>({})
 const otherIngredientsDropdownOpen = ref(false)
 const otherIngredientsDropdownRef = ref<HTMLElement | null>(null)
 const otherIngredientsTriggerRef = ref<HTMLElement | null>(null)
+const otherIngredientsDropdownStyle = ref<Record<string, string>>({})
 const utensilsDropdownOpen = ref(false)
 const utensilsDropdownRef = ref<HTMLElement | null>(null)
 const utensilsTriggerRef = ref<HTMLElement | null>(null)
+const utensilsDropdownStyle = ref<Record<string, string>>({})
 
 /** True only after user has clicked Save in the group info dropdown with at least one valid contact. Cleared when contacts become invalid. */
 const groupInfoCommitted = ref(false)
@@ -70,6 +73,16 @@ watch(
 
 function toggleContactDropdown() {
   contactDropdownOpen.value = !contactDropdownOpen.value
+  if (contactDropdownOpen.value && contactTriggerRef.value) {
+    const rect = contactTriggerRef.value.getBoundingClientRect()
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8))
+    contactDropdownStyle.value = {
+      position: 'fixed',
+      top: `${rect.bottom + 4}px`,
+      left: `${left}px`,
+      width: `${rect.width}px`,
+    }
+  }
 }
 
 function normalizedConflictPhone(raw: string): string {
@@ -148,6 +161,16 @@ function handleContactClickOutside(e: MouseEvent) {
 
 function toggleOtherIngredientsDropdown() {
   otherIngredientsDropdownOpen.value = !otherIngredientsDropdownOpen.value
+  if (otherIngredientsDropdownOpen.value && otherIngredientsTriggerRef.value) {
+    const rect = otherIngredientsTriggerRef.value.getBoundingClientRect()
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8))
+    otherIngredientsDropdownStyle.value = {
+      position: 'fixed',
+      top: `${rect.bottom + 4}px`,
+      left: `${left}px`,
+      width: `${rect.width}px`,
+    }
+  }
 }
 
 function handleOtherIngredientsSave() {
@@ -157,6 +180,16 @@ function handleOtherIngredientsSave() {
 
 function toggleUtensilsDropdown() {
   utensilsDropdownOpen.value = !utensilsDropdownOpen.value
+  if (utensilsDropdownOpen.value && utensilsTriggerRef.value) {
+    const rect = utensilsTriggerRef.value.getBoundingClientRect()
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8))
+    utensilsDropdownStyle.value = {
+      position: 'fixed',
+      top: `${rect.bottom + 4}px`,
+      left: `${left}px`,
+      width: `${rect.width}px`,
+    }
+  }
 }
 
 function handleUtensilsSave() {
@@ -392,12 +425,14 @@ async function handleSubmit() {
                 </svg>
               </span>
             </button>
-            <div
-              v-show="contactDropdownOpen"
-              ref="contactDropdownRef"
-              class="home-contact-dropdown"
-              role="dialog"
-            >
+            <Teleport to="body">
+              <div
+                v-show="contactDropdownOpen"
+                ref="contactDropdownRef"
+                class="home-contact-dropdown"
+                :style="contactDropdownStyle"
+                role="dialog"
+              >
               <div
                 v-for="(contact, i) in contacts"
                 :key="i"
@@ -466,7 +501,8 @@ async function handleSubmit() {
                   Save
                 </button>
               </div>
-            </div>
+              </div>
+            </Teleport>
           </div>
         </div>
       </div>
@@ -569,12 +605,14 @@ async function handleSubmit() {
                     </svg>
                   </span>
                 </button>
-                <div
-                  v-show="otherIngredientsDropdownOpen"
-                  ref="otherIngredientsDropdownRef"
-                  class="home-other-ingredients-dropdown"
-                  role="dialog"
-                >
+                <Teleport to="body">
+                  <div
+                    v-show="otherIngredientsDropdownOpen"
+                    ref="otherIngredientsDropdownRef"
+                    class="home-other-ingredients-dropdown"
+                    :style="otherIngredientsDropdownStyle"
+                    role="dialog"
+                  >
                   <div
                     v-for="(entry, i) in otherIngredientEntries"
                     :key="i"
@@ -642,7 +680,8 @@ async function handleSubmit() {
                       Save
                     </button>
                   </div>
-                </div>
+                  </div>
+                </Teleport>
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
                 Thanks! Feel free to edit your form later if needed
@@ -694,12 +733,14 @@ async function handleSubmit() {
                     </svg>
                   </span>
                 </button>
-                <div
-                  v-show="utensilsDropdownOpen"
-                  ref="utensilsDropdownRef"
-                  class="home-utensils-dropdown"
-                  role="dialog"
-                >
+                <Teleport to="body">
+                  <div
+                    v-show="utensilsDropdownOpen"
+                    ref="utensilsDropdownRef"
+                    class="home-utensils-dropdown"
+                    :style="utensilsDropdownStyle"
+                    role="dialog"
+                  >
                   <div
                     v-for="(entry, i) in utensilEntries"
                     :key="i"
@@ -759,7 +800,8 @@ async function handleSubmit() {
                       Save
                     </button>
                   </div>
-                </div>
+                  </div>
+                </Teleport>
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
                 Thanks! Feel free to edit your form later if needed
@@ -960,310 +1002,21 @@ async function handleSubmit() {
 .home-contact-chevron-open {
   transform: rotate(180deg);
 }
-.home-contact-dropdown {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  right: 0;
-  width: 100%;
-  min-width: 100%;
-  max-height: 22rem;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid var(--color-border, #e5e5e5);
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 50;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-sizing: border-box;
-}
-.home-contact-dropdown-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-  min-height: 2.5rem;
-}
-.home-contact-add-row-wrap {
-  min-height: 2.5rem;
-}
-.home-contact-add-row-spacer {
-  min-width: 0;
-}
-.home-contact-add-row-spacer-name {
-  flex: 0 1 40%;
-}
-.home-contact-add-row-spacer-phone {
-  flex: 1 1 55%;
-}
-.home-contact-pill {
-  flex: 1 1 0;
-  min-width: 8rem;
-  display: flex;
-  align-items: center;
-  border-radius: 9999px;
-  border: 1px solid var(--color-border, #e5e5e5);
-  padding: 0.25rem 0.75rem;
-  background: #fff;
-  overflow: visible;
-}
-.home-contact-pill-name {
-  flex: 0 1 40%;
-  min-width: 10rem;
-}
-.home-contact-pill-phone {
-  flex: 1 1 55%;
-  min-width: 12rem;
-}
-.home-contact-pill .home-phone-pill-inner {
-  flex: 1;
-  min-width: 0;
-  overflow: visible;
-}
-.home-contact-input {
-  width: 100%;
-  min-width: 0;
-  border: none;
-  outline: none;
-  padding: 0;
-  font-size: inherit;
-  font-family: inherit;
-  font-weight: 500;
-  background: transparent;
-  text-align: center;
-  box-sizing: border-box;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-.home-contact-input::placeholder {
-  color: var(--color-lafayette-gray, #3c373c);
-  opacity: 0.7;
-}
-.home-contact-btn-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  line-height: 1;
-  text-align: center;
-}
-.home-contact-add-btn-circle {
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-lafayette-red, #6b0f2a);
-  color: #fff;
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-.home-contact-add-btn-circle:hover {
-  filter: brightness(1.1);
-}
-.home-contact-add-btn-circle:focus,
-.home-contact-add-btn-circle:focus-visible {
-  outline: none;
-}
-.home-contact-dropdown-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 0.25rem;
-}
 
-.home-contact-error {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.4rem;
-  color: #b91c1c;
-  font-size: 1rem;
-  padding: 0 0.25rem;
-}
-.home-phone-remove {
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-lafayette-red, #6b0f2a);
-  color: #fff;
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-.home-phone-remove .home-contact-btn-icon,
-.home-contact-add-btn-circle .home-contact-btn-icon {
-  font-size: inherit;
-}
-.home-phone-remove:hover {
-  filter: brightness(1.1);
-}
-.home-phone-remove:focus {
-  outline: none;
-}
+/* Dropdown content styles → see unscoped <style> block below */
 
-/* Other ingredients dropdown (same pattern as contact, 4 pills: Item, Size, Quantity, Additional Details) */
+/* Other ingredients pill-wrap (stays scoped — only the trigger, not the teleported dropdown) */
 .home-other-ingredients-pill-wrap {
   position: relative;
   padding: 0;
   min-width: 0;
 }
-.home-other-ingredients-dropdown {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  right: 0;
-  width: 100%;
-  min-width: 100%;
-  max-height: 22rem;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid var(--color-border, #e5e5e5);
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 50;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-sizing: border-box;
-}
-.home-other-ingredients-dropdown-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-  min-height: 2.5rem;
-}
-.home-other-ingredients-pill {
-  display: flex;
-  align-items: center;
-  border-radius: 9999px;
-  border: 1px solid var(--color-border, #e5e5e5);
-  padding: 0.25rem 0.75rem;
-  background: #fff;
-  overflow: visible;
-  min-width: 0;
-}
-.home-other-ingredients-pill-item {
-  flex: 1 1 28%;
-  min-width: 5rem;
-}
-.home-other-ingredients-pill-size {
-  flex: 0 1 15%;
-  min-width: 4rem;
-}
-.home-other-ingredients-pill-qty {
-  flex: 0 1 12%;
-  min-width: 3.5rem;
-}
-.home-other-ingredients-pill-details {
-  flex: 1 1 30%;
-  min-width: 5rem;
-}
-.home-other-ingredients-add-spacer {
-  flex: 1 1 0;
-  min-width: 0;
-}
 
-/* Utensils dropdown (Utensil/Equipment, Size, Quantity) */
+/* Utensils pill-wrap (stays scoped — only the trigger, not the teleported dropdown) */
 .home-utensils-pill-wrap {
   position: relative;
   padding: 0;
   min-width: 0;
-}
-.home-utensils-dropdown {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  right: 0;
-  width: 100%;
-  min-width: 100%;
-  max-height: 22rem;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid var(--color-border, #e5e5e5);
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 50;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-sizing: border-box;
-}
-.home-utensils-dropdown-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-  min-height: 2.5rem;
-}
-.home-utensils-pill {
-  display: flex;
-  align-items: center;
-  border-radius: 9999px;
-  border: 1px solid var(--color-border, #e5e5e5);
-  padding: 0.25rem 0.75rem;
-  background: #fff;
-  overflow: visible;
-  min-width: 0;
-}
-.home-utensils-pill-utensil {
-  flex: 1 1 50%;
-  min-width: 8rem;
-}
-.home-utensils-pill-size {
-  flex: 0 1 20%;
-  min-width: 4rem;
-}
-.home-utensils-pill-qty {
-  flex: 0 1 15%;
-  min-width: 3.5rem;
-}
-.home-utensils-add-spacer {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.home-phone-remove:focus-visible {
-  outline: none;
-}
-.home-phone-pill-inner {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.home-phone-hazard-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.home-phone-hazard {
-  flex-shrink: 0;
-  width: 1.1rem;
-  height: 1.1rem;
-  color: #b91c1c;
-  pointer-events: none;
 }
 
 .home-layout {
@@ -1438,5 +1191,285 @@ async function handleSubmit() {
   flex-shrink: 0;
   width: 1rem;
   height: 1rem;
+}
+</style>
+
+<style>
+/* ─── Teleported dropdown content ───────────────────────────────────────────
+   These rules must be unscoped because the dropdowns are rendered via
+   <Teleport to="body"> and the Vue scoped attribute is not applied there.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Group info (contact) dropdown ── */
+.home-contact-dropdown {
+  max-height: 22rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+.home-contact-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+}
+.home-contact-add-row-wrap {
+  min-height: 2.5rem;
+}
+.home-contact-add-row-spacer {
+  min-width: 0;
+}
+.home-contact-add-row-spacer-name {
+  flex: 0 1 40%;
+}
+.home-contact-add-row-spacer-phone {
+  flex: 1 1 55%;
+}
+.home-contact-pill {
+  flex: 1 1 0;
+  min-width: 8rem;
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border, #e5e5e5);
+  padding: 0.25rem 0.75rem;
+  background: #fff;
+  overflow: visible;
+}
+.home-contact-pill-name {
+  flex: 0 1 40%;
+  min-width: 10rem;
+}
+.home-contact-pill-phone {
+  flex: 1 1 55%;
+  min-width: 12rem;
+}
+.home-contact-pill .home-phone-pill-inner {
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+}
+.home-contact-input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 500;
+  background: transparent;
+  text-align: center;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.home-contact-input::placeholder {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
+}
+.home-contact-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+  text-align: center;
+}
+.home-contact-add-btn-circle {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.home-contact-add-btn-circle:hover {
+  filter: brightness(1.1);
+}
+.home-contact-add-btn-circle:focus,
+.home-contact-add-btn-circle:focus-visible {
+  outline: none;
+}
+.home-contact-dropdown-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+.home-contact-error {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  color: #b91c1c;
+  font-size: 1rem;
+  padding: 0 0.25rem;
+}
+.home-phone-remove {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.home-phone-remove .home-contact-btn-icon,
+.home-contact-add-btn-circle .home-contact-btn-icon {
+  font-size: inherit;
+}
+.home-phone-remove:hover {
+  filter: brightness(1.1);
+}
+.home-phone-remove:focus,
+.home-phone-remove:focus-visible {
+  outline: none;
+}
+.home-phone-pill-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.home-phone-hazard-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.home-phone-hazard {
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: #b91c1c;
+  pointer-events: none;
+}
+
+/* ── Other Ingredients dropdown ── */
+.home-other-ingredients-dropdown {
+  max-height: 22rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+.home-other-ingredients-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+}
+.home-other-ingredients-pill {
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border, #e5e5e5);
+  padding: 0.25rem 0.75rem;
+  background: #fff;
+  overflow: visible;
+  min-width: 0;
+}
+.home-other-ingredients-pill-item {
+  flex: 1 1 28%;
+  min-width: 5rem;
+}
+.home-other-ingredients-pill-size {
+  flex: 0 1 15%;
+  min-width: 4rem;
+}
+.home-other-ingredients-pill-qty {
+  flex: 0 1 12%;
+  min-width: 3.5rem;
+}
+.home-other-ingredients-pill-details {
+  flex: 1 1 30%;
+  min-width: 5rem;
+}
+.home-other-ingredients-add-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ── Utensils dropdown ── */
+.home-utensils-dropdown {
+  max-height: 22rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+.home-utensils-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+}
+.home-utensils-pill {
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border, #e5e5e5);
+  padding: 0.25rem 0.75rem;
+  background: #fff;
+  overflow: visible;
+  min-width: 0;
+}
+.home-utensils-pill-utensil {
+  flex: 1 1 50%;
+  min-width: 8rem;
+}
+.home-utensils-pill-size {
+  flex: 0 1 20%;
+  min-width: 4rem;
+}
+.home-utensils-pill-qty {
+  flex: 0 1 15%;
+  min-width: 3.5rem;
+}
+.home-utensils-add-spacer {
+  flex: 1 1 0;
+  min-width: 0;
 }
 </style>

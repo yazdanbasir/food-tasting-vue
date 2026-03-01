@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps<{
   modelValue: 'yes' | 'no' | ''
@@ -13,9 +13,25 @@ const emit = defineEmits<{
 const open = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 
 function toggle() {
   open.value = !open.value
+  if (open.value) {
+    nextTick(() => {
+      if (buttonRef.value) {
+        const rect = buttonRef.value.getBoundingClientRect()
+        const left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8))
+        dropdownStyle.value = {
+          position: 'fixed',
+          top: `${rect.bottom + 4}px`,
+          left: `${left}px`,
+          width: `${rect.width}px`,
+          minWidth: `${rect.width}px`,
+        }
+      }
+    })
+  }
 }
 
 function select(value: 'yes' | 'no') {
@@ -58,25 +74,28 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
       <template v-else>{{ placeholder }}</template>
       <span class="yes-no-select-chevron" aria-hidden="true">{{ open ? '▲' : '▼' }}</span>
     </button>
-    <div
-      v-show="open"
-      ref="dropdownRef"
-      class="yes-no-select-dropdown"
-      role="listbox"
-      tabindex="-1"
-    >
-      <button
-        v-for="option in [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]"
-        :key="option.value"
-        type="button"
-        role="option"
-        class="yes-no-select-option"
-        :aria-selected="modelValue === option.value"
-        @click="select(option.value as 'yes' | 'no')"
+    <Teleport to="body">
+      <div
+        v-show="open"
+        ref="dropdownRef"
+        class="yes-no-select-dropdown"
+        :style="dropdownStyle"
+        role="listbox"
+        tabindex="-1"
       >
-        {{ option.label }}
-      </button>
-    </div>
+        <button
+          v-for="option in [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]"
+          :key="option.value"
+          type="button"
+          role="option"
+          class="yes-no-select-option"
+          :aria-selected="modelValue === option.value"
+          @click="select(option.value as 'yes' | 'no')"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -136,17 +155,15 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   font-size: 0.65em;
   opacity: 0.8;
 }
+</style>
 
+<style>
 .yes-no-select-dropdown {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  min-width: 100%;
   background: #fff;
   border: 1px solid var(--color-lafayette-gray, #3c373c);
   border-radius: 0.75rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 50;
+  z-index: 9999;
   padding: 0.25rem 0;
   outline: none;
 }
