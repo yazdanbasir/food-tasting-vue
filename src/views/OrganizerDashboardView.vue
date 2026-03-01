@@ -998,8 +998,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                   </div>
                 </template>
                 <template v-else>
-                  <span v-if="sub.needs_fridge_space === 'no'">No</span>
-                  <span v-else>—</span>
+                  <span>—</span>
                 </template>
               </div>
 
@@ -1050,37 +1049,39 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
             <div v-if="expandedSubmissions.has(sub.id)" class="submission-detail">
               <div class="submission-detail-meta">
                 <div class="submission-detail-meta-grid">
-                  <div class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Phone</span>
-                    <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.phone_number || '').trim() }">{{ (sub.phone_number || '').trim() || '—' }}</span>
+                  <div class="submission-detail-meta-left submission-detail-meta-col-1">
+                    <div class="submission-detail-meta-item">
+                      <span class="submission-detail-meta-label">Phone</span>
+                      <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !(sub.phone_number || '').trim() }">{{ (sub.phone_number || '').trim() || '—' }}</span>
+                    </div>
+                    <div class="submission-detail-meta-item submission-detail-meta-dietary-flags">
+                      <span class="submission-detail-meta-label">Dietary Flags</span>
+                      <DietaryIcons :dietary="aggregateDietary(sub)" :size="18" />
+                    </div>
+                    <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item submission-detail-meta-ingredients">
+                      <span class="submission-detail-meta-label">Ingredients</span>
+                      <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'Has Ingredients ✅' : 'Missing Ingredients ⚠️' }}</span>
+                    </div>
                   </div>
-                  <div class="submission-detail-meta-item">
+                  <div class="submission-detail-meta-item submission-detail-meta-col-3">
                     <span class="submission-detail-meta-label">Kitchen</span>
                     <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.has_cooking_place }">{{ sub.has_cooking_place ? (sub.has_cooking_place === 'yes' ? 'Has Kitchen ✅' : 'Needs Kitchen ⚠️') : '—' }}</span>
                   </div>
-                  <div v-if="sub.needs_fridge_space" class="submission-detail-meta-item">
+                  <div v-if="sub.needs_fridge_space" class="submission-detail-meta-item submission-detail-meta-col-4">
                     <span class="submission-detail-meta-label">Fridge</span>
                     <span class="submission-detail-meta-value">{{ sub.needs_fridge_space === 'yes' ? 'Needs Fridge ⚠️' : 'Has Fridge ✅' }}</span>
                   </div>
-                  <div v-if="sub.needs_utensils" class="submission-detail-meta-item">
+                  <div v-if="sub.needs_utensils" class="submission-detail-meta-item submission-detail-meta-col-5">
                     <span class="submission-detail-meta-label">Utensils</span>
                     <span class="submission-detail-meta-value">{{ sub.needs_utensils === 'yes' ? 'Needs Utensils ⚠️' : 'Has Utensils ✅' }}</span>
                   </div>
-                  <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Ingredients</span>
-                    <span class="submission-detail-meta-value">{{ sub.found_all_ingredients === 'yes' ? 'Has Ingredients ✅' : 'Missing Ingredients ⚠️' }}</span>
-                  </div>
-                  <div class="submission-detail-meta-item">
-                    <span class="submission-detail-meta-label">Dietary Flags</span>
-                    <DietaryIcons :dietary="aggregateDietary(sub)" :size="18" />
-                  </div>
-                  <div class="submission-detail-meta-actions">
+                  <div class="submission-detail-meta-actions submission-detail-meta-col-8">
                     <button
                       type="button"
                       class="btn-pill-primary"
                       @click.stop="handleEditSubmission(sub)"
                     >
-                      Edit Form
+                      Edit
                     </button>
                     <button
                       type="button"
@@ -2028,20 +2029,45 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   font-size: var(--body-font-size, 1.125rem);
 }
 
+/* Same grid as table so Kitchen, Fridge, Utensils align with their columns; all items on one row */
 .submission-detail-meta-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(6, 1fr) 2rem;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+}
+
+.submission-detail-meta-col-1 { grid-column: 1; grid-row: 1; }
+.submission-detail-meta-col-2 { grid-column: 2; grid-row: 1; }
+.submission-detail-meta-col-3 { grid-column: 3; grid-row: 1; }
+.submission-detail-meta-col-4 { grid-column: 4; grid-row: 1; }
+.submission-detail-meta-col-5 { grid-column: 5; grid-row: 1; }
+.submission-detail-meta-col-6 { grid-column: 6; grid-row: 1; }
+.submission-detail-meta-col-8 { grid-column: 8; grid-row: 1; }
+
+.submission-detail-meta-left {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 0.75rem 3.5rem;
-  overflow-x: auto;
+  gap: 0.75rem 2rem;
+  min-width: 0;
+}
+
+.submission-detail-meta-dietary-flags :deep(.dietary-icons) {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.submission-detail-meta-ingredients {
+  white-space: nowrap;
 }
 
 .submission-detail-meta-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-left: auto;
-  flex-shrink: 0;
+  justify-content: flex-end;
 }
 
 .submission-detail-meta-item {
@@ -2049,7 +2075,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .submission-detail-meta-label {
