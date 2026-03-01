@@ -766,9 +766,12 @@ function equipmentOptionsFor(sub: SubmissionResponse): string[] {
   })
 }
 
-function equipmentAllocatedValues(sub: SubmissionResponse): string[] {
+/** Options for equipment multi-select including any allocated values so they always display. */
+function equipmentOptionsForSelect(sub: SubmissionResponse): string[] {
   const options = equipmentOptionsFor(sub)
-  return parseEquipmentAllocated(sub.equipment_allocated).filter((v) => options.includes(v))
+  const allocated = parseEquipmentAllocated(sub.equipment_allocated)
+  const extra = allocated.filter((v) => !options.includes(v))
+  return extra.length ? [...extra, ...options] : options
 }
 
 async function assignEquipmentMulti(sub: SubmissionResponse, names: string[]) {
@@ -797,18 +800,20 @@ function fridgeOptionsFor(sub: SubmissionResponse): string[] {
   })
 }
 
-/** Display value for fridge select: only show submission's fridge if it's still in the current fridge list. */
-function effectiveFridgeValue(sub: SubmissionResponse): string | null {
+/** Options for fridge select including submitted value so it always displays. */
+function fridgeOptionsForSelect(sub: SubmissionResponse): string[] {
+  const options = fridgeOptionsFor(sub)
   const val = (sub.fridge_location || '').trim()
-  if (!val) return null
-  return fridgeOptionsFor(sub).includes(val) ? sub.fridge_location : null
+  if (val && !options.includes(val)) return [val, ...options]
+  return options
 }
 
-/** Display value for kitchen select: only show submission's kitchen if it's still in the current kitchen list. */
-function effectiveKitchenValue(sub: SubmissionResponse): string | null {
+/** Options for kitchen select including submitted value so it always displays. */
+function kitchenOptionsForSelect(sub: SubmissionResponse): string[] {
+  const options = kitchenOptionsFor(sub)
   const val = (sub.cooking_location || '').trim()
-  if (!val) return null
-  return kitchenOptionsFor(sub).includes(val) ? sub.cooking_location : null
+  if (val && !options.includes(val)) return [val, ...options]
+  return options
 }
 
 function helperOptions(sub: SubmissionResponse): string[] {
@@ -822,11 +827,12 @@ function helperOptions(sub: SubmissionResponse): string[] {
   })
 }
 
-/** Display value for helper select: only show submission's helper if it's still in the current helper list. */
-function effectiveHelperValue(sub: SubmissionResponse): string | null {
+/** Options for helper select including submitted value so it always displays. */
+function helperOptionsForSelect(sub: SubmissionResponse): string[] {
+  const options = helperOptions(sub)
   const val = (sub.helper_driver_needed || '').trim()
-  if (!val) return null
-  return helperOptions(sub).includes(val) ? sub.helper_driver_needed : null
+  if (val && !options.includes(val)) return [val, ...options]
+  return options
 }
 
 </script>
@@ -949,8 +955,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                 <template v-if="sub.needs_fridge_space === 'yes'">
                   <div class="form-section-pill kitchen-resource-pill">
                     <KitchenResourceSelect
-                      :model-value="effectiveFridgeValue(sub)"
-                      :options="fridgeOptionsFor(sub)"
+                      :model-value="(sub.fridge_location || '').trim() || null"
+                      :options="fridgeOptionsForSelect(sub)"
                       placeholder="Assign fridge"
                       clearable
                       @update:model-value="(val) => assignKitchenField(sub, 'fridge_location', val)"
@@ -976,8 +982,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                 <template v-if="sub.needs_utensils === 'yes'">
                   <div class="form-section-pill kitchen-resource-pill">
                     <KitchenResourceMultiSelect
-                      :model-value="equipmentAllocatedValues(sub)"
-                      :options="equipmentOptionsFor(sub)"
+                      :model-value="parseEquipmentAllocated(sub.equipment_allocated)"
+                      :options="equipmentOptionsForSelect(sub)"
                       placeholder="Assign equipment"
                       @update:model-value="(vals) => assignEquipmentMulti(sub, vals)"
                     />
@@ -991,8 +997,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                 <template v-if="sub.has_cooking_place === 'no'">
                   <div class="form-section-pill kitchen-resource-pill">
                     <KitchenResourceSelect
-                      :model-value="effectiveKitchenValue(sub)"
-                      :options="kitchenOptionsFor(sub)"
+                      :model-value="(sub.cooking_location || '').trim() || null"
+                      :options="kitchenOptionsForSelect(sub)"
                       placeholder="Assign kitchen"
                       clearable
                       @update:model-value="(val) => assignKitchenField(sub, 'cooking_location', val)"
@@ -1015,7 +1021,7 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
                       @keyup.enter="saveKitchenField(sub, 'cooking_location')"
                       @keyup.escape="cancelKitchenEdit(sub.id, 'cooking_location')"
                     />
-                    <span v-else>{{ effectiveKitchenValue(sub) || '—' }}</span>
+                    <span v-else>{{ (sub.cooking_location || '').trim() || '—' }}</span>
                   </div>
                 </template>
               </div>
@@ -1024,8 +1030,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
                 <div class="form-section-pill kitchen-resource-pill">
                   <KitchenResourceSelect
-                    :model-value="effectiveHelperValue(sub)"
-                    :options="helperOptions(sub)"
+                    :model-value="(sub.helper_driver_needed || '').trim() || null"
+                    :options="helperOptionsForSelect(sub)"
                     placeholder="Assign helper"
                     clearable
                     @update:model-value="(val) => assignKitchenField(sub, 'helper_driver_needed', val)"
