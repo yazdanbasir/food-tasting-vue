@@ -148,6 +148,33 @@ class Api::V1::GroceryListController < ApplicationController
     render json: { error: "Ingredient not found" }, status: :not_found
   end
 
+  # POST /api/v1/grocery_list/master_list_check (organizer only) — create notification when checking Other Stores / Utensils items
+  def master_list_check
+    list_type = params[:list_type].to_s
+    label = params[:label].to_s.presence || "Item"
+    checked = params[:checked]
+
+    unless %w[other_stores utensils_equipment].include?(list_type)
+      return render json: { error: "Invalid list_type" }, status: :unprocessable_entity
+    end
+
+    title_prefix = list_type == "other_stores" ? "OTHER STORES" : "UTENSILS/EQUIPMENT"
+    if checked
+      create_and_broadcast_notification(
+        event_type: "master_list_checked",
+        title: "#{title_prefix} \u2014 CHECKED",
+        message: label
+      )
+    else
+      create_and_broadcast_notification(
+        event_type: "master_list_unchecked",
+        title: "#{title_prefix} \u2014 UNCHECKED",
+        message: label
+      )
+    end
+    render json: { ok: true }
+  end
+
   def find_or_create_organizer_submission
     Submission.find_or_create_by!(team_name: "Organizer", dish_name: "Extra items")
   end

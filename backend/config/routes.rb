@@ -17,6 +17,7 @@ Rails.application.routes.draw do
       resource :organizer_session, only: [ :create, :destroy ]
       resource :grocery_list, controller: "grocery_list", only: [ :show ] do
         post "items", action: :create_item
+        post "master_list_check", action: :master_list_check
         patch ":ingredient_id", to: "grocery_list#update", as: :check_item
       end
       post "submissions/by_id/:submission_id/ingredients", to: "submissions#add_ingredient"

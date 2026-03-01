@@ -11,7 +11,7 @@ import { DIETARY_FLAGS } from '@/data/dietaryFlags'
 import KitchenResourceSelect from '@/components/KitchenResourceSelect.vue'
 import KitchenResourceMultiSelect from '@/components/KitchenResourceMultiSelect.vue'
 import { getAllSubmissions, updateSubmission, type SubmissionResponse } from '@/api/submissions'
-import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, getKitchenResources, createKitchenResource, updateKitchenResource, deleteKitchenResource, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload, type KitchenResourceItem } from '@/api/organizer'
+import { getGroceryList, checkGroceryItem, updateGroceryQuantity, updateSubmissionIngredientQuantity, deleteSubmission, updateKitchenAllocation, getKitchenResources, createKitchenResource, updateKitchenResource, deleteKitchenResource, masterListCheckNotify, type GroceryListResponse, type GroceryItem, type KitchenAllocationPayload, type KitchenResourceItem } from '@/api/organizer'
 import LockOverlay from '@/components/LockOverlay.vue'
 import { useLockOverlay } from '@/composables/useLockOverlay'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
@@ -77,6 +77,82 @@ function formatUtensilsNotesLines(notes: string | null | undefined): string[] {
   return [notes]
 }
 
+/** Parsed utensil entry from utensils_notes JSON for aggregation */
+interface UtensilParsed {
+  utensil: string
+  size: string
+  quantity: number
+}
+
+/** Parse utensils_notes JSON into structured entries (for aggregation) */
+function parseUtensilsNotes(notes: string | null | undefined): UtensilParsed[] {
+  if (!notes || !notes.trim()) return []
+  try {
+    const parsed = JSON.parse(notes) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map((row: { utensil?: string; size?: string; quantity?: string }) => {
+        const u = String(row?.utensil ?? '').trim()
+        if (!u) return null
+        const s = String(row?.size ?? '').trim()
+        const q = Math.max(0, parseInt(String(row?.quantity ?? '1'), 10) || 1)
+        return { utensil: u, size: s, quantity: q }
+      })
+      .filter((x): x is UtensilParsed => x != null)
+  } catch {
+    return []
+  }
+}
+
+/** Aggregated equipment master list: name (utensil), subline (size), quantity */
+function aggregatedEquipmentList(): { name: string; subline: string; quantity: number }[] {
+  const byKey = new Map<string, { name: string; subline: string; quantity: number }>()
+  for (const sub of submissions.value) {
+    if (sub.needs_utensils !== 'yes') continue
+    for (const entry of parseUtensilsNotes(sub.utensils_notes)) {
+      const key = `${entry.utensil}|${entry.size}`
+      const existing = byKey.get(key)
+      if (existing) {
+        existing.quantity += entry.quantity
+      } else {
+        byKey.set(key, {
+          name: entry.utensil,
+          subline: entry.size || '',
+          quantity: entry.quantity,
+        })
+      }
+    }
+  }
+  return Array.from(byKey.values()).sort((a, b) => a.name.localeCompare(b.name) || a.subline.localeCompare(b.subline))
+}
+
+const equipmentMasterList = computed(() => aggregatedEquipmentList())
+
+/** Aggregated Other Stores master list: name (item), subline (size · additionalDetails), quantity */
+function aggregatedOtherStoresList(): { name: string; subline: string; quantity: number }[] {
+  const byKey = new Map<string, { name: string; subline: string; quantity: number }>()
+  for (const sub of submissions.value) {
+    for (const entry of parseOtherIngredients(sub)) {
+      const key = `${entry.item}|${entry.size}|${entry.additionalDetails}`
+      const subline = [entry.size, entry.additionalDetails].filter(Boolean).join(' · ')
+      const qty = Math.max(0, parseInt(entry.quantity, 10) || 0)
+      const existing = byKey.get(key)
+      if (existing) {
+        existing.quantity += qty
+      } else {
+        byKey.set(key, {
+          name: entry.item || '—',
+          subline,
+          quantity: qty,
+        })
+      }
+    }
+  }
+  return Array.from(byKey.values()).sort((a, b) => a.name.localeCompare(b.name) || a.subline.localeCompare(b.subline))
+}
+
+const otherStoresMasterList = computed(() => aggregatedOtherStoresList())
+
 /** Phone numbers in same order as members (for meta box aligned with Members column) */
 function submissionPhoneNumbers(sub: SubmissionResponse): string[] {
   const raw = (sub.phone_number ?? '').trim()
@@ -107,9 +183,18 @@ function parseOtherIngredients(sub: SubmissionResponse): Array<{ item: string; s
   return []
 }
 
-const EMPTY_DIETARY: IngredientDietary = Object.fromEntries(
-  DIETARY_FLAGS.map((f) => [f.key, false])
-) as IngredientDietary
+const EMPTY_DIETARY: IngredientDietary = {
+  is_alcohol: false,
+  gluten: false,
+  dairy: false,
+  egg: false,
+  peanut: false,
+  kosher: false,
+  vegan: false,
+  vegetarian: false,
+  lactose_free: false,
+  wheat_free: false,
+}
 
 /** Map an "other stores" entry to a minimal Ingredient for IngredientRow (placeholder thumb, name, size, qty) */
 function otherEntryToIngredient(
@@ -146,7 +231,7 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 
 
 const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'placards' | 'notifications'>('submissions')
-const groceryStore = ref<'giant' | 'other-stores'>('giant') // tab bar above aisles: Giant | Other Stores
+const groceryStore = ref<'giant' | 'other-stores' | 'utensils-equipment'>('giant') // tab bar: Giant | Other Stores | Utensils/Equipment
 /** Tab inside each submission detail: Giant (ingredients from grocery) vs Other Stores (other_ingredients list) */
 const submissionDetailStoreTab = ref<'giant' | 'other-stores'>('giant')
 const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('fridges') // Kitchens & Utensils sub-tabs
@@ -173,6 +258,43 @@ function toggleAisleExpanded(aisle: string) {
   if (next.has(aisle)) next.delete(aisle)
   else next.add(aisle)
   expandedAisles.value = next
+}
+
+/** Checked keys for master list tabs (Other Stores / Utensils) — key = `${name}|${subline}` */
+const checkedOtherStoresKeys = ref<Set<string>>(new Set())
+const checkedEquipmentKeys = ref<Set<string>>(new Set())
+
+function masterListKey(item: { name: string; subline: string }): string {
+  return `${item.name}|${item.subline}`
+}
+
+function isMasterListChecked(type: 'other-stores' | 'utensils-equipment', key: string): boolean {
+  return type === 'other-stores' ? checkedOtherStoresKeys.value.has(key) : checkedEquipmentKeys.value.has(key)
+}
+
+function toggleMasterListCheck(
+  type: 'other-stores' | 'utensils-equipment',
+  key: string,
+  label: string,
+) {
+  const isOtherStores = type === 'other-stores'
+  const set = isOtherStores ? checkedOtherStoresKeys.value : checkedEquipmentKeys.value
+  const newChecked = !set.has(key)
+
+  if (isOtherStores) {
+    const next = new Set(checkedOtherStoresKeys.value)
+    if (newChecked) next.add(key)
+    else next.delete(key)
+    checkedOtherStoresKeys.value = next
+  } else {
+    const next = new Set(checkedEquipmentKeys.value)
+    if (newChecked) next.add(key)
+    else next.delete(key)
+    checkedEquipmentKeys.value = next
+  }
+
+  const apiListType = isOtherStores ? 'other_stores' : 'utensils_equipment'
+  void masterListCheckNotify(apiListType, label, newChecked)
 }
 
 function aisleTotal(items: GroceryItem[]): number {
@@ -369,6 +491,8 @@ function notifDotColor(eventType: string): string {
     'grocery_qty_changed',
     'grocery_item_checked',
     'grocery_item_unchecked',
+    'master_list_checked',
+    'master_list_unchecked',
   ]
   if (deletion.includes(eventType)) return '#dc2626' /* red */
   if (edited.includes(eventType)) return '#2563eb' /* blue */
@@ -1398,6 +1522,84 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
           >
             Other Stores
           </button>
+          <button
+            type="button"
+            class="grocery-store-tab"
+            :class="groceryStore === 'utensils-equipment' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+            @click="groceryStore = 'utensils-equipment'"
+          >
+            Utensils/Equipment
+          </button>
+        </div>
+        <div v-if="groceryStore === 'other-stores'" class="grocery-sections grocery-utensils-list">
+          <div
+            v-for="item in otherStoresMasterList"
+            :key="masterListKey(item)"
+            class="grocery-aisle-card grocery-master-card"
+            :class="{ 'grocery-master-card-checked': isMasterListChecked('other-stores', masterListKey(item)) }"
+          >
+            <label class="grocery-product-checkbox-wrap grocery-master-checkbox-wrap">
+              <input
+                type="checkbox"
+                class="grocery-checkbox"
+                :checked="isMasterListChecked('other-stores', masterListKey(item))"
+                @change="toggleMasterListCheck('other-stores', masterListKey(item), item.subline ? item.name + ' | ' + item.subline : item.name)"
+              />
+            </label>
+            <div class="grocery-master-card-content">
+              <div class="grocery-aisle-header grocery-utensils-row">
+                <div class="grocery-aisle-name-col">
+                  <div class="form-section-pill grocery-aisle-dish-pill">
+                    <span class="form-section-pill-input grocery-aisle-dish-text" :class="{ 'line-through': isMasterListChecked('other-stores', masterListKey(item)) }">{{ item.subline ? `${item.name} | ${item.subline}` : item.name }}</span>
+                  </div>
+                </div>
+                <span class="grocery-aisle-header-spacer"></span>
+                <div class="grocery-product-actions grocery-aisle-header-actions">
+                  <span class="qty-controls">
+                    <span class="tabular-nums qty-num grocery-aisle-header-val">{{ item.quantity }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-if="!otherStoresMasterList.length" class="grocery-utensils-empty">
+            No other-store items yet.
+          </div>
+        </div>
+        <div v-if="groceryStore === 'utensils-equipment'" class="grocery-sections grocery-utensils-list">
+          <div
+            v-for="item in equipmentMasterList"
+            :key="masterListKey(item)"
+            class="grocery-aisle-card grocery-master-card"
+            :class="{ 'grocery-master-card-checked': isMasterListChecked('utensils-equipment', masterListKey(item)) }"
+          >
+            <label class="grocery-product-checkbox-wrap grocery-master-checkbox-wrap">
+              <input
+                type="checkbox"
+                class="grocery-checkbox"
+                :checked="isMasterListChecked('utensils-equipment', masterListKey(item))"
+                @change="toggleMasterListCheck('utensils-equipment', masterListKey(item), item.subline ? item.name + ' | ' + item.subline : item.name)"
+              />
+            </label>
+            <div class="grocery-master-card-content">
+              <div class="grocery-aisle-header grocery-utensils-row">
+                <div class="grocery-aisle-name-col">
+                  <div class="form-section-pill grocery-aisle-dish-pill">
+                    <span class="form-section-pill-input grocery-aisle-dish-text" :class="{ 'line-through': isMasterListChecked('utensils-equipment', masterListKey(item)) }">{{ item.subline ? `${item.name} | ${item.subline}` : item.name }}</span>
+                  </div>
+                </div>
+                <span class="grocery-aisle-header-spacer"></span>
+                <div class="grocery-product-actions grocery-aisle-header-actions">
+                  <span class="qty-controls">
+                    <span class="tabular-nums qty-num grocery-aisle-header-val">{{ item.quantity }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-if="!equipmentMasterList.length" class="grocery-utensils-empty">
+            No equipment requested yet.
+          </div>
         </div>
         <div v-if="groceryStore === 'giant'" class="grocery-sections">
           <div v-for="(items, aisle) in groceryList.aisles" :key="aisle" class="grocery-aisle-card">
@@ -2594,6 +2796,81 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem 1rem 1rem;
+}
+
+/* Utensils/Equipment tab: same card style as aisle header, read-only row (no collapse) */
+.grocery-utensils-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Master list cards (Other Stores / Utensils): checkbox left, content right, checkbox centered to pill + detail */
+.grocery-master-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem 0.6rem 1rem;
+}
+.grocery-master-checkbox-wrap {
+  flex-shrink: 0;
+  align-self: center;
+}
+.grocery-master-card-content {
+  flex: 1;
+  min-width: 0;
+}
+.grocery-master-card .grocery-aisle-header {
+  padding-left: 0;
+  padding-right: 2rem;
+}
+.grocery-master-card-checked {
+  opacity: 0.6;
+}
+.grocery-master-card-checked .grocery-aisle-dish-text {
+  text-decoration: line-through;
+}
+
+.grocery-utensils-row {
+  cursor: default;
+  pointer-events: none;
+}
+.grocery-utensils-row:hover {
+  opacity: 1;
+}
+/* Divider and quantity column: full-height divider, centered number */
+.grocery-utensils-row .grocery-aisle-header-actions {
+  align-self: stretch;
+}
+.grocery-utensils-row .grocery-product-actions {
+  align-self: stretch;
+  min-width: 4rem;
+  justify-content: center;
+}
+.grocery-utensils-row .grocery-product-actions .qty-controls {
+  justify-content: center;
+}
+.grocery-utensils-row .grocery-product-actions .qty-num {
+  text-align: center;
+}
+.grocery-utensils-empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--color-lafayette-gray, #3c373c);
+  font-style: italic;
+}
+
+/* Subline under title row — align with text inside pill (header 1rem + pill 1rem) */
+.grocery-master-detail {
+  padding: 0 2rem 0.6rem 1rem;
+  padding-left: 2rem; /* 1rem header + 1rem form-section-pill left = align with pill text */
+  font-size: inherit;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  color: #000 !important;
+  -webkit-text-fill-color: #000;
 }
 
 

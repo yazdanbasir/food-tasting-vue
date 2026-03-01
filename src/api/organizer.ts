@@ -139,6 +139,23 @@ export async function checkGroceryItem(ingredientId: number, checked: boolean): 
   if (!res.ok) throw new Error(`Failed to update item: ${res.status}`)
 }
 
+/** Notify backend when checking Other Stores / Utensils master list items (creates notification like Giant tab). */
+export async function masterListCheckNotify(
+  listType: 'other_stores' | 'utensils_equipment',
+  label: string,
+  checked: boolean,
+): Promise<void> {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/grocery_list/master_list_check`, {
+    method: 'POST',
+    headers: organizerHeaders(),
+    body: JSON.stringify({ list_type: listType, label, checked }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || 'Failed to update notification')
+  }
+}
+
 export async function updateGroceryQuantity(ingredientId: number, quantity: number): Promise<void> {
   const res = await fetch(`${BASE}/api/v1/grocery_list/${ingredientId}`, {
     method: 'PATCH',
