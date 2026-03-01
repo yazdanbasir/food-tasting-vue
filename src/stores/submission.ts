@@ -276,12 +276,18 @@ export const useSubmissionStore = defineStore('submission', () => {
       try {
         const parsed = JSON.parse(rawOther) as unknown
         if (Array.isArray(parsed)) {
-          otherIngredientEntries.value = parsed.map((row) => ({
-            item: String((row as { item?: string }).item ?? ''),
-            size: String((row as { size?: string }).size ?? ''),
-            quantity: String((row as { quantity?: string }).quantity ?? ''),
-            additionalDetails: String((row as { additionalDetails?: string }).additionalDetails ?? ''),
-          }))
+          otherIngredientEntries.value = parsed.map((row) => {
+            const r = row as Record<string, unknown>
+            return {
+              item: String(r?.item ?? '').trim(),
+              size: String(r?.size ?? '').trim(),
+              quantity: String(r?.quantity ?? '').trim(),
+              additionalDetails: String(r?.additionalDetails ?? r?.additional_details ?? '').trim(),
+            }
+          })
+          if (otherIngredientEntries.value.length === 0) {
+            otherIngredientEntries.value = [{ item: '', size: '', quantity: '', additionalDetails: '' }]
+          }
         } else {
           otherIngredientEntries.value = [{ item: rawOther, size: '', quantity: '', additionalDetails: '' }]
         }

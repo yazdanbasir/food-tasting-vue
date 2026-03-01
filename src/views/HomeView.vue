@@ -184,7 +184,7 @@ async function handleSubmit() {
     has_cooking_place: hasCookingPlace.value || undefined,
     cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
     found_all_ingredients: foundAllIngredients.value || undefined,
-    other_ingredients: foundAllIngredients.value === 'no' && otherIngredientEntries.value.length > 0
+    other_ingredients: foundAllIngredients.value === 'no'
       ? JSON.stringify(otherIngredientEntries.value)
       : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
