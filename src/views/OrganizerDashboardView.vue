@@ -7,6 +7,7 @@ import { createConsumer } from '@rails/actioncable'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
+import { DIETARY_FLAGS } from '@/data/dietaryFlags'
 import KitchenResourceSelect from '@/components/KitchenResourceSelect.vue'
 import KitchenResourceMultiSelect from '@/components/KitchenResourceMultiSelect.vue'
 import { getAllSubmissions, type SubmissionResponse } from '@/api/submissions'
@@ -225,8 +226,7 @@ async function switchToKitchens() {
 function switchToPlacards() {
   activeTab.value = 'placards'
   addProductError.value = null
-  // Default: select all submissions
-  selectedPlacardIds.value = new Set(submissions.value.map((s) => s.id))
+  selectedPlacardIds.value = new Set()
 }
 
 function togglePlacardSelection(id: number) {
@@ -1628,16 +1628,30 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 
       <!-- Placards Tab -->
       <div v-else-if="activeTab === 'placards'" class="placards-tab">
+        <!-- Dietary flags legend -->
+        <div class="submission-detail-meta placard-legend-card">
+          <div class="submission-detail-meta-grid placard-legend-grid">
+            <div
+              v-for="{ key, label, icon } in DIETARY_FLAGS"
+              :key="key"
+              class="submission-detail-meta-item"
+            >
+              <component :is="icon" :size="18" class="placard-legend-icon" aria-hidden="true" />
+              <span class="submission-detail-meta-label">{{ label }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Toolbar: select-all toggle + export buttons -->
         <div class="placard-toolbar">
-          <button
-            type="button"
-            class="btn-pill-secondary placard-select-all-btn"
-            @click="toggleAllPlacards"
-          >
-            {{ selectedPlacardIds.size === submissions.length ? 'Deselect All' : 'Select All' }}
-          </button>
           <div class="placard-toolbar-actions">
+            <button
+              type="button"
+              class="btn-pill-primary placard-select-all-btn"
+              @click="toggleAllPlacards"
+            >
+              {{ selectedPlacardIds.size === submissions.length ? 'Deselect All' : 'Select All' }}
+            </button>
             <button
               type="button"
               class="btn-pill-primary"
@@ -1680,8 +1694,8 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
               @click.stop
               @change="togglePlacardSelection(sub.id)"
             />
-            <div class="form-section-pill submission-country-pill">
-              <span class="form-section-pill-input">{{ countryLabel(sub.country_code) }}</span>
+            <div class="form-section-pill">
+              <span class="submission-country-display" :title="countryLabel(sub.country_code)">{{ sub.country_code ? flagEmoji(sub.country_code) : '🏳️' }}</span>
             </div>
             <div class="form-section-pill submission-dish-pill">
               <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name }}</span>
@@ -2280,10 +2294,26 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 }
 
 .grocery-checkbox {
-  width: 1.25rem;
-  height: 1.25rem;
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 1rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: 1px solid #c4c1bc;
   cursor: pointer;
-  accent-color: var(--color-lafayette-red, #6b0f2a);
+  flex-shrink: 0;
+  transition: background-color 0.15s, border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.grocery-checkbox:checked {
+  background-color: var(--color-lafayette-red, #6b0f2a);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  background-size: 65%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .grocery-thumb-clickable {
@@ -2855,10 +2885,25 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
   gap: 0.75rem;
 }
 
+/* Dietary legend card */
+.placard-legend-card {
+  /* extends .submission-detail-meta */
+}
+
+.placard-legend-grid {
+  flex-wrap: wrap !important;
+  gap: 0.75rem 2.5rem !important;
+}
+
+.placard-legend-icon {
+  flex-shrink: 0;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
 .placard-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.75rem;
   flex-wrap: wrap;
 }
@@ -2866,10 +2911,6 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 .placard-toolbar-actions {
   display: flex;
   gap: 0.5rem;
-}
-
-.placard-select-all-btn {
-  font-size: 0.95rem;
 }
 
 .placard-progress {
@@ -2918,18 +2959,73 @@ function effectiveHelperValue(sub: SubmissionResponse): string | null {
 
 .placard-card-selected {
   border-color: var(--color-lafayette-red, #6b0f2a);
-  background-color: #f3eded;
+  background-color: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+}
+
+.placard-card-selected .form-section-pill {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.placard-card-selected .form-section-pill:has(.submission-country-display),
+.placard-card-selected .submission-dish-pill {
+  background: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.placard-card-selected .submission-dish-pill .form-section-pill-input {
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.placard-card-selected .form-section-pill-input {
+  color: #fff;
+}
+
+.placard-card-selected .placard-checkbox {
+  accent-color: #fff;
 }
 
 .placard-card-selected:hover {
-  background-color: #ede5e5;
+  background-color: #5a0d24;
 }
 
+.placard-card-selected:hover .form-section-pill {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.placard-card-selected:hover .form-section-pill:has(.submission-country-display),
+.placard-card-selected:hover .submission-dish-pill {
+  background: #fff;
+}
+
+/* Placard checkbox + country pill: match submissions flag pill (white, pill shape) */
 .placard-checkbox {
-  width: 1.1rem;
-  height: 1.1rem;
-  accent-color: var(--color-lafayette-red, #6b0f2a);
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 1rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: none;
   cursor: pointer;
   flex-shrink: 0;
+  transition: background-color 0.15s, border-color 0.15s;
+  box-sizing: border-box;
 }
+
+.placard-checkbox:checked {
+  background-color: var(--color-lafayette-red, #6b0f2a);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  background-size: 65%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.placard-card-selected .placard-checkbox:checked {
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b0f2a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
 </style>
