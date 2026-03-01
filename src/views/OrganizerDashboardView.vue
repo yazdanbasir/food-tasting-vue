@@ -1965,6 +1965,8 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 
 .sub-header-cell {
   min-width: 0;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .sub-header-center {
@@ -2397,6 +2399,10 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   padding: 0.25rem 1rem;
   border-radius: 9999px;
   background: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c4c1bc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  background-size: 65%;
+  background-position: center;
+  background-repeat: no-repeat;
   border: 1px solid #c4c1bc;
   cursor: pointer;
   flex-shrink: 0;
@@ -2735,6 +2741,9 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 .kitchen-cell .kitchen-cell-inner-editable,
 .kitchen-cell .kitchen-cell-inner-editable span {
   color: #000 !important;
+  min-width: 0;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .kitchen-cell-editable {
@@ -3144,6 +3153,10 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   padding: 0.25rem 1rem;
   border-radius: 9999px;
   background: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c4c1bc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  background-size: 65%;
+  background-position: center;
+  background-repeat: no-repeat;
   border: none;
   cursor: pointer;
   flex-shrink: 0;
@@ -3162,6 +3175,59 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 .placard-card-selected .placard-checkbox:checked {
   background-color: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b0f2a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* ── Mobile: submissions table horizontal scroll ── */
+@media (max-width: 600px) {
+  .dashboard-subtab-bar-row {
+    flex-wrap: nowrap;
+  }
+
+  .dashboard-subtab-bar {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-subtab-row {
+    flex-wrap: nowrap;
+    width: max-content;
+  }
+
+  .dashboard-subtab {
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .dashboard {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .dashboard-body {
+    overflow-y: visible;
+    padding: 1rem;
+    flex: none;
+  }
+
+  .submissions-scroll-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 1rem;
+  }
+
+  .submission-table-header,
+  .submissions-list {
+    min-width: 90rem;
+  }
+
+  .grocery-product-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    word-break: break-word;
+  }
 }
 
 </style>
