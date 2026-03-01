@@ -87,6 +87,26 @@ function submissionPhoneNumbers(sub: SubmissionResponse): string[] {
   return Array.from({ length: max }, (_, i) => phones[i] ?? '—')
 }
 
+/** Parse other_ingredients JSON into rows for "Other Stores" tab in submission detail */
+function parseOtherIngredients(sub: SubmissionResponse): Array<{ item: string; size: string; quantity: string; additionalDetails: string }> {
+  const raw = (sub.other_ingredients ?? '').trim()
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (Array.isArray(parsed)) {
+      return parsed.map((row: Record<string, unknown>) => ({
+        item: String(row?.item ?? '').trim(),
+        size: String(row?.size ?? '').trim(),
+        quantity: String(row?.quantity ?? '').trim(),
+        additionalDetails: String(row?.additionalDetails ?? '').trim(),
+      }))
+    }
+  } catch {
+    /* fall through */
+  }
+  return []
+}
+
 /** Aggregate dietary flags for a submission: true if any ingredient has that flag */
 function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
   const keys = [
@@ -103,6 +123,8 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 
 const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'placards' | 'notifications'>('submissions')
 const groceryStore = ref<'giant' | 'other-stores'>('giant') // tab bar above aisles: Giant | Other Stores
+/** Tab inside each submission detail: Giant (ingredients from grocery) vs Other Stores (other_ingredients list) */
+const submissionDetailStoreTab = ref<'giant' | 'other-stores'>('giant')
 const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('fridges') // Kitchens & Utensils sub-tabs
 const addingKuType = ref<'fridge' | 'kitchen' | 'utensil' | 'helper_driver' | null>(null) // show add-card with input
 const kuAddInputRef = ref<HTMLInputElement | null>(null)
@@ -1215,17 +1237,53 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 </div>
               </div>
               <div class="form-section-ingredients submission-detail-ingredients">
-                <div class="submission-detail-list">
-                  <IngredientRow
-                    v-for="item in sub.ingredients"
-                    :key="item.ingredient.product_id"
-                    :ingredient="toIngredient(item.ingredient)"
-                    :quantity="item.quantity"
-                    :editable="true"
-                    :show-price="true"
-                    @change-qty="(delta) => handleSubmissionIngredientQty(sub.id, item.ingredient.id, item.quantity, delta)"
-                  />
+                <div class="submission-detail-store-bar grocery-store-bar">
+                  <button
+                    type="button"
+                    class="grocery-store-tab"
+                    :class="submissionDetailStoreTab === 'giant' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+                    @click="submissionDetailStoreTab = 'giant'"
+                  >
+                    Giant
+                  </button>
+                  <button
+                    type="button"
+                    class="grocery-store-tab"
+                    :class="submissionDetailStoreTab === 'other-stores' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+                    @click="submissionDetailStoreTab = 'other-stores'"
+                  >
+                    Other Stores
+                  </button>
                 </div>
+                <template v-if="submissionDetailStoreTab === 'giant'">
+                  <div class="submission-detail-list">
+                    <IngredientRow
+                      v-for="item in sub.ingredients"
+                      :key="item.ingredient.product_id"
+                      :ingredient="toIngredient(item.ingredient)"
+                      :quantity="item.quantity"
+                      :editable="true"
+                      :show-price="true"
+                      @change-qty="(delta) => handleSubmissionIngredientQty(sub.id, item.ingredient.id, item.quantity, delta)"
+                    />
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="submission-detail-list submission-detail-other-stores-list">
+                    <template v-if="parseOtherIngredients(sub).length">
+                      <div
+                        v-for="(entry, i) in parseOtherIngredients(sub)"
+                        :key="i"
+                        class="submission-detail-other-stores-row"
+                      >
+                        <span class="submission-detail-other-stores-item">{{ entry.item || '—' }}</span>
+                        <span class="submission-detail-other-stores-meta">{{ [entry.size, entry.quantity].filter(Boolean).join(' · ') || '—' }}</span>
+                        <span v-if="entry.additionalDetails" class="submission-detail-other-stores-details">{{ entry.additionalDetails }}</span>
+                      </div>
+                    </template>
+                    <div v-else class="submission-detail-other-stores-empty">No items from other stores</div>
+                  </div>
+                </template>
               </div>
               <div v-if="addProductError && expandedSubmissions.has(sub.id)" class="dashboard-error add-product-err">
                 {{ addProductError }}
@@ -2238,6 +2296,51 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   flex: none;
   min-height: 0;
   padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* bar uses margin-bottom only so total bar-to-list = 1.75rem, matching main grocery-store-bar */
+}
+
+.submission-detail-store-bar {
+  margin-bottom: 1.75rem; /* same as main grocery-store-bar to first aisle */
+}
+
+.submission-detail-other-stores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.submission-detail-other-stores-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--color-border, #e5e5e5);
+  font-size: inherit;
+  color: var(--color-lafayette-gray, #3c373c);
+}
+.submission-detail-other-stores-row:last-child {
+  border-bottom: none;
+}
+.submission-detail-other-stores-item {
+  font-weight: 500;
+  color: #1a1a1a;
+}
+.submission-detail-other-stores-meta {
+  font-size: 0.9375rem;
+  opacity: 0.9;
+}
+.submission-detail-other-stores-details {
+  width: 100%;
+  font-size: 0.875rem;
+  opacity: 0.85;
+}
+.submission-detail-other-stores-empty {
+  padding: 0.75rem 0;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.8;
+  font-style: italic;
 }
 
 .submission-detail-list {
