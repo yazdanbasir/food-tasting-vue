@@ -68,7 +68,15 @@ onUnmounted(() => {
       @click="toggle"
     >
       {{ selectedLabel }}
-      <span class="country-select-chevron" aria-hidden="true">{{ open ? '▲' : '▼' }}</span>
+      <span
+        class="country-select-chevron"
+        :class="{ 'country-select-chevron-open': open }"
+        aria-hidden="true"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </span>
     </button>
     <div
       v-show="open"
@@ -146,9 +154,14 @@ onUnmounted(() => {
 }
 
 .country-select-chevron {
+  display: inline-flex;
   flex-shrink: 0;
-  font-size: 0.65em;
-  opacity: 0.8;
+  color: inherit;
+  opacity: 0.82;
+  transition: transform 0.2s;
+}
+.country-select-chevron-open {
+  transform: rotate(180deg);
 }
 
 .country-select-dropdown {

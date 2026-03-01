@@ -1397,7 +1397,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 v-if="expandedKuCards.has(kuCardKey('fridge', row.id))"
                 class="ku-card-detail"
               >
-                <div v-if="isKuCardEditing('fridge', row)" class="ku-card-meta ku-card-edit-form">
+                <div v-show="isKuCardEditing('fridge', row)" class="ku-card-meta ku-card-edit-form">
                   <div v-if="kuEditError" class="ku-edit-error">{{ kuEditError }}</div>
                   <div class="ku-card-edit-fields">
                     <div class="ku-card-meta-item">
@@ -1418,7 +1418,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                     </div>
                   </div>
                 </div>
-                <div v-else class="ku-card-meta">
+                <div v-show="!isKuCardEditing('fridge', row)" class="ku-card-meta">
                   <div class="ku-card-meta-grid">
                     <div class="ku-card-meta-item">
                       <span class="ku-card-meta-label">Point Person</span>
@@ -1478,7 +1478,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 v-if="expandedKuCards.has(kuCardKey('kitchen', row.id))"
                 class="ku-card-detail"
               >
-                <div v-if="isKuCardEditing('kitchen', row)" class="ku-card-meta ku-card-edit-form">
+                <div v-show="isKuCardEditing('kitchen', row)" class="ku-card-meta ku-card-edit-form">
                   <div v-if="kuEditError" class="ku-edit-error">{{ kuEditError }}</div>
                   <div class="ku-card-edit-fields">
                     <div class="ku-card-meta-item">
@@ -1499,7 +1499,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                     </div>
                   </div>
                 </div>
-                <div v-else class="ku-card-meta">
+                <div v-show="!isKuCardEditing('kitchen', row)" class="ku-card-meta">
                   <div class="ku-card-meta-grid">
                     <div class="ku-card-meta-item">
                       <span class="ku-card-meta-label">Point Person</span>
@@ -1559,7 +1559,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 v-if="expandedKuCards.has(kuCardKey('utensil', row.id))"
                 class="ku-card-detail"
               >
-                <div v-if="isKuCardEditing('utensil', row)" class="ku-card-meta ku-card-edit-form">
+                <div v-show="isKuCardEditing('utensil', row)" class="ku-card-meta ku-card-edit-form">
                   <div v-if="kuEditError" class="ku-edit-error">{{ kuEditError }}</div>
                   <div class="ku-card-edit-fields">
                     <div class="ku-card-meta-item">
@@ -1580,7 +1580,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                     </div>
                   </div>
                 </div>
-                <div v-else class="ku-card-meta">
+                <div v-show="!isKuCardEditing('utensil', row)" class="ku-card-meta">
                   <div class="ku-card-meta-grid">
                     <div class="ku-card-meta-item">
                       <span class="ku-card-meta-label">Point Person</span>
@@ -1640,7 +1640,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 v-if="expandedKuCards.has(kuCardKey('helper_driver', row.id))"
                 class="ku-card-detail"
               >
-                <div v-if="isKuCardEditing('helper_driver', row)" class="ku-card-meta ku-card-edit-form">
+                <div v-show="isKuCardEditing('helper_driver', row)" class="ku-card-meta ku-card-edit-form">
                   <div v-if="kuEditError" class="ku-edit-error">{{ kuEditError }}</div>
                   <div class="ku-card-edit-fields">
                     <div class="ku-card-meta-item">
@@ -1665,7 +1665,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                     </div>
                   </div>
                 </div>
-                <div v-else class="ku-card-meta">
+                <div v-show="!isKuCardEditing('helper_driver', row)" class="ku-card-meta">
                   <div class="ku-card-meta-grid">
                     <div class="ku-card-meta-item">
                       <span class="ku-card-meta-label">Phone</span>

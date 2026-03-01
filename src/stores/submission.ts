@@ -16,8 +16,12 @@ export const useSubmissionStore = defineStore('submission', () => {
   const dishName = ref('')
   const countryCode = ref('')
   const members = ref<string[]>([])
-  /** One or more US phone numbers. At least one valid number required to advance. */
-  const phoneNumbers = ref<string[]>([''])
+  /** Contact info: name + phone pairs. At least one valid pair required to advance. */
+  const contacts = ref<Array<{ name: string; phone: string }>>([
+    { name: '', phone: '' },
+    { name: '', phone: '' },
+    { name: '', phone: '' },
+  ])
   const hasCookingPlace = ref<'yes' | 'no' | ''>('')
   const cookingLocation = ref('')
   const foundAllIngredients = ref<'yes' | 'no' | ''>('')
@@ -112,10 +116,19 @@ export const useSubmissionStore = defineStore('submission', () => {
     )
   })
 
+  /** Contacts with non-empty name and valid US phone. */
+  const validContacts = computed(() =>
+    contacts.value.filter(
+      (c) =>
+        c.name.trim().length > 0 &&
+        c.phone.trim().length > 0 &&
+        isUSPhoneNumber(c.phone),
+    ),
+  )
+
+  /** Valid phone numbers (for API payload). */
   const validPhoneNumbers = computed(() =>
-    phoneNumbers.value
-      .map((n) => n.trim())
-      .filter((n) => n.length > 0 && isUSPhoneNumber(n)),
+    validContacts.value.map((c) => c.phone.trim()),
   )
 
   const canAdvancePage1 = computed(
@@ -123,7 +136,7 @@ export const useSubmissionStore = defineStore('submission', () => {
       !!countryCode.value &&
       dishName.value.trim().length > 0 &&
       members.value.length > 0 &&
-      validPhoneNumbers.value.length > 0 &&
+      validContacts.value.length > 0 &&
       ingredients.value.length > 0,
   )
 
@@ -137,13 +150,13 @@ export const useSubmissionStore = defineStore('submission', () => {
       needsUtensils.value !== '',
   )
 
-  function addPhone() {
-    phoneNumbers.value = [...phoneNumbers.value, '']
+  function addContact() {
+    contacts.value = [...contacts.value, { name: '', phone: '' }]
   }
 
-  function removePhone(index: number) {
-    if (phoneNumbers.value.length <= 1) return
-    phoneNumbers.value = phoneNumbers.value.filter((_, i) => i !== index)
+  function removeContact(index: number) {
+    if (contacts.value.length <= 1) return
+    contacts.value = contacts.value.filter((_, i) => i !== index)
   }
 
   function reset() {
@@ -151,7 +164,11 @@ export const useSubmissionStore = defineStore('submission', () => {
     dishName.value = ''
     countryCode.value = ''
     members.value = []
-    phoneNumbers.value = ['']
+    contacts.value = [
+      { name: '', phone: '' },
+      { name: '', phone: '' },
+      { name: '', phone: '' },
+    ]
     hasCookingPlace.value = ''
     cookingLocation.value = ''
     foundAllIngredients.value = ''
@@ -178,8 +195,18 @@ export const useSubmissionStore = defineStore('submission', () => {
     countryCode.value = sub.country_code ?? ''
     members.value = [...(sub.members || [])]
     const raw = (sub.phone_number ?? '').trim()
-    phoneNumbers.value = raw ? raw.split(/\s*,\s*/).map((s) => s.trim()).filter(Boolean) : ['']
-    if (phoneNumbers.value.length === 0) phoneNumbers.value = ['']
+    const phones = raw ? raw.split(/\s*,\s*/).map((s) => s.trim()).filter(Boolean) : []
+    const fromPhones =
+      phones.length > 0 ? phones.map((phone) => ({ name: '', phone })) : []
+    const defaultRows = [
+      { name: '', phone: '' },
+      { name: '', phone: '' },
+      { name: '', phone: '' },
+    ]
+    contacts.value =
+      fromPhones.length >= 3
+        ? fromPhones
+        : [...fromPhones, ...defaultRows.slice(fromPhones.length)]
     hasCookingPlace.value = (sub.has_cooking_place as 'yes' | 'no' | '') ?? ''
     cookingLocation.value = sub.cooking_location ?? ''
     foundAllIngredients.value = (sub.found_all_ingredients as 'yes' | 'no' | '') ?? ''
@@ -208,10 +235,11 @@ export const useSubmissionStore = defineStore('submission', () => {
     dishName,
     countryCode,
     members,
-    phoneNumbers,
+    contacts,
+    validContacts,
     validPhoneNumbers,
-    addPhone,
-    removePhone,
+    addContact,
+    removeContact,
     hasCookingPlace,
     cookingLocation,
     foundAllIngredients,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import '@/styles/form-section.css'
-import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import CountrySelect from '@/components/CountrySelect.vue'
@@ -29,13 +29,46 @@ const {
   needsUtensils,
   utensilsNotes,
   otherIngredients,
+  validPhoneNumbers,
+  validContacts,
+  contacts,
+  countryCode,
+  dishName,
 } = storeToRefs(store)
-const phoneIsValid = computed(() =>
-  store.phoneNumber.trim().length === 0 ? false : store.isUSPhoneNumber(store.phoneNumber),
-)
-const phoneIncomplete = computed(
-  () => store.phoneNumber.trim().length > 0 && !phoneIsValid.value,
-)
+const contactDropdownOpen = ref(false)
+const contactDropdownRef = ref<HTMLElement | null>(null)
+const contactTriggerRef = ref<HTMLElement | null>(null)
+
+/** At least one valid name+phone pair (for grocery section and Save button). */
+const hasValidContact = computed(() => validContacts.value.length > 0)
+
+function toggleContactDropdown() {
+  contactDropdownOpen.value = !contactDropdownOpen.value
+}
+
+function handleContactSave() {
+  contactDropdownOpen.value = false
+}
+
+function phoneIncompleteAt(index: number) {
+  const phone = contacts.value[index]?.phone?.trim() ?? ''
+  return phone.length > 0 && !store.isUSPhoneNumber(contacts.value[index]?.phone ?? '')
+}
+
+function handleContactClickOutside(e: MouseEvent) {
+  const target = e.target as Node
+  if (
+    contactDropdownOpen.value &&
+    contactDropdownRef.value && !contactDropdownRef.value.contains(target) &&
+    contactTriggerRef.value && !contactTriggerRef.value.contains(target)
+  ) {
+    contactDropdownOpen.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleContactClickOutside))
+onUnmounted(() => document.removeEventListener('click', handleContactClickOutside))
+
 const router = useRouter()
 
 const membersText = computed({
@@ -49,10 +82,10 @@ const membersText = computed({
 })
 
 const showGrocerySection = computed(() =>
-  Boolean(store.countryCode) &&
-  Boolean(store.dishName.trim()) &&
+  Boolean(countryCode.value) &&
+  Boolean(dishName.value.trim()) &&
   members.value.length > 0 &&
-  phoneIsValid.value,
+  hasValidContact.value,
 )
 
 const remindersExpanded = ref(true)
@@ -88,7 +121,9 @@ async function handleSubmit() {
     notes: '',
     country_code: store.countryCode || '',
     members: [...members.value],
-    phone_number: store.phoneNumber?.trim() || undefined,
+    phone_number: validPhoneNumbers.value.length > 0
+      ? validPhoneNumbers.value.join(', ')
+      : undefined,
     has_cooking_place: hasCookingPlace.value || undefined,
     cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
     found_all_ingredients: foundAllIngredients.value || undefined,
@@ -180,15 +215,16 @@ async function handleSubmit() {
           <div class="form-section-pill home-dish-pill home-dish-pill-country">
             <CountrySelect />
           </div>
-          <div class="form-section-pill home-dish-pill">
+          <div class="form-section-pill home-dish-pill home-dish-pill-dish-name">
             <input
               v-model="store.dishName"
               type="text"
               placeholder="Dish Name"
-              size="11"
+              :size="Math.max(11, (store.dishName || '').length + 1)"
               class="form-section-pill-input pill-input-center"
             />
           </div>
+          <!-- Team member names pill commented out for now
           <div class="form-section-pill home-dish-pill home-dish-pill-grow">
             <input
               v-model="membersText"
@@ -197,26 +233,98 @@ async function handleSubmit() {
               class="form-section-pill-input pill-input-center"
             />
           </div>
-          <div class="form-section-pill home-dish-pill home-dish-pill-phone">
-            <span class="home-phone-pill-inner">
-              <input
-                v-model="store.phoneNumber"
-                type="text"
-                inputmode="tel"
-                placeholder="US Phone Number"
-                size="14"
-                class="form-section-pill-input pill-input-center"
-                :aria-invalid="phoneIncomplete"
-              />
+          -->
+          <div class="form-section-pill home-dish-pill home-dish-pill-phone home-contact-pill-wrap">
+            <button
+              ref="contactTriggerRef"
+              type="button"
+              class="home-contact-trigger"
+              :aria-expanded="contactDropdownOpen"
+              aria-haspopup="dialog"
+              @click="toggleContactDropdown"
+            >
+              Add Contact Info
               <span
-                v-if="phoneIncomplete"
-                class="home-phone-hazard-wrap"
-                title="Please enter a valid US phone number"
-                aria-label="Please enter a valid US phone number"
+                class="home-contact-chevron"
+                :class="{ 'home-contact-chevron-open': contactDropdownOpen }"
+                aria-hidden="true"
               >
-                <TriangleAlert class="home-phone-hazard" aria-hidden="true" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
               </span>
-            </span>
+            </button>
+            <div
+              v-show="contactDropdownOpen"
+              ref="contactDropdownRef"
+              class="home-contact-dropdown"
+              role="dialog"
+            >
+              <div
+                v-for="(contact, i) in contacts"
+                :key="i"
+                class="home-contact-dropdown-row"
+              >
+                <div class="home-contact-pill home-contact-pill-name">
+                  <input
+                    v-model="contact.name"
+                    type="text"
+                    placeholder="Name"
+                    class="home-contact-input"
+                  />
+                </div>
+                <div class="home-contact-pill home-contact-pill-phone">
+                  <span class="home-phone-pill-inner">
+                    <input
+                      v-model="contact.phone"
+                      type="text"
+                      inputmode="tel"
+                      placeholder="Phone"
+                      class="home-contact-input"
+                      :aria-invalid="phoneIncompleteAt(i)"
+                    />
+                    <span
+                      v-if="phoneIncompleteAt(i)"
+                      class="home-phone-hazard-wrap"
+                      title="Enter a valid US phone number"
+                      aria-label="Invalid phone"
+                    >
+                      <TriangleAlert class="home-phone-hazard" aria-hidden="true" />
+                    </span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="home-phone-remove"
+                  :aria-label="`Remove contact ${i + 1}`"
+                  @click.stop="store.removeContact(i)"
+                >
+                  <span class="home-contact-btn-icon" aria-hidden="true">×</span>
+                </button>
+              </div>
+              <div class="home-contact-dropdown-row home-contact-add-row-wrap">
+                <span class="home-contact-add-row-spacer home-contact-add-row-spacer-name" />
+                <span class="home-contact-add-row-spacer home-contact-add-row-spacer-phone" />
+                <button
+                  type="button"
+                  class="home-contact-add-btn-circle"
+                  aria-label="Add row"
+                  @click="store.addContact()"
+                >
+                  <span class="home-contact-btn-icon" aria-hidden="true">+</span>
+                </button>
+              </div>
+              <div class="home-contact-dropdown-footer">
+                <button
+                  type="button"
+                  class="btn-pill-primary"
+                  :disabled="!hasValidContact"
+                  @click="handleContactSave"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -427,7 +535,6 @@ async function handleSubmit() {
   margin: 0;
 }
 
-/* Dish details bar: full width, horizontal pill row */
 .home-dish-bar {
   flex: none;
   width: 100%;
@@ -435,6 +542,27 @@ async function handleSubmit() {
   border-radius: 1rem;
   padding: 0.75rem 1rem;
   box-sizing: border-box;
+}
+
+/* Dish bar pills only: fix height to match form-section default (2.75rem) */
+.home-dish-bar .form-section-pill {
+  min-height: 2.75rem;
+  height: 2.75rem;
+}
+
+.home-dish-bar .form-section-pill-label,
+.home-dish-bar .form-section-pill:has(.form-section-pill-input) {
+  line-height: 2.5rem;
+  padding: 0.25rem 1rem;
+}
+
+.home-dish-bar .form-section-pill-input {
+  min-height: 2.5rem;
+}
+
+.home-dish-bar :deep(.country-select-btn) {
+  min-height: 2.5rem;
+  height: 2.5rem;
 }
 
 .home-dish-bar-inner {
@@ -448,6 +576,12 @@ async function handleSubmit() {
 .home-dish-pill {
   flex: 0 0 auto;
   box-sizing: border-box;
+}
+
+/* Dish name pill: only as wide as needed for placeholder, expands when typing */
+.home-dish-bar .home-dish-pill-dish-name {
+  flex: 0 1 auto;
+  min-width: 9rem;
 }
 
 .home-dish-pill-grow {
@@ -465,6 +599,197 @@ async function handleSubmit() {
   text-align: center;
 }
 
+/* Contact pill: trigger only, opens dropdown. Width synced with dropdown. */
+.home-contact-pill-wrap {
+  position: relative;
+  padding: 0;
+  width: min(36rem, 95vw);
+  min-width: min(36rem, 95vw);
+}
+.home-contact-trigger {
+  width: 100%;
+  padding: 0.25rem 1rem;
+  min-height: 2.5rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--color-lafayette-gray, #3c373c);
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 500;
+  opacity: 0.7;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.home-contact-trigger:hover {
+  opacity: 0.9;
+}
+.home-contact-trigger:focus,
+.home-contact-trigger:focus-visible {
+  outline: none;
+}
+.home-contact-chevron {
+  display: inline-flex;
+  color: inherit;
+  opacity: 0.82;
+  transition: transform 0.2s;
+}
+.home-contact-chevron-open {
+  transform: rotate(180deg);
+}
+.home-contact-dropdown {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-width: 100%;
+  max-height: 22rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+.home-contact-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+}
+.home-contact-add-row-wrap {
+  min-height: 2.5rem;
+}
+.home-contact-add-row-spacer {
+  min-width: 0;
+}
+.home-contact-add-row-spacer-name {
+  flex: 0 1 40%;
+}
+.home-contact-add-row-spacer-phone {
+  flex: 1 1 55%;
+}
+.home-contact-pill {
+  flex: 1 1 0;
+  min-width: 8rem;
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border, #e5e5e5);
+  padding: 0.25rem 0.75rem;
+  background: #fff;
+  overflow: visible;
+}
+.home-contact-pill-name {
+  flex: 0 1 40%;
+  min-width: 10rem;
+}
+.home-contact-pill-phone {
+  flex: 1 1 55%;
+  min-width: 12rem;
+}
+.home-contact-pill .home-phone-pill-inner {
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+}
+.home-contact-input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 500;
+  background: transparent;
+  text-align: center;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.home-contact-input::placeholder {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
+}
+.home-contact-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+  text-align: center;
+}
+.home-contact-add-btn-circle {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.home-contact-add-btn-circle:hover {
+  filter: brightness(1.1);
+}
+.home-contact-add-btn-circle:focus,
+.home-contact-add-btn-circle:focus-visible {
+  outline: none;
+}
+.home-contact-dropdown-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+.home-phone-remove {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.home-phone-remove .home-contact-btn-icon,
+.home-contact-add-btn-circle .home-contact-btn-icon {
+  font-size: inherit;
+}
+.home-phone-remove:hover {
+  filter: brightness(1.1);
+}
+.home-phone-remove:focus {
+  outline: none;
+}
+.home-phone-remove:focus-visible {
+  outline: none;
+}
 .home-phone-pill-inner {
   display: inline-flex;
   align-items: center;
