@@ -41,6 +41,7 @@ const {
   validContacts,
   contacts,
   countryCode,
+  countryNameOther,
   dishName,
   editingSubmissionId,
 } = storeToRefs(store)
@@ -282,6 +283,7 @@ async function handleSubmit() {
     dish_name: store.dishName,
     notes: '',
     country_code: store.countryCode || '',
+    ...(store.countryCode === 'OTHER' && { country_name_other: store.countryNameOther.trim() || undefined }),
     members: validContacts.value.map((c) => c.name.trim()),
     phone_number: validPhoneNumbers.value.length > 0
       ? validPhoneNumbers.value.join(', ')
@@ -395,6 +397,19 @@ async function handleSubmit() {
           <div class="form-section-pill form-section-pill-label">Dish Details</div>
           <div class="form-section-pill home-dish-pill home-dish-pill-country">
             <CountrySelect />
+          </div>
+          <div
+            v-if="countryCode === 'OTHER'"
+            class="form-section-pill home-dish-pill home-dish-pill-country-other"
+          >
+            <input
+              v-model="store.countryNameOther"
+              type="text"
+              placeholder="Country Name"
+              :size="Math.max(12, (store.countryNameOther || '').length + 1)"
+              class="form-section-pill-input pill-input-center"
+              aria-label="Country Name (when Other is selected)"
+            />
           </div>
           <div class="form-section-pill home-dish-pill home-dish-pill-dish-name">
             <input
@@ -1026,6 +1041,11 @@ async function handleSubmit() {
 
 .home-dish-pill-country {
   color: var(--color-lafayette-gray, #3c373c);
+}
+
+.home-dish-bar .home-dish-pill-country-other {
+  flex: 0 1 auto;
+  min-width: 9rem;
 }
 
 .home-dish-display-pill {

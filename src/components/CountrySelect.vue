@@ -4,6 +4,10 @@ import { storeToRefs } from 'pinia'
 import { useSubmissionStore } from '@/stores/submission'
 import { COUNTRIES, DIAL_CODES, flagEmoji } from '@/data/countries'
 
+/** Synthetic option for "Other" in the full country dropdown (non-compact) only */
+const OTHER_COUNTRY_CODE = 'OTHER'
+const OTHER_OPTION = { name: 'Other', code: OTHER_COUNTRY_CODE }
+
 const props = withDefaults(
   defineProps<{ modelValue?: string; compact?: boolean }>(),
   { compact: false },
@@ -25,6 +29,7 @@ const searchInputRef = ref<HTMLInputElement | null>(null)
 
 const selectedLabel = computed(() => {
   if (!effectiveValue.value) return props.compact ? 'Code' : 'Country'
+  if (effectiveValue.value === OTHER_COUNTRY_CODE) return 'Other'
   const c = COUNTRIES.find((x) => x.code === effectiveValue.value)
   if (!c) return props.compact ? 'Code' : 'Country'
   const dial = DIAL_CODES[c.code]
@@ -48,8 +53,10 @@ const filteredCountries = computed(() => {
     }
     return list
   }
-  if (!q) return COUNTRIES
-  return COUNTRIES.filter((c) => c.name.toLowerCase().startsWith(q.toLowerCase()))
+  // Full country list: prepend "Other" when not compact; filter by name
+  const list = !q ? COUNTRIES : COUNTRIES.filter((c) => c.name.toLowerCase().startsWith(q.toLowerCase()))
+  const withOther = props.compact ? list : [OTHER_OPTION, ...list]
+  return withOther
 })
 
 watch(open, async (isOpen) => {
@@ -155,7 +162,8 @@ onUnmounted(() => {
         :aria-selected="effectiveValue === c.code"
         @click.stop="select(c.code)"
       >
-        {{ flagEmoji(c.code) }} {{ compact ? (DIAL_CODES[c.code] ?? c.code) : c.name }}
+        <template v-if="c.code === OTHER_COUNTRY_CODE">🏳️ Other</template>
+        <template v-else>{{ flagEmoji(c.code) }} {{ compact ? (DIAL_CODES[c.code] ?? c.code) : c.name }}</template>
       </button>
       </div>
     </Teleport>

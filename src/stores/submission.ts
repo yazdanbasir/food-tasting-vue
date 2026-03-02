@@ -18,6 +18,8 @@ export const useSubmissionStore = defineStore('submission', () => {
   const teamName = ref('')
   const dishName = ref('')
   const countryCode = ref('')
+  /** When country is "Other", user types the country name here (dish bar only). */
+  const countryNameOther = ref('')
   const members = ref<string[]>([])
   /** Contact info: name, optional country code, and phone. At least one valid pair required to advance. */
   const contacts = ref<Array<{ name: string; phone: string; countryCode: string }>>([
@@ -152,6 +154,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   const canAdvancePage1 = computed(
     () =>
       !!countryCode.value &&
+      (countryCode.value !== 'OTHER' || countryNameOther.value.trim().length > 0) &&
       dishName.value.trim().length > 0 &&
       validContacts.value.length > 0 &&
       ingredients.value.length > 0,
@@ -226,6 +229,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     teamName.value = ''
     dishName.value = ''
     countryCode.value = ''
+    countryNameOther.value = ''
     members.value = []
     contacts.value = [
       { name: '', phone: '', countryCode: '' },
@@ -259,6 +263,9 @@ export const useSubmissionStore = defineStore('submission', () => {
     editingAsOrganizer.value = asOrganizer
     dishName.value = sub.dish_name
     countryCode.value = sub.country_code ?? ''
+    countryNameOther.value = (sub.country_code === 'OTHER' && (sub as { country_name?: string | null }).country_name)
+      ? (sub as { country_name?: string | null }).country_name ?? ''
+      : ''
     members.value = [...(sub.members || [])]
     const names = sub.members || []
     const raw = (sub.phone_number ?? '').trim()
@@ -353,6 +360,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     teamName,
     dishName,
     countryCode,
+    countryNameOther,
     members,
     contacts,
     validContacts,

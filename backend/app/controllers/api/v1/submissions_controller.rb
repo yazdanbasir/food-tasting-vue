@@ -6,12 +6,14 @@ class Api::V1::SubmissionsController < ApplicationController
   # POST /api/v1/submissions
   def create
     raw_country = params[:country_code] || params["country_code"]
+    raw_country_name = params[:country_name_other] || params["country_name_other"]
     raw_members = params[:members] || params["members"]
     attrs = {
       dish_name: params[:dish_name],
       team_name: params[:team_name],
       notes: params[:notes],
       country_code: raw_country.presence,
+      country_name: (raw_country == "OTHER" ? raw_country_name.presence : nil),
       members: raw_members.is_a?(Array) ? raw_members : nil,
       phone_number: params[:phone_number].presence,
       has_cooking_place: params[:has_cooking_place].presence,
@@ -110,6 +112,7 @@ class Api::V1::SubmissionsController < ApplicationController
   def update
     submission = Submission.find(params[:id])
     raw_country = params[:country_code] || params["country_code"]
+    raw_country_name = params[:country_name_other] || params["country_name_other"]
     raw_members = params[:members] || params["members"]
 
     Rails.logger.info "[Submissions#update] other_ingredients=#{params[:other_ingredients].inspect}"
@@ -118,6 +121,7 @@ class Api::V1::SubmissionsController < ApplicationController
       team_name: params[:team_name],
       notes: params[:notes],
       country_code: raw_country.presence,
+      country_name: (raw_country == "OTHER" ? raw_country_name.presence : nil),
       members: raw_members.is_a?(Array) ? raw_members : submission.members,
       phone_number: params[:phone_number].presence,
       has_cooking_place: params[:has_cooking_place].presence,
@@ -267,6 +271,7 @@ class Api::V1::SubmissionsController < ApplicationController
       dish_name: submission.dish_name,
       notes: submission.notes,
       country_code: submission.country_code,
+      country_name: submission.respond_to?(:country_name) ? submission.country_name : nil,
       members: submission.members.is_a?(Array) ? submission.members : [],
       phone_number: submission.phone_number,
       has_cooking_place: submission.has_cooking_place,

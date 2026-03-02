@@ -689,8 +689,9 @@ function formatAisleTitle(aisle: string): string {
   return `Aisle ${aisle}`
 }
 
-function countryLabel(code: string | null): string {
+function countryLabel(code: string | null, countryName?: string | null): string {
   if (!code) return 'country'
+  if (code === 'OTHER' && countryName) return countryName
   const c = COUNTRIES.find((x) => x.code === code)
   return c ? `${flagEmoji(c.code)} ${c.name}` : 'country'
 }
@@ -1376,7 +1377,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
               <!-- Col 1: Country + Dish pills -->
               <div class="submission-bar">
                 <div class="form-section-pill">
-                  <span class="submission-country-display" :title="countryLabel(sub.country_code)">{{ sub.country_code ? flagEmoji(sub.country_code) : '🏳️' }}</span>
+                  <span class="submission-country-display" :title="countryLabel(sub.country_code, sub.country_name)">{{ sub.country_code === 'OTHER' ? '🏳️' : (sub.country_code ? flagEmoji(sub.country_code) : '🏳️') }}</span>
                 </div>
                 <div class="form-section-pill submission-dish-pill">
                   <span class="form-section-pill-input submission-dish-text" :class="{ 'submission-dish-placeholder': !sub.dish_name }">{{ sub.dish_name || 'dish name...' }}</span>
@@ -2368,7 +2369,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
               @change="togglePlacardSelection(row.sub.id)"
             />
             <div class="form-section-pill">
-              <span class="submission-country-display" :title="countryLabel(row.sub.country_code)">{{ row.sub.country_code ? flagEmoji(row.sub.country_code) : '🏳️' }}</span>
+              <span class="submission-country-display" :title="countryLabel(row.sub.country_code, row.sub.country_name)">{{ row.sub.country_code === 'OTHER' ? '🏳️' : (row.sub.country_code ? flagEmoji(row.sub.country_code) : '🏳️') }}</span>
             </div>
             <div class="form-section-pill submission-dish-pill">
               <span class="form-section-pill-input submission-dish-text">{{ row.sub.dish_name }}</span>

@@ -7,6 +7,7 @@ export interface SubmissionPayload {
   dish_name: string
   notes?: string
   country_code?: string
+  country_name_other?: string
   members?: string[]
   phone_number?: string
   has_cooking_place?: string
@@ -44,6 +45,7 @@ export interface SubmissionResponse {
   dish_name: string
   notes: string | null
   country_code: string | null
+  country_name?: string | null
   members: string[]
   phone_number?: string | null
   has_cooking_place?: string | null
