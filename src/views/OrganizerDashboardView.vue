@@ -1491,7 +1491,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 <div class="submission-detail-meta-grid">
                   <div class="submission-detail-meta-left submission-detail-meta-col-1">
                     <div class="submission-detail-meta-item submission-detail-meta-dietary-flags">
-                      <span class="submission-detail-meta-label">Dietary Flags</span>
+                      <span class="submission-detail-meta-label">Dietary Tags</span>
                       <DietaryIcons v-if="Object.values(aggregateDietary(sub)).some(Boolean)" :dietary="aggregateDietary(sub)" :size="18" />
                       <span v-else class="submission-detail-meta-value submission-detail-meta-empty">—</span>
                     </div>
@@ -2286,7 +2286,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
         <!-- Dietary flags bar (same shape as submission-table-header, background matches placard cards) -->
         <div class="submission-table-header placard-dietary-bar">
           <div class="form-section-pill submission-dish-pill placard-dietary-title">
-              <span class="form-section-pill-input submission-dish-text">Dietary Flags</span>
+              <span class="form-section-pill-input submission-dish-text">Dietary Tags</span>
             </div>
           <div
             v-for="{ key, label, icon } in DIETARY_FLAGS"
@@ -2325,7 +2325,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
               class="btn-pill-primary placard-edit-flags-btn"
               @click="editPlacardFlagsMode = !editPlacardFlagsMode"
             >
-              {{ editPlacardFlagsMode ? 'Done' : 'Edit Flags' }}
+              {{ editPlacardFlagsMode ? 'Done' : 'Edit Tags' }}
             </button>
             <button
               type="button"
