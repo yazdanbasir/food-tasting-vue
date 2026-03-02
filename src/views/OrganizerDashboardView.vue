@@ -2388,7 +2388,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 <button
                   type="button"
                   class="placard-flag-add"
-                  aria-label="Add dietary flag"
+                  aria-label="Add dietary tag"
                   @click.stop="openAddDropdown(row.sub.id, $event.currentTarget as HTMLElement)"
                 >
                   <Plus :size="12" aria-hidden="true" />
@@ -2425,7 +2425,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
               </button>
             </template>
             <div v-else class="resource-select-empty">
-              All flags added
+              All tags added
             </div>
           </div>
         </Teleport>
