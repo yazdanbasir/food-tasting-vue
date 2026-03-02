@@ -21,7 +21,9 @@ class Api::V1::SubmissionsController < ApplicationController
       needs_fridge_space: params[:needs_fridge_space].presence,
       needs_utensils: params[:needs_utensils].presence,
       utensils_notes: params[:utensils_notes].presence,
-      dish_temperature: params[:dish_temperature].presence
+      dish_temperature: params[:dish_temperature].presence,
+      dish_description: params[:dish_description].presence,
+      allergen: params[:allergen].presence
     }
     Rails.logger.info "[Submissions#create] other_ingredients param: #{params[:other_ingredients].inspect}"
     @submission = Submission.new(attrs)
@@ -125,7 +127,9 @@ class Api::V1::SubmissionsController < ApplicationController
       needs_fridge_space: params[:needs_fridge_space].presence,
       needs_utensils: params[:needs_utensils].presence,
       utensils_notes: params[:utensils_notes].presence,
-      dish_temperature: params[:dish_temperature].presence
+      dish_temperature: params[:dish_temperature].presence,
+      dish_description: params[:dish_description].presence,
+      allergen: params[:allergen].presence
     )
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
@@ -273,6 +277,8 @@ class Api::V1::SubmissionsController < ApplicationController
       needs_utensils: submission.needs_utensils,
       utensils_notes: submission.utensils_notes,
       dish_temperature: submission.dish_temperature,
+      dish_description: submission.dish_description,
+      allergen: submission.allergen,
       equipment_allocated: submission.equipment_allocated,
       helper_driver_needed: submission.helper_driver_needed,
       fridge_location: submission.fridge_location,

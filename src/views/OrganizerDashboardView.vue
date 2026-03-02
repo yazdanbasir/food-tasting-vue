@@ -643,6 +643,8 @@ function submissionToPayload(sub: SubmissionResponse): Parameters<typeof updateS
     other_ingredients: sub.other_ingredients ?? undefined,
     needs_fridge_space: sub.needs_fridge_space ?? undefined,
     dish_temperature: sub.dish_temperature ?? undefined,
+    dish_description: sub.dish_description ?? undefined,
+    allergen: sub.allergen ?? undefined,
     needs_utensils: sub.needs_utensils ?? undefined,
     utensils_notes: sub.utensils_notes ?? undefined,
     ingredients: (sub.ingredients ?? []).map((item) => ({

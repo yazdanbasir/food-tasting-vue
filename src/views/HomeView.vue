@@ -28,6 +28,10 @@ const {
   foundAllIngredients,
   needsFridgeSpace,
   dishHotOrCold,
+  dishDescription,
+  canShowDishDescriptionSection,
+  allergen,
+  canShowAllergenSection,
   needsUtensils,
   utensilEntries,
   validUtensilEntries,
@@ -293,6 +297,8 @@ async function handleSubmit() {
         : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
     dish_temperature: dishHotOrCold.value || undefined,
+    dish_description: dishDescription.value.trim() || undefined,
+    allergen: allergen.value.trim() || undefined,
     needs_utensils: needsUtensils.value || undefined,
     utensils_notes: needsUtensils.value === 'yes' && utensilEntries.value.length > 0
       ? JSON.stringify(utensilEntries.value)
@@ -848,6 +854,38 @@ async function handleSubmit() {
             </div>
           </div>
 
+          <!-- Dish Description section (shows when all other questions answered) -->
+          <div v-if="canShowDishDescriptionSection" class="home-dish-bar form-section-top-bar">
+            <div class="home-dish-bar-inner">
+              <div class="form-section-pill form-section-pill-label">Dish Description</div>
+              <div class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-pill-dish-description">
+                <input
+                  v-model="dishDescription"
+                  type="text"
+                  placeholder="Tell us about the dish you are cooking and why it's significant"
+                  :size="Math.max(15, (dishDescription || '').length + 1)"
+                  class="form-section-pill-input pill-input-center home-dish-description-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Allergen section (shows when dish description filled; final input before Submit) -->
+          <div v-if="canShowAllergenSection" class="home-dish-bar form-section-top-bar">
+            <div class="home-dish-bar-inner">
+              <div class="form-section-pill form-section-pill-label">Allergen</div>
+              <div class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-pill-allergen">
+                <input
+                  v-model="allergen"
+                  type="text"
+                  placeholder="Does your dish have any known allergens that you are aware of?"
+                  :size="Math.max(15, (allergen || '').length + 1)"
+                  class="form-section-pill-input pill-input-center home-dish-allergen-input"
+                />
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Page 2 footer — always pinned at bottom -->
@@ -963,6 +1001,23 @@ async function handleSubmit() {
 .home-dish-bar .home-dish-pill-dish-name {
   flex: 0 1 auto;
   min-width: 9rem;
+}
+
+.home-dish-bar .home-dish-pill-dish-description {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.home-dish-bar .home-dish-description-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.home-dish-bar .home-dish-pill-allergen {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.home-dish-bar .home-dish-allergen-input {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .home-dish-pill-grow {

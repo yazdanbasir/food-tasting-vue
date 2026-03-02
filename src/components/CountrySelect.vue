@@ -155,7 +155,7 @@ onUnmounted(() => {
         :aria-selected="effectiveValue === c.code"
         @click.stop="select(c.code)"
       >
-        {{ flagEmoji(c.code) }} {{ DIAL_CODES[c.code] ?? c.code }}
+        {{ flagEmoji(c.code) }} {{ compact ? (DIAL_CODES[c.code] ?? c.code) : c.name }}
       </button>
       </div>
     </Teleport>

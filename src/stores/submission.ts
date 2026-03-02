@@ -31,6 +31,8 @@ export const useSubmissionStore = defineStore('submission', () => {
   const needsFridgeSpace = ref<'yes' | 'no' | ''>('')
   const needsUtensils = ref<'yes' | 'no' | ''>('')
   const dishHotOrCold = ref<'hot' | 'cold' | ''>('')
+  const dishDescription = ref('')
+  const allergen = ref('')
   /** Utensil/equipment entries when needs_utensils is 'yes'. Each entry: utensil, size, quantity. Start with one empty row. */
   const utensilEntries = ref<UtensilEntry[]>([{ utensil: '', size: '', quantity: '' }])
   /** Other-store items when found_all_ingredients is 'no'. Each entry: item, size, quantity, additionalDetails. Start with one empty row. */
@@ -165,7 +167,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     utensilEntries.value.filter((e) => e.utensil.trim() !== ''),
   )
 
-  const canSubmit = computed(
+  /** True when all page-2 questions are answered except dish description (used to show Dish Description section). */
+  const canShowDishDescriptionSection = computed(
     () =>
       canAdvancePage1.value &&
       foundAllIngredients.value !== '' &&
@@ -176,6 +179,20 @@ export const useSubmissionStore = defineStore('submission', () => {
       dishHotOrCold.value !== '' &&
       needsUtensils.value !== '' &&
       (needsUtensils.value !== 'yes' || validUtensilEntries.value.length >= 1),
+  )
+
+  /** Allergen section appears as soon as user has filled dish description. */
+  const canShowAllergenSection = computed(
+    () =>
+      canShowDishDescriptionSection.value &&
+      dishDescription.value.trim().length > 0,
+  )
+
+  /** Submit enabled once allergen is filled (dish description already required to show Allergen section). */
+  const canSubmit = computed(
+    () =>
+      canShowAllergenSection.value &&
+      allergen.value.trim().length > 0,
   )
 
   function addOtherIngredientEntry() {
@@ -221,6 +238,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     needsFridgeSpace.value = ''
     needsUtensils.value = ''
     dishHotOrCold.value = ''
+    dishDescription.value = ''
+    allergen.value = ''
     utensilEntries.value = [{ utensil: '', size: '', quantity: '' }]
     otherIngredientEntries.value = [{ item: '', size: '', quantity: '', additionalDetails: '' }]
     ingredients.value = []
@@ -263,6 +282,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     needsFridgeSpace.value = (sub.needs_fridge_space as 'yes' | 'no' | '') ?? ''
     needsUtensils.value = (sub.needs_utensils as 'yes' | 'no' | '') ?? ''
     dishHotOrCold.value = (sub.dish_temperature as 'hot' | 'cold' | '') ?? ''
+    dishDescription.value = sub.dish_description ?? ''
+    allergen.value = sub.allergen ?? ''
     const rawUtensils = (sub.utensils_notes ?? '').trim()
     if (rawUtensils) {
       try {
@@ -343,6 +364,10 @@ export const useSubmissionStore = defineStore('submission', () => {
     foundAllIngredients,
     needsFridgeSpace,
     dishHotOrCold,
+    dishDescription,
+    canShowDishDescriptionSection,
+    allergen,
+    canShowAllergenSection,
     needsUtensils,
     utensilEntries,
     validUtensilEntries,

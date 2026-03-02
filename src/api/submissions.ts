@@ -16,6 +16,8 @@ export interface SubmissionPayload {
   needs_utensils?: string
   utensils_notes?: string
   dish_temperature?: string
+  dish_description?: string
+  allergen?: string
   other_ingredients?: string | null
   ingredients: { ingredient_id: number; quantity: number }[]
 }
@@ -51,6 +53,8 @@ export interface SubmissionResponse {
   needs_utensils?: string | null
   utensils_notes?: string | null
   dish_temperature?: string | null
+  dish_description?: string | null
+  allergen?: string | null
   other_ingredients?: string | null
   equipment_allocated?: string | null
   helper_driver_needed?: string | null
