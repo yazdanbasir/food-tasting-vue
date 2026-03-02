@@ -43,22 +43,29 @@ function select(value: 'hot' | 'cold') {
 
 function handleClickOutside(e: MouseEvent) {
   const target = e.target as Node
-  // Defer so option click/mousedown can run first and set open = false
-  setTimeout(() => {
-    if (
-      open.value &&
-      dropdownRef.value &&
-      !dropdownRef.value.contains(target) &&
-      buttonRef.value &&
-      !buttonRef.value.contains(target)
-    ) {
-      open.value = false
-    }
-  }, 0)
+  if (
+    open.value &&
+    dropdownRef.value &&
+    !dropdownRef.value.contains(target) &&
+    buttonRef.value &&
+    !buttonRef.value.contains(target)
+  ) {
+    open.value = false
+  }
 }
 
-onMounted(() => { document.addEventListener('click', handleClickOutside) })
-onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && open.value) open.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleKeydown)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
@@ -95,7 +102,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
           role="option"
           class="yes-no-select-option"
           :aria-selected="modelValue === option.value"
-          @mousedown.stop="select(option.value)"
+          @mousedown.prevent.stop="select(option.value)"
         >
           {{ option.label }}
         </button>

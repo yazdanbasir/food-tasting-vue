@@ -73,10 +73,6 @@ watch(
   { immediate: true },
 )
 
-function setDishHotOrCold(v: 'hot' | 'cold') {
-  dishHotOrCold.value = v
-}
-
 function toggleContactDropdown() {
   contactDropdownOpen.value = !contactDropdownOpen.value
   if (contactDropdownOpen.value && contactTriggerRef.value) {
@@ -142,6 +138,10 @@ function phoneIncompleteAt(index: number) {
 
 function handleContactClickOutside(e: MouseEvent) {
   const target = e.target as Node
+  // Do not close our dropdowns when user is clicking inside a teleported select (Hot/Cold, Yes/No, Country)
+  if ((target as Element).closest?.('.yes-no-select-dropdown, .hot-cold-select-dropdown, .country-select-dropdown')) {
+    return
+  }
   if (
     contactDropdownOpen.value &&
     contactDropdownRef.value && !contactDropdownRef.value.contains(target) &&
@@ -302,8 +302,6 @@ async function handleSubmit() {
       quantity: item.quantity,
     })),
   }
-
-  console.log('[Other ingredients] Submit — payload.other_ingredients:', payload.other_ingredients != null ? payload.other_ingredients : '(undefined)')
 
   try {
     const editingId = store.editingSubmissionId
@@ -590,9 +588,8 @@ async function handleSubmit() {
               </div>
               <div class="form-section-pill home-dish-pill">
                 <HotColdSelect
-                  :model-value="dishHotOrCold"
+                  v-model="dishHotOrCold"
                   placeholder="Is your dish hot or cold?"
-                  @update:model-value="setDishHotOrCold"
                 />
               </div>
             </div>
