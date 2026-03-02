@@ -243,6 +243,14 @@ const selectedPlacardIds = ref<Set<number>>(new Set())
 const { isExporting, exportProgress, exportPDF, exportPNG } = usePlacardExport()
 const expandedSubmissions = ref<Set<number>>(new Set())
 
+const placardRows = computed(() =>
+  submissions.value.map((sub) => {
+    const dietary = aggregateDietary(sub)
+    const hasDietary = Object.values(dietary).some(Boolean)
+    return { sub, dietary, hasDietary }
+  })
+)
+
 function toggleSubmissionExpanded(id: number) {
   const next = new Set(expandedSubmissions.value)
   if (next.has(id)) next.delete(id)
@@ -2124,13 +2132,6 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
           <div class="placard-toolbar-actions">
             <button
               type="button"
-              class="btn-pill-primary placard-select-all-btn"
-              @click="toggleAllPlacards"
-            >
-              {{ selectedPlacardIds.size === submissions.length ? 'Deselect All' : 'Select All' }}
-            </button>
-            <button
-              type="button"
               class="btn-pill-primary"
               :disabled="isExporting || !selectedPlacardIds.size"
               @click="handleExportPDF"
@@ -2145,6 +2146,16 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
             >
               Export PNG
             </button>
+            <button type="button" class="btn-pill-primary placard-edit-flags-btn">
+              Edit Flags
+            </button>
+            <button
+              type="button"
+              class="btn-pill-primary placard-select-all-btn"
+              @click="toggleAllPlacards"
+            >
+              {{ selectedPlacardIds.size === submissions.length ? 'Deselect All' : 'Select All' }}
+            </button>
           </div>
         </div>
 
@@ -2158,24 +2169,27 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
         <div v-if="!submissions.length" class="dashboard-empty">No submissions yet.</div>
         <div v-else class="placard-list">
           <div
-            v-for="sub in submissions"
-            :key="sub.id"
+            v-for="row in placardRows"
+            :key="row.sub.id"
             class="placard-card"
-            :class="{ 'placard-card-selected': selectedPlacardIds.has(sub.id) }"
-            @click="togglePlacardSelection(sub.id)"
+            :class="{ 'placard-card-selected': selectedPlacardIds.has(row.sub.id) }"
+            @click="togglePlacardSelection(row.sub.id)"
           >
             <input
               type="checkbox"
               class="placard-checkbox"
-              :checked="selectedPlacardIds.has(sub.id)"
+              :checked="selectedPlacardIds.has(row.sub.id)"
               @click.stop
-              @change="togglePlacardSelection(sub.id)"
+              @change="togglePlacardSelection(row.sub.id)"
             />
             <div class="form-section-pill">
-              <span class="submission-country-display" :title="countryLabel(sub.country_code)">{{ sub.country_code ? flagEmoji(sub.country_code) : '🏳️' }}</span>
+              <span class="submission-country-display" :title="countryLabel(row.sub.country_code)">{{ row.sub.country_code ? flagEmoji(row.sub.country_code) : '🏳️' }}</span>
             </div>
             <div class="form-section-pill submission-dish-pill">
-              <span class="form-section-pill-input submission-dish-text">{{ sub.dish_name }}</span>
+              <span class="form-section-pill-input submission-dish-text">{{ row.sub.dish_name }}</span>
+            </div>
+            <div class="grocery-product-dietary placard-row-dietary">
+              <DietaryIcons v-if="row.hasDietary" :dietary="row.dietary" :size="16" />
             </div>
           </div>
         </div>
@@ -3634,6 +3648,11 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   cursor: pointer;
   transition: background-color 0.15s, box-shadow 0.15s;
   border: 2px solid transparent;
+}
+
+.placard-row-dietary {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .placard-card:hover {
