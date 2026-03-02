@@ -7,11 +7,11 @@ import type { SubmissionResponse } from '@/api/submissions'
 export type OtherIngredientEntry = { item: string; size: string; quantity: string; additionalDetails: string }
 export type UtensilEntry = { utensil: string; size: string; quantity: string }
 
-function isUSPhoneNumber(value: string): boolean {
-  const digits = value.replace(/\D/g, '')
-  if (digits.length === 10) return true
-  if (digits.length === 11 && digits.startsWith('1')) return true
-  return false
+/** True if the string contains only digits and common phone formatting (+, spaces, dashes, parentheses). */
+function isPhoneNumbersOnly(value: string): boolean {
+  if (!value.trim()) return true
+  if (!/^\+?[\d\s\-()]*$/.test(value)) return false
+  return value.replace(/\D/g, '').length >= 1
 }
 
 export const useSubmissionStore = defineStore('submission', () => {
@@ -19,11 +19,11 @@ export const useSubmissionStore = defineStore('submission', () => {
   const dishName = ref('')
   const countryCode = ref('')
   const members = ref<string[]>([])
-  /** Contact info: name + phone pairs. At least one valid pair required to advance. */
-  const contacts = ref<Array<{ name: string; phone: string }>>([
-    { name: '', phone: '' },
-    { name: '', phone: '' },
-    { name: '', phone: '' },
+  /** Contact info: name, optional country code, and phone. At least one valid pair required to advance. */
+  const contacts = ref<Array<{ name: string; phone: string; countryCode: string }>>([
+    { name: '', phone: '', countryCode: '' },
+    { name: '', phone: '', countryCode: '' },
+    { name: '', phone: '', countryCode: '' },
   ])
   const hasCookingPlace = ref<'yes' | 'no' | ''>('')
   const cookingLocation = ref('')
@@ -132,13 +132,13 @@ export const useSubmissionStore = defineStore('submission', () => {
     )
   })
 
-  /** Contacts with non-empty name and valid US phone. */
+  /** Contacts with non-empty name and non-empty phone (numbers only, any format). */
   const validContacts = computed(() =>
     contacts.value.filter(
       (c) =>
         c.name.trim().length > 0 &&
         c.phone.trim().length > 0 &&
-        isUSPhoneNumber(c.phone),
+        isPhoneNumbersOnly(c.phone),
     ),
   )
 
@@ -197,7 +197,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   }
 
   function addContact() {
-    contacts.value = [...contacts.value, { name: '', phone: '' }]
+    contacts.value = [...contacts.value, { name: '', phone: '', countryCode: '' }]
   }
 
   function removeContact(index: number) {
@@ -211,9 +211,9 @@ export const useSubmissionStore = defineStore('submission', () => {
     countryCode.value = ''
     members.value = []
     contacts.value = [
-      { name: '', phone: '' },
-      { name: '', phone: '' },
-      { name: '', phone: '' },
+      { name: '', phone: '', countryCode: '' },
+      { name: '', phone: '', countryCode: '' },
+      { name: '', phone: '', countryCode: '' },
     ]
     hasCookingPlace.value = ''
     cookingLocation.value = ''
@@ -248,11 +248,12 @@ export const useSubmissionStore = defineStore('submission', () => {
     const zipped = Array.from({ length: maxLen }, (_, i) => ({
       name: (names[i] ?? '').trim(),
       phone: phones[i] ?? '',
+      countryCode: '', // API has no per-contact country; leave empty on load
     }))
     const defaultRows = [
-      { name: '', phone: '' },
-      { name: '', phone: '' },
-      { name: '', phone: '' },
+      { name: '', phone: '', countryCode: '' },
+      { name: '', phone: '', countryCode: '' },
+      { name: '', phone: '', countryCode: '' },
     ]
     contacts.value =
       zipped.length >= 3 ? zipped : [...zipped, ...defaultRows.slice(zipped.length)]
@@ -370,6 +371,6 @@ export const useSubmissionStore = defineStore('submission', () => {
     setLastSubmitted,
     pendingOrganizerMerge,
     setPendingOrganizerMerge,
-    isUSPhoneNumber,
+    isPhoneNumbersOnly,
   }
 })

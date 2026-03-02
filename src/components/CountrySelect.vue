@@ -2,9 +2,20 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSubmissionStore } from '@/stores/submission'
-import { COUNTRIES, flagEmoji } from '@/data/countries'
+import { COUNTRIES, DIAL_CODES, flagEmoji } from '@/data/countries'
+
+const props = withDefaults(
+  defineProps<{ modelValue?: string; compact?: boolean }>(),
+  { compact: false },
+)
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const { countryCode } = storeToRefs(useSubmissionStore())
+/** When modelValue is provided (e.g. contact row), use it; otherwise use store (dish bar). */
+const effectiveValue = computed(() =>
+  props.modelValue !== undefined ? props.modelValue : countryCode.value,
+)
+
 const open = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const buttonRef = ref<HTMLElement | null>(null)
@@ -13,15 +24,32 @@ const countrySearchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 
 const selectedLabel = computed(() => {
-  if (!countryCode.value) return 'Country'
-  const c = COUNTRIES.find((x) => x.code === countryCode.value)
-  return c ? `${flagEmoji(c.code)} ${c.name}` : 'Country'
+  if (!effectiveValue.value) return props.compact ? 'Code' : 'Country'
+  const c = COUNTRIES.find((x) => x.code === effectiveValue.value)
+  if (!c) return props.compact ? 'Code' : 'Country'
+  const dial = DIAL_CODES[c.code]
+  return props.compact ? `${flagEmoji(c.code)} ${dial ?? c.code}` : `${flagEmoji(c.code)} ${c.name}`
 })
 
 const filteredCountries = computed(() => {
-  const q = countrySearchQuery.value.trim().toLowerCase()
+  const q = countrySearchQuery.value.trim()
+  if (props.compact) {
+    const dialNum = (code: string) => parseInt((DIAL_CODES[code] ?? '').replace(/\D/g, '') || '0', 10)
+    let list = [...COUNTRIES]
+      .filter((c) => c.code !== 'UM') // avoid duplicate +1: US and Minor Outlying Islands
+      .sort((a, b) => dialNum(a.code) - dialNum(b.code))
+    if (q) {
+      const qNorm = q.replace(/\D/g, '')
+      list = list.filter((c) => {
+        const dial = DIAL_CODES[c.code] ?? c.code
+        const dialNorm = dial.replace(/\D/g, '')
+        return dialNorm.includes(qNorm) || dial.toLowerCase().includes(q.toLowerCase())
+      })
+    }
+    return list
+  }
   if (!q) return COUNTRIES
-  return COUNTRIES.filter((c) => c.name.toLowerCase().startsWith(q))
+  return COUNTRIES.filter((c) => c.name.toLowerCase().startsWith(q.toLowerCase()))
 })
 
 watch(open, async (isOpen) => {
@@ -53,7 +81,11 @@ function toggle() {
 }
 
 function select(code: string) {
-  countryCode.value = code
+  if (props.modelValue !== undefined) {
+    emit('update:modelValue', code)
+  } else {
+    countryCode.value = code
+  }
   open.value = false
 }
 
@@ -73,12 +105,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="country-select-wrap">
+  <div class="country-select-wrap" :class="{ 'country-select-wrap--compact': compact }">
     <button
       ref="buttonRef"
       type="button"
       class="country-select-btn"
-      :class="{ 'country-select-btn--placeholder': !countryCode }"
+      :class="{ 'country-select-btn--placeholder': !effectiveValue }"
       aria-haspopup="listbox"
       :aria-expanded="open"
       @click="toggle"
@@ -109,9 +141,9 @@ onUnmounted(() => {
           v-model="countrySearchQuery"
           type="text"
           autocomplete="off"
-          placeholder="Search countries..."
+          :placeholder="props.compact ? 'Search by code...' : 'Search countries...'"
           class="search-input"
-          aria-label="Search countries"
+          :aria-label="props.compact ? 'Search by dial code' : 'Search countries'"
         />
       </div>
       <button
@@ -120,10 +152,10 @@ onUnmounted(() => {
         type="button"
         role="option"
         class="country-select-option"
-        :aria-selected="countryCode === c.code"
-        @click="select(c.code)"
+        :aria-selected="effectiveValue === c.code"
+        @click.stop="select(c.code)"
       >
-        {{ flagEmoji(c.code) }} {{ c.name }}
+        {{ flagEmoji(c.code) }} {{ DIAL_CODES[c.code] ?? c.code }}
       </button>
       </div>
     </Teleport>
@@ -182,6 +214,28 @@ onUnmounted(() => {
 }
 .country-select-chevron-open {
   transform: rotate(180deg);
+}
+
+/* Compact: contact row — match name/phone pill height, width adapts to selected code */
+.country-select-wrap--compact {
+  width: max-content;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+.country-select-wrap--compact .country-select-btn {
+  width: max-content;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  padding: 0 0.5rem;
+  border-radius: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+.country-select-wrap--compact .country-select-chevron {
+  display: none;
 }
 </style>
 

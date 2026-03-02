@@ -133,7 +133,7 @@ async function handleContactSave() {
 
 function phoneIncompleteAt(index: number) {
   const phone = contacts.value[index]?.phone?.trim() ?? ''
-  return phone.length > 0 && !store.isUSPhoneNumber(contacts.value[index]?.phone ?? '')
+  return phone.length > 0 && !store.isPhoneNumbersOnly(contacts.value[index]?.phone ?? '')
 }
 
 function handleContactClickOutside(e: MouseEvent) {
@@ -288,7 +288,7 @@ async function handleSubmit() {
         ? null
         : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
-    dish_temperature: dishHotOrCold.value || undefined,
+    dish_temperature: (store.dishHotOrCold as { value?: string }).value || undefined,
     needs_utensils: needsUtensils.value || undefined,
     utensils_notes: needsUtensils.value === 'yes' && utensilEntries.value.length > 0
       ? JSON.stringify(utensilEntries.value)
@@ -449,6 +449,9 @@ async function handleSubmit() {
                     class="home-contact-input"
                   />
                 </div>
+                <div class="home-contact-pill home-contact-pill-country">
+                  <CountrySelect v-model="contact.countryCode" compact />
+                </div>
                 <div class="home-contact-pill home-contact-pill-phone">
                   <span class="home-phone-pill-inner">
                     <input
@@ -462,7 +465,7 @@ async function handleSubmit() {
                     <span
                       v-if="phoneIncompleteAt(i)"
                       class="home-phone-hazard-wrap"
-                      title="Enter a valid US phone number"
+                      title="Enter numbers only"
                       aria-label="Invalid phone"
                     >
                       <TriangleAlert class="home-phone-hazard" aria-hidden="true" />
@@ -480,6 +483,7 @@ async function handleSubmit() {
               </div>
               <div class="home-contact-dropdown-row home-contact-add-row-wrap">
                 <span class="home-contact-add-row-spacer home-contact-add-row-spacer-name" />
+                <span class="home-contact-add-row-spacer home-contact-add-row-spacer-country" />
                 <span class="home-contact-add-row-spacer home-contact-add-row-spacer-phone" />
                 <button
                   type="button"
@@ -584,7 +588,7 @@ async function handleSubmit() {
                 <HotColdSelect
                   :model-value="dishHotOrCold"
                   placeholder="Is your dish hot or cold?"
-                  @update:model-value="(v: 'hot' | 'cold') => store.$patch({ dishHotOrCold: v })"
+                  @update:model-value="(v: 'hot' | 'cold') => ((store.dishHotOrCold as { value: string }).value = v)"
                 />
               </div>
             </div>
@@ -1238,7 +1242,7 @@ async function handleSubmit() {
 }
 .home-contact-dropdown-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0.5rem;
   min-width: 0;
   min-height: 2.5rem;
@@ -1251,6 +1255,10 @@ async function handleSubmit() {
 }
 .home-contact-add-row-spacer-name {
   flex: 0 1 40%;
+}
+.home-contact-add-row-spacer-country {
+  flex: 0 0 4.75rem;
+  min-width: 4.75rem;
 }
 .home-contact-add-row-spacer-phone {
   flex: 1 1 55%;
@@ -1269,6 +1277,26 @@ async function handleSubmit() {
 .home-contact-pill-name {
   flex: 0 1 40%;
   min-width: 10rem;
+}
+.home-contact-pill-country {
+  flex: 0 0 auto;
+  min-width: 4.75rem;
+  width: max-content;
+  overflow: hidden;
+  padding: 0.25rem 0.75rem;
+  display: flex;
+  align-items: stretch;
+}
+.home-contact-pill-country :deep(.country-select-wrap) {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.home-contact-pill-country :deep(.country-select-btn) {
+  color: var(--color-lafayette-gray, #3c373c) !important;
+}
+.home-contact-pill-country :deep(.country-select-btn--placeholder) {
+  opacity: 0.7;
 }
 .home-contact-pill-phone {
   flex: 1 1 55%;
