@@ -642,6 +642,7 @@ function submissionToPayload(sub: SubmissionResponse): Parameters<typeof updateS
     found_all_ingredients: sub.found_all_ingredients ?? undefined,
     other_ingredients: sub.other_ingredients ?? undefined,
     needs_fridge_space: sub.needs_fridge_space ?? undefined,
+    dish_temperature: sub.dish_temperature ?? undefined,
     needs_utensils: sub.needs_utensils ?? undefined,
     utensils_notes: sub.utensils_notes ?? undefined,
     ingredients: (sub.ingredients ?? []).map((item) => ({
@@ -1494,6 +1495,10 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                       <span class="submission-detail-meta-label">Dietary Tags</span>
                       <DietaryIcons v-if="Object.values(aggregateDietary(sub)).some(Boolean)" :dietary="aggregateDietary(sub)" :size="18" />
                       <span v-else class="submission-detail-meta-value submission-detail-meta-empty">—</span>
+                    </div>
+                    <div class="submission-detail-meta-item submission-detail-meta-dish-type">
+                      <span class="submission-detail-meta-label">Dish Type</span>
+                      <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.dish_temperature }">{{ sub.dish_temperature === 'hot' ? 'Hot' : sub.dish_temperature === 'cold' ? 'Cold' : '—' }}</span>
                     </div>
                     <!-- Ingredients display (commented out for now)
                     <div v-if="sub.found_all_ingredients" class="submission-detail-meta-item submission-detail-meta-ingredients">

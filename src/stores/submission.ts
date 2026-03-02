@@ -30,6 +30,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   const foundAllIngredients = ref<'yes' | 'no' | ''>('')
   const needsFridgeSpace = ref<'yes' | 'no' | ''>('')
   const needsUtensils = ref<'yes' | 'no' | ''>('')
+  const dishHotOrCold = ref<'hot' | 'cold' | ''>('')
   /** Utensil/equipment entries when needs_utensils is 'yes'. Each entry: utensil, size, quantity. Start with one empty row. */
   const utensilEntries = ref<UtensilEntry[]>([{ utensil: '', size: '', quantity: '' }])
   /** Other-store items when found_all_ingredients is 'no'. Each entry: item, size, quantity, additionalDetails. Start with one empty row. */
@@ -172,6 +173,7 @@ export const useSubmissionStore = defineStore('submission', () => {
       hasCookingPlace.value !== '' &&
       (hasCookingPlace.value !== 'yes' || cookingLocation.value.trim().length > 0) &&
       needsFridgeSpace.value !== '' &&
+      dishHotOrCold.value !== '' &&
       needsUtensils.value !== '' &&
       (needsUtensils.value !== 'yes' || validUtensilEntries.value.length >= 1),
   )
@@ -218,6 +220,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     foundAllIngredients.value = ''
     needsFridgeSpace.value = ''
     needsUtensils.value = ''
+    dishHotOrCold.value = ''
     utensilEntries.value = [{ utensil: '', size: '', quantity: '' }]
     otherIngredientEntries.value = [{ item: '', size: '', quantity: '', additionalDetails: '' }]
     ingredients.value = []
@@ -258,6 +261,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     foundAllIngredients.value = (sub.found_all_ingredients as 'yes' | 'no' | '') ?? ''
     needsFridgeSpace.value = (sub.needs_fridge_space as 'yes' | 'no' | '') ?? ''
     needsUtensils.value = (sub.needs_utensils as 'yes' | 'no' | '') ?? ''
+    dishHotOrCold.value = (sub.dish_temperature as 'hot' | 'cold' | '') ?? ''
     const rawUtensils = (sub.utensils_notes ?? '').trim()
     if (rawUtensils) {
       try {
@@ -337,6 +341,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     cookingLocation,
     foundAllIngredients,
     needsFridgeSpace,
+    dishHotOrCold,
     needsUtensils,
     utensilEntries,
     validUtensilEntries,

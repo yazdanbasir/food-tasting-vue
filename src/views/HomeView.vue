@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import CountrySelect from '@/components/CountrySelect.vue'
 import YesNoSelect from '@/components/YesNoSelect.vue'
+import HotColdSelect from '@/components/HotColdSelect.vue'
 import { TriangleAlert } from 'lucide-vue-next'
 import { useSubmissionStore } from '@/stores/submission'
 import { createSubmission, lookupSubmissionByPhone, updateSubmission } from '@/api/submissions'
@@ -26,6 +27,7 @@ const {
   cookingLocation,
   foundAllIngredients,
   needsFridgeSpace,
+  dishHotOrCold,
   needsUtensils,
   utensilEntries,
   validUtensilEntries,
@@ -286,6 +288,7 @@ async function handleSubmit() {
         ? null
         : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
+    dish_temperature: dishHotOrCold.value || undefined,
     needs_utensils: needsUtensils.value || undefined,
     utensils_notes: needsUtensils.value === 'yes' && utensilEntries.value.length > 0
       ? JSON.stringify(utensilEntries.value)
@@ -577,6 +580,13 @@ async function handleSubmit() {
                   placeholder="Do you need fridge space?"
                 />
               </div>
+              <div class="form-section-pill home-dish-pill">
+                <HotColdSelect
+                  :model-value="dishHotOrCold"
+                  placeholder="Is your dish hot or cold?"
+                  @update:model-value="(v: 'hot' | 'cold') => store.$patch({ dishHotOrCold: v })"
+                />
+              </div>
             </div>
           </div>
 
@@ -818,6 +828,17 @@ async function handleSubmit() {
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
                 Thanks! Feel free to edit your form later
+              </div>
+            </div>
+          </div>
+
+          <!-- Dish Type section (shows when dish hot/cold is chosen) -->
+          <div v-if="dishHotOrCold !== ''" class="home-dish-bar form-section-top-bar">
+            <div class="home-dish-bar-inner">
+              <div class="form-section-pill form-section-pill-label">Dish Type</div>
+              <div class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
+                <template v-if="dishHotOrCold === 'cold'">Thanks! We'll provide trays and serving utensils at the event</template>
+                <template v-else>Thanks! We'll provide trays, racks, heating units, and serving utensils at the event</template>
               </div>
             </div>
           </div>
