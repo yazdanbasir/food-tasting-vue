@@ -4115,6 +4115,27 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
     word-break: break-word;
   }
 
+  /* Grocery tab: stack view-mode bar below the store tabs */
+  .grocery-tab-bar-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .grocery-tab-bar-row .grocery-store-bar {
+    max-width: 100%;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .grocery-tab-bar-row .grocery-view-mode-bar {
+    margin-left: 0;
+    align-self: flex-start;
+    width: fit-content;
+  }
+
   /* Assignments tab: stack add-button below the scrollable sub-tab bar */
   .ku-tab-bar-row {
     flex-direction: column;
