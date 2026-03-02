@@ -2,7 +2,7 @@
 # Variants: :full (all fields + price + dietary), :summary (no category, no price decimal), :grocery_list (subset for list items).
 # Pass an Ingredient or a hash-like (e.g. aggregation row with ingredient_id, product_id, name, ...).
 class IngredientSerializer
-  DIETARY_KEYS = %i[is_alcohol gluten dairy egg peanut kosher vegan vegetarian lactose_free wheat_free].freeze
+  DIETARY_KEYS = %i[is_alcohol gluten dairy egg peanut kosher vegan vegetarian lactose_free wheat_free pork shellfish].freeze
 
   def self.as_json(ingredient_or_hash, variant: :full)
     new(ingredient_or_hash, variant).as_json

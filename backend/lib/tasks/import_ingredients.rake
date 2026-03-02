@@ -44,6 +44,8 @@ namespace :import do
           vegetarian:   row["vegetarian"] == 1,
           lactose_free: row["lactose_free"] == 1,
           wheat_free:   row["wheat_free"] == 1,
+          pork:         row["pork"] == 1,
+          shellfish:    row["shellfish"] == 1,
           scraped_at:   scraped_at
         }
 

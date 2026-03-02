@@ -13,7 +13,20 @@
  */
 import { ref, createApp, type App as VueApp } from 'vue'
 import type { SubmissionResponse } from '@/api/submissions'
+import type { IngredientDietary } from '@/types/ingredient'
 import PlacardRenderer from '@/components/PlacardRenderer.vue'
+
+function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
+  const keys = [
+    'is_alcohol', 'gluten', 'dairy', 'egg', 'peanut',
+    'kosher', 'vegan', 'vegetarian', 'lactose_free', 'wheat_free',
+  ] as const
+  const out = {} as IngredientDietary
+  for (const k of keys) {
+    out[k] = sub.ingredients.some((i) => i.ingredient.dietary?.[k])
+  }
+  return out
+}
 
 /** Format current date-time as MM_DD_YYYY_HH_MM */
 function dateTimeSuffix(): string {
@@ -37,10 +50,12 @@ export function usePlacardExport() {
   /**
    * Mount PlacardRenderer for a single submission into a hidden container,
    * wait for images to load, capture with html2canvas, then tear down.
+   * When effectiveDietary is provided, the placard uses it instead of aggregating from ingredients.
    */
   async function renderToCanvas(
     sub: SubmissionResponse,
     html2canvas: typeof import('html2canvas-pro')['default'],
+    effectiveDietary?: IngredientDietary | null,
   ): Promise<HTMLCanvasElement> {
     // Create a host element positioned off-screen
     const host = document.createElement('div')
@@ -54,7 +69,10 @@ export function usePlacardExport() {
 
     let app: VueApp | null = null
     try {
-      app = createApp(PlacardRenderer, { submission: sub })
+      app = createApp(PlacardRenderer, {
+        submission: sub,
+        effectiveDietary: effectiveDietary ?? undefined,
+      })
       app.mount(mountEl)
 
       // Give the browser a frame to render (and load the ISA logo)
@@ -92,7 +110,10 @@ export function usePlacardExport() {
   }
 
   /** Export selected submissions as a single multi-page PDF (landscape A4). */
-  async function exportPDF(submissions: SubmissionResponse[]) {
+  async function exportPDF(
+    submissions: SubmissionResponse[],
+    overrides?: Record<number, IngredientDietary>,
+  ) {
     if (!submissions.length) return
     isExporting.value = true
     exportProgress.value = 'Loading export libraries…'
@@ -109,7 +130,8 @@ export function usePlacardExport() {
 
       for (const [i, sub] of submissions.entries()) {
         exportProgress.value = `Generating placard ${i + 1} of ${submissions.length}…`
-        const canvas = await renderToCanvas(sub, html2canvas)
+        const effective = overrides?.[sub.id] ?? aggregateDietary(sub)
+        const canvas = await renderToCanvas(sub, html2canvas, effective)
 
         const imgData = canvas.toDataURL('image/png')
         if (i > 0) pdf.addPage()
@@ -133,7 +155,10 @@ export function usePlacardExport() {
   }
 
   /** Export selected submissions as individual PNG downloads. */
-  async function exportPNG(submissions: SubmissionResponse[]) {
+  async function exportPNG(
+    submissions: SubmissionResponse[],
+    overrides?: Record<number, IngredientDietary>,
+  ) {
     if (!submissions.length) return
     isExporting.value = true
     exportProgress.value = 'Loading export libraries…'
@@ -143,7 +168,8 @@ export function usePlacardExport() {
 
       for (const [i, sub] of submissions.entries()) {
         exportProgress.value = `Generating placard ${i + 1} of ${submissions.length}…`
-        const canvas = await renderToCanvas(sub, html2canvas)
+        const effective = overrides?.[sub.id] ?? aggregateDietary(sub)
+        const canvas = await renderToCanvas(sub, html2canvas, effective)
 
         // Convert canvas to blob and download
         const blob = await new Promise<Blob>((resolve, reject) => {

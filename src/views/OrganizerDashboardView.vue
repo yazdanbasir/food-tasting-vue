@@ -7,7 +7,8 @@ import { createConsumer } from '@rails/actioncable'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
-import { DIETARY_FLAGS } from '@/data/dietaryFlags'
+import { DIETARY_FLAGS, type DietaryFlagKey } from '@/data/dietaryFlags'
+import { Plus, X } from 'lucide-vue-next'
 import KitchenResourceSelect from '@/components/KitchenResourceSelect.vue'
 import KitchenResourceMultiSelect from '@/components/KitchenResourceMultiSelect.vue'
 import { getAllSubmissions, updateSubmission, type SubmissionResponse } from '@/api/submissions'
@@ -232,6 +233,8 @@ function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
 
 const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'placards' | 'notifications'>('submissions')
 const groceryStore = ref<'giant' | 'other-stores' | 'utensils-equipment'>('giant') // tab bar: Giant | Other Stores | Utensils/Equipment
+/** Giant tab only: show list by aisle (default) or as one flat full list */
+const giantViewMode = ref<'by-aisle' | 'full-list'>('by-aisle')
 /** Tab inside each submission detail: Giant (ingredients from grocery) vs Other Stores (other_ingredients list) */
 const submissionDetailStoreTab = ref<'giant' | 'other-stores'>('giant')
 const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('fridges') // Kitchens & Utensils sub-tabs
@@ -243,9 +246,90 @@ const selectedPlacardIds = ref<Set<number>>(new Set())
 const { isExporting, exportProgress, exportPDF, exportPNG } = usePlacardExport()
 const expandedSubmissions = ref<Set<number>>(new Set())
 
+const editPlacardFlagsMode = ref(false)
+const placardDietaryOverrides = ref<Record<number, IngredientDietary>>({})
+const openAddDropdownForSubId = ref<number | null>(null)
+const addDropdownAnchorRef = ref<HTMLElement | null>(null)
+const placardAddDropdownRef = ref<HTMLElement | null>(null)
+const addDropdownStyle = ref<Record<string, string>>({})
+
+function getEffectivePlacardDietary(sub: SubmissionResponse): IngredientDietary {
+  const overrides = placardDietaryOverrides.value[sub.id]
+  if (overrides) return overrides
+  return aggregateDietary(sub)
+}
+
+function removePlacardFlag(subId: number, key: DietaryFlagKey) {
+  const sub = submissions.value.find((s) => s.id === subId)
+  if (!sub) return
+  const effective = getEffectivePlacardDietary(sub)
+  placardDietaryOverrides.value = {
+    ...placardDietaryOverrides.value,
+    [subId]: { ...effective, [key]: false },
+  }
+}
+
+function addPlacardFlag(subId: number, key: DietaryFlagKey) {
+  const sub = submissions.value.find((s) => s.id === subId)
+  if (!sub) return
+  const effective = getEffectivePlacardDietary(sub)
+  placardDietaryOverrides.value = {
+    ...placardDietaryOverrides.value,
+    [subId]: { ...effective, [key]: true },
+  }
+  openAddDropdownForSubId.value = null
+}
+
+function openAddDropdown(subId: number, anchorEl: HTMLElement) {
+  openAddDropdownForSubId.value = subId
+  addDropdownAnchorRef.value = anchorEl
+  nextTick(() => {
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect()
+      addDropdownStyle.value = {
+        position: 'fixed',
+        top: `${rect.bottom + 4}px`,
+        left: `${rect.left}px`,
+      }
+    }
+  })
+}
+
+function closeAddDropdown() {
+  openAddDropdownForSubId.value = null
+  addDropdownAnchorRef.value = null
+}
+
+function handlePlacardDropdownClickOutside(e: MouseEvent) {
+  if (openAddDropdownForSubId.value == null) return
+  const target = e.target as Node
+  if (placardAddDropdownRef.value?.contains(target)) return
+  if (addDropdownAnchorRef.value?.contains(target)) return
+  closeAddDropdown()
+}
+
+watch(openAddDropdownForSubId, (open) => {
+  if (open) {
+    nextTick(() => document.addEventListener('click', handlePlacardDropdownClickOutside))
+  } else {
+    document.removeEventListener('click', handlePlacardDropdownClickOutside)
+  }
+})
+
+onUnmounted(() => document.removeEventListener('click', handlePlacardDropdownClickOutside))
+
+const placardAddDropdownFlags = computed(() => {
+  const subId = openAddDropdownForSubId.value
+  if (subId == null) return []
+  const sub = submissions.value.find((s) => s.id === subId)
+  if (!sub) return []
+  const effective = getEffectivePlacardDietary(sub)
+  return DIETARY_FLAGS.filter((f) => !effective[f.key])
+})
+
 const placardRows = computed(() =>
   submissions.value.map((sub) => {
-    const dietary = aggregateDietary(sub)
+    const dietary = getEffectivePlacardDietary(sub)
     const hasDietary = Object.values(dietary).some(Boolean)
     return { sub, dietary, hasDietary }
   })
@@ -467,12 +551,12 @@ function toggleAllPlacards() {
 
 function handleExportPDF() {
   const selected = submissions.value.filter((s) => selectedPlacardIds.value.has(s.id))
-  exportPDF(selected)
+  exportPDF(selected, placardDietaryOverrides.value)
 }
 
 function handleExportPNG() {
   const selected = submissions.value.filter((s) => selectedPlacardIds.value.has(s.id))
-  exportPNG(selected)
+  exportPNG(selected, placardDietaryOverrides.value)
 }
 
 function switchToNotifications() {
@@ -638,6 +722,12 @@ const grandTotalQty = computed(() => {
     (sum, items) => sum + items.reduce((s, i) => s + i.total_quantity, 0),
     0,
   )
+})
+
+/** All Giant items in one array (for Full List view) */
+const giantAllItems = computed(() => {
+  if (!groceryList.value) return []
+  return Object.values(groceryList.value.aisles).flat()
 })
 
 function parseEquipmentAllocated(val: string | null | undefined): string[] {
@@ -1512,32 +1602,52 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 
       <!-- Grocery List Tab -->
       <div v-else-if="activeTab === 'grocery' && groceryList">
-        <!-- Store tab bar above Aisles (spacing matches submission-table-header) -->
-        <div class="grocery-store-bar">
-          <button
-            type="button"
-            class="grocery-store-tab"
-            :class="groceryStore === 'giant' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
-            @click="groceryStore = 'giant'"
-          >
-            Giant
-          </button>
-          <button
-            type="button"
-            class="grocery-store-tab"
-            :class="groceryStore === 'other-stores' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
-            @click="groceryStore = 'other-stores'"
-          >
-            Other Stores
-          </button>
-          <button
-            type="button"
-            class="grocery-store-tab"
-            :class="groceryStore === 'utensils-equipment' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
-            @click="groceryStore = 'utensils-equipment'"
-          >
-            Utensils/Equipment
-          </button>
+        <!-- Store tab bar + Giant view toggle (separate bar, right-aligned) -->
+        <div class="grocery-tab-bar-row">
+          <div class="grocery-store-bar">
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="groceryStore === 'giant' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="groceryStore = 'giant'"
+            >
+              Giant
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="groceryStore === 'other-stores' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="groceryStore = 'other-stores'"
+            >
+              Other Stores
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="groceryStore === 'utensils-equipment' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="groceryStore = 'utensils-equipment'"
+            >
+              Utensils/Equipment
+            </button>
+          </div>
+          <div v-if="groceryStore === 'giant'" class="grocery-store-bar grocery-view-mode-bar">
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="giantViewMode === 'by-aisle' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="giantViewMode = 'by-aisle'"
+            >
+              By Aisle
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="giantViewMode === 'full-list' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="giantViewMode = 'full-list'"
+            >
+              Full List
+            </button>
+          </div>
         </div>
         <div v-if="groceryStore === 'other-stores'" class="grocery-sections grocery-utensils-list">
           <div
@@ -1609,7 +1719,8 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
             No equipment requested yet.
           </div>
         </div>
-        <div v-if="groceryStore === 'giant'" class="grocery-sections">
+        <!-- Giant: By Aisle (collapsible aisles) -->
+        <div v-if="groceryStore === 'giant' && giantViewMode === 'by-aisle'" class="grocery-sections">
           <div v-for="(items, aisle) in groceryList.aisles" :key="aisle" class="grocery-aisle-card">
             <!-- Aisle header (collapsible) -->
             <button
@@ -1703,6 +1814,69 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 </div>
               </div>
 
+            </div>
+          </div>
+        </div>
+        <!-- Giant: Full List (single flat list) -->
+        <div v-if="groceryStore === 'giant' && giantViewMode === 'full-list'" class="grocery-sections">
+          <div class="grocery-aisle-card">
+            <div class="grocery-aisle-body">
+              <div
+                v-for="item in giantAllItems"
+                :key="item.ingredient.id"
+                class="grocery-product-row"
+                :class="{ 'grocery-product-row-checked': item.checked }"
+              >
+                <label class="grocery-product-checkbox-wrap">
+                  <input
+                    type="checkbox"
+                    :checked="item.checked"
+                    class="grocery-checkbox"
+                    @change="toggleCheck(item)"
+                  />
+                </label>
+                <IngredientThumb
+                  :ingredient="item.ingredient"
+                  :class="item.ingredient.image_url ? 'grocery-thumb-clickable' : ''"
+                  @click="openGroceryLightbox(item)"
+                />
+                <div class="grocery-product-info">
+                  <span class="grocery-product-name truncate" :class="{ 'line-through': item.checked }">{{ item.ingredient.name }}</span>
+                  <span class="grocery-product-size" :class="{ 'line-through': item.checked }">{{ item.ingredient.size }}</span>
+                </div>
+                <div class="grocery-product-dietary">
+                  <DietaryIcons v-if="item.ingredient.dietary" :dietary="item.ingredient.dietary" :size="16" />
+                </div>
+                <div class="grocery-product-teams truncate" :title="item.teams.join(', ')">
+                  {{ item.teams.join(', ') }}
+                </div>
+                <div class="grocery-product-price tabular-nums">
+                  ${{ ((item.ingredient.price_cents * item.total_quantity) / 100).toFixed(2) }}
+                </div>
+                <div class="grocery-product-actions">
+                  <span class="qty-controls">
+                    <span class="tabular-nums qty-num">{{ item.total_quantity }}</span>
+                    <span class="qty-btn-stack">
+                      <button
+                        type="button"
+                        class="qty-btn"
+                        aria-label="Increase quantity"
+                        @click.prevent.stop="changeQuantity(item, 1)"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                      </button>
+                      <button
+                        type="button"
+                        class="qty-btn"
+                        aria-label="Decrease quantity"
+                        @click.prevent.stop="changeQuantity(item, -1)"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                      </button>
+                    </span>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2146,8 +2320,12 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
             >
               Export PNG
             </button>
-            <button type="button" class="btn-pill-primary placard-edit-flags-btn">
-              Edit Flags
+            <button
+              type="button"
+              class="btn-pill-primary placard-edit-flags-btn"
+              @click="editPlacardFlagsMode = !editPlacardFlagsMode"
+            >
+              {{ editPlacardFlagsMode ? 'Done' : 'Edit Flags' }}
             </button>
             <button
               type="button"
@@ -2188,11 +2366,69 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
             <div class="form-section-pill submission-dish-pill">
               <span class="form-section-pill-input submission-dish-text">{{ row.sub.dish_name }}</span>
             </div>
-            <div class="grocery-product-dietary placard-row-dietary">
-              <DietaryIcons v-if="row.hasDietary" :dietary="row.dietary" :size="16" />
+            <div class="grocery-product-dietary placard-row-dietary placard-flags-row">
+              <template v-if="editPlacardFlagsMode">
+                <span
+                  v-for="{ key, label, icon } in DIETARY_FLAGS.filter((f) => row.dietary[f.key])"
+                  :key="key"
+                  class="placard-flag-wrap"
+                >
+                  <span class="placard-flag-icon-wrap" :title="label">
+                    <component :is="icon" :size="16" class="dietary-icon" aria-hidden="true" />
+                  </span>
+                  <button
+                    type="button"
+                    class="placard-flag-remove"
+                    :aria-label="`Remove ${label}`"
+                    @click.stop="removePlacardFlag(row.sub.id, key)"
+                  >
+                    <X :size="8" aria-hidden="true" />
+                  </button>
+                </span>
+                <button
+                  type="button"
+                  class="placard-flag-add"
+                  aria-label="Add dietary flag"
+                  @click.stop="openAddDropdown(row.sub.id, $event.currentTarget as HTMLElement)"
+                >
+                  <Plus :size="12" aria-hidden="true" />
+                </button>
+              </template>
+              <template v-else>
+                <DietaryIcons v-if="row.hasDietary" :dietary="row.dietary" :size="16" />
+              </template>
             </div>
           </div>
         </div>
+
+        <!-- Add-flag dropdown (resource-select style) -->
+        <Teleport to="body">
+          <div
+            v-if="openAddDropdownForSubId !== null"
+            ref="placardAddDropdownRef"
+            class="resource-select-dropdown placard-add-dropdown"
+            role="listbox"
+            tabindex="-1"
+            :style="addDropdownStyle"
+            @click.stop
+          >
+            <template v-if="placardAddDropdownFlags.length">
+              <button
+                v-for="flag in placardAddDropdownFlags"
+                :key="flag.key"
+                type="button"
+                role="option"
+                class="resource-select-option resource-select-option--single"
+                @click.stop="addPlacardFlag(openAddDropdownForSubId!, flag.key)"
+              >
+                {{ flag.label }}
+              </button>
+            </template>
+            <div v-else class="resource-select-empty">
+              All flags added
+            </div>
+          </div>
+        </Teleport>
       </div>
 
       <!-- Notifications Tab -->
@@ -2664,6 +2900,23 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   min-height: 3.75rem;
   margin-bottom: 1.75rem; /* same total gap as between main tab bar and this bar (0.75rem + 1rem) */
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.grocery-tab-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.grocery-tab-bar-row .grocery-store-bar {
+  margin-bottom: 0;
+}
+
+.grocery-tab-bar-row .grocery-view-mode-bar {
+  margin-left: auto;
 }
 
 .grocery-store-tab {
@@ -3653,6 +3906,72 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 .placard-row-dietary {
   margin-left: auto;
   flex-shrink: 0;
+}
+
+.placard-flags-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.placard-flag-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.125rem;
+}
+
+.placard-flag-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placard-flag-wrap .dietary-icon {
+  color: var(--color-lafayette-gray, #3c373c);
+}
+
+.placard-flag-remove {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.placard-flag-remove:hover {
+  opacity: 0.9;
+}
+
+.placard-flag-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.placard-flag-add:hover {
+  opacity: 0.9;
 }
 
 .placard-card:hover {

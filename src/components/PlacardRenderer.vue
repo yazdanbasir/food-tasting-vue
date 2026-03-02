@@ -19,19 +19,25 @@ import type { IngredientDietary } from '@/types/ingredient'
 
 const props = defineProps<{
   submission: SubmissionResponse
+  effectiveDietary?: IngredientDietary | null
 }>()
 
-/** Aggregate dietary: true if ANY ingredient carries the flag */
-const dietary = computed<IngredientDietary>(() => {
+/** Aggregate dietary from ingredients when effectiveDietary not provided */
+function aggregateDietaryFromSubmission(sub: SubmissionResponse): IngredientDietary {
   const keys = [
     'is_alcohol', 'gluten', 'dairy', 'egg', 'peanut',
     'kosher', 'vegan', 'vegetarian', 'lactose_free', 'wheat_free',
   ] as const
   const out = {} as IngredientDietary
   for (const k of keys) {
-    out[k] = props.submission.ingredients.some((i) => i.ingredient.dietary?.[k])
+    out[k] = sub.ingredients.some((i) => i.ingredient.dietary?.[k])
   }
   return out
+}
+
+const dietary = computed<IngredientDietary>(() => {
+  if (props.effectiveDietary != null) return props.effectiveDietary
+  return aggregateDietaryFromSubmission(props.submission)
 })
 
 const activeFlags = computed(() => DIETARY_FLAGS.filter(({ key }) => dietary.value[key]))
