@@ -43,15 +43,18 @@ function select(value: 'hot' | 'cold') {
 
 function handleClickOutside(e: MouseEvent) {
   const target = e.target as Node
-  if (
-    open.value &&
-    dropdownRef.value &&
-    !dropdownRef.value.contains(target) &&
-    buttonRef.value &&
-    !buttonRef.value.contains(target)
-  ) {
-    open.value = false
-  }
+  // Defer so option click/mousedown can run first and set open = false
+  setTimeout(() => {
+    if (
+      open.value &&
+      dropdownRef.value &&
+      !dropdownRef.value.contains(target) &&
+      buttonRef.value &&
+      !buttonRef.value.contains(target)
+    ) {
+      open.value = false
+    }
+  }, 0)
 }
 
 onMounted(() => { document.addEventListener('click', handleClickOutside) })
@@ -80,7 +83,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
       <div
         v-show="open"
         ref="dropdownRef"
-        class="yes-no-select-dropdown"
+        class="yes-no-select-dropdown hot-cold-select-dropdown"
         :style="dropdownStyle"
         role="listbox"
         tabindex="-1"
@@ -92,7 +95,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
           role="option"
           class="yes-no-select-option"
           :aria-selected="modelValue === option.value"
-          @click="select(option.value)"
+          @mousedown.stop="select(option.value)"
         >
           {{ option.label }}
         </button>
@@ -156,5 +159,11 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   flex-shrink: 0;
   font-size: 0.65em;
   opacity: 0.8;
+}
+</style>
+
+<style>
+.hot-cold-select-dropdown {
+  z-index: 10001;
 }
 </style>

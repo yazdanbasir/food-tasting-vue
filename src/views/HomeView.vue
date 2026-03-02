@@ -73,6 +73,10 @@ watch(
   { immediate: true },
 )
 
+function setDishHotOrCold(v: 'hot' | 'cold') {
+  dishHotOrCold.value = v
+}
+
 function toggleContactDropdown() {
   contactDropdownOpen.value = !contactDropdownOpen.value
   if (contactDropdownOpen.value && contactTriggerRef.value) {
@@ -288,7 +292,7 @@ async function handleSubmit() {
         ? null
         : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
-    dish_temperature: (store.dishHotOrCold as { value?: string }).value || undefined,
+    dish_temperature: dishHotOrCold.value || undefined,
     needs_utensils: needsUtensils.value || undefined,
     utensils_notes: needsUtensils.value === 'yes' && utensilEntries.value.length > 0
       ? JSON.stringify(utensilEntries.value)
@@ -588,7 +592,7 @@ async function handleSubmit() {
                 <HotColdSelect
                   :model-value="dishHotOrCold"
                   placeholder="Is your dish hot or cold?"
-                  @update:model-value="(v: 'hot' | 'cold') => ((store.dishHotOrCold as { value: string }).value = v)"
+                  @update:model-value="setDishHotOrCold"
                 />
               </div>
             </div>
