@@ -4170,9 +4170,26 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
     border-radius: 1rem;
   }
 
+  /* Table keeps horizontal scroll; wider min-width so each column has room for content */
   .submission-table-header:not(.placard-generate-bar):not(.placard-dietary-bar),
   .submissions-scroll-wrap .submissions-list {
-    min-width: 90rem;
+    min-width: 100rem;
+  }
+
+  /* Column minimums so each cell has space for text/dropdowns without cramping */
+  .submission-table-header:not(.placard-generate-bar):not(.placard-dietary-bar),
+  .submission-row {
+    grid-template-columns: minmax(16rem, 2fr) minmax(7rem, 1fr) minmax(9rem, 1fr) minmax(9rem, 1fr) minmax(12rem, 1fr) minmax(12rem, 1fr) minmax(10rem, 1fr) 2rem;
+  }
+
+  .submission-row .kitchen-cell {
+    overflow: visible;
+  }
+
+  .submission-row .kitchen-cell .form-section-pill,
+  .submission-row .kitchen-cell .kitchen-resource-pill {
+    min-width: 0;
+    width: 100%;
   }
 
   .grocery-product-name {
