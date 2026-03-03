@@ -26,6 +26,7 @@ const buttonRef = ref<HTMLElement | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 const countrySearchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
+const isTouchDevice = ref(false)
 
 const selectedLabel = computed(() => {
   if (!effectiveValue.value) return props.compact ? 'Code' : 'Country'
@@ -64,7 +65,9 @@ watch(open, async (isOpen) => {
     countrySearchQuery.value = ''
   } else {
     await nextTick()
-    searchInputRef.value?.focus()
+    if (!isTouchDevice.value) {
+      searchInputRef.value?.focus()
+    }
   }
 })
 
@@ -104,6 +107,12 @@ function handleClickOutside(e: MouseEvent) {
 }
 
 onMounted(() => {
+  if (typeof window !== 'undefined') {
+    isTouchDevice.value =
+      'ontouchstart' in window || navigator.maxTouchPoints > 0 || // most modern browsers
+      // @ts-expect-error: older Safari uses msMaxTouchPoints
+      navigator.msMaxTouchPoints > 0
+  }
   document.addEventListener('click', handleClickOutside)
 })
 onUnmounted(() => {
