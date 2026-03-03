@@ -22,13 +22,6 @@ const route = useRoute()
       >
         Form
       </RouterLink>
-      <RouterLink
-        to="/organizer"
-        class="app-header-link"
-        :class="route.path.startsWith('/organizer') ? 'app-header-link-active' : 'app-header-link-inactive'"
-      >
-        Manage
-      </RouterLink>
     </div>
   </header>
 </template>

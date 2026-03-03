@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLockOverlay } from '@/composables/useLockOverlay'
 import { useSubmissionStore } from '@/stores/submission'
 import '@/styles/form-section.css'
+
+const props = withDefaults(
+  defineProps<{
+    allowPassword?: boolean
+  }>(),
+  {
+    allowPassword: true,
+  },
+)
 
 const router = useRouter()
 const { isLocked, verifyPassword, unlock, lookupByPhone } = useLockOverlay()
@@ -13,26 +22,19 @@ const input = ref('')
 const error = ref<string | null>(null)
 const isLookingUp = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
+const overlayVisible = computed(() => !props.allowPassword || isLocked.value)
+
+if (!props.allowPassword && typeof window !== 'undefined') {
+  const storage = window.localStorage
+  storage.removeItem('organizer_token')
+  storage.removeItem('organizer_username')
+  storage.removeItem('organizer_unlocked')
+}
 
 async function onInput(e: Event) {
   const value = (e.target as HTMLInputElement).value
   input.value = value
   error.value = null
-  if (!value) return
-
-  // Password match → unlock organizer immediately
-  if (verifyPassword(value)) {
-    input.value = ''
-    const result = await unlock(value)
-    if (!result.ok) error.value = result.error
-    return
-  }
-
-  // Phone lookup → auto-trigger as soon as 10+ digits are entered
-  const digitCount = value.replace(/\D/g, '').length
-  if (digitCount >= 10) {
-    await performLookup(value)
-  }
 }
 
 async function performLookup(value: string) {
@@ -43,14 +45,34 @@ async function performLookup(value: string) {
   isLookingUp.value = false
   if (result.ok) {
     submissionStore.loadForEdit(result.submission, false)
+    await router.replace({ path: '/organizer' })
     router.push('/')
   } else {
     error.value = result.error
   }
 }
 
-watch(isLocked, (locked) => {
-  if (locked) {
+async function handleEnter() {
+  const value = input.value
+  error.value = null
+  if (!value) return
+
+  if (!props.allowPassword && /[A-Za-z]/.test(value)) {
+    error.value = 'Enter phone number only'
+    return
+  }
+
+  if (props.allowPassword && verifyPassword(value)) {
+    const result = await unlock(value)
+    if (!result.ok) error.value = result.error
+    return
+  }
+
+  await performLookup(value)
+}
+
+watch(overlayVisible, (visible) => {
+  if (visible) {
     input.value = ''
     error.value = null
     requestAnimationFrame(() => inputRef.value?.focus({ preventScroll: true }))
@@ -70,16 +92,15 @@ function onKeydown(e: KeyboardEvent) {
     <slot />
 
     <Teleport to="body">
-      <Transition name="lock-fade">
-        <div
-          v-if="isLocked"
-          class="lock-overlay fixed inset-x-0 top-0 z-[2147483647] flex items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Unlock app"
-          @keydown.tab.prevent="onKeydown"
-        >
-          <div class="flex flex-col items-center gap-4">
+      <div
+        v-if="overlayVisible"
+        class="lock-overlay fixed inset-x-0 top-0 z-[2147483647] flex items-center justify-center"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Unlock app"
+        @keydown.tab.prevent="onKeydown"
+      >
+        <div class="flex flex-col items-center gap-4">
 
             <svg
               class="lock-icon lock-overlay-icon"
@@ -105,7 +126,7 @@ function onKeydown(e: KeyboardEvent) {
                 <span
                   v-if="!input.length"
                   class="lock-password-placeholder"
-                >Enter password or phone number</span>
+                >{{ props.allowPassword ? 'Enter password or phone number' : 'Enter phone number' }}</span>
                 <span v-else class="lock-password-dots">{{ '•'.repeat(input.length) }}</span>
               </div>
               <input
@@ -115,6 +136,7 @@ function onKeydown(e: KeyboardEvent) {
                 autocomplete="off"
                 class="lock-password-input"
                 @input="onInput"
+                @keydown.enter.prevent="handleEnter"
               />
             </div>
 
@@ -124,12 +146,15 @@ function onKeydown(e: KeyboardEvent) {
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
               </button>
-              <span class="lock-back-caption">(I made a mistake. I shouldn't be here. Take me back!)</span>
+              <button type="button" class="btn-pill-primary lock-back-btn" aria-label="Enter" @click="handleEnter">
+                <svg class="lock-overlay-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
 
-          </div>
         </div>
-      </Transition>
+      </div>
     </Teleport>
   </div>
 </template>
@@ -275,19 +300,10 @@ function onKeydown(e: KeyboardEvent) {
   border-color: var(--color-lafayette-gray, #3c373c);
 }
 
-.lock-fade-enter-active,
-.lock-fade-leave-active {
-  transition: opacity 0.3s ease-out;
-}
-.lock-fade-enter-from,
-.lock-fade-leave-to {
-  opacity: 0;
-}
-
 .lock-back-block {
   margin-top: 0.25rem;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 0.75rem;
 }

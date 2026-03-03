@@ -2,7 +2,7 @@
 import '@/styles/form-section.css'
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import type { Ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
@@ -23,9 +23,11 @@ import type { Ingredient, IngredientDietary } from '@/types/ingredient'
 import { usePlacardExport } from '@/composables/usePlacardExport'
 
 const router = useRouter()
+const route = useRoute()
 const submissionStore = useSubmissionStore()
 const notifStore = useNotificationStore()
 const { isLocked } = useLockOverlay()
+const isStudentLookupOnly = computed(() => route.query.mode === 'student-edit')
 
 // Re-load kitchen resources after the organizer unlocks, since onMounted runs
 // before auth and the first attempt silently fails (401, no token yet).
@@ -136,7 +138,7 @@ function aggregatedOtherStoresList(): { name: string; subline: string; quantity:
     for (const entry of parseOtherIngredients(sub)) {
       const key = `${entry.item}|${entry.size}|${entry.additionalDetails}`
       const subline = [entry.size, entry.additionalDetails].filter(Boolean).join(' · ')
-      const qty = Math.max(0, parseInt(entry.quantity, 10) || 0)
+      const qty = Math.max(0, parseOtherIngredientQuantity(entry.quantity))
       const existing = byKey.get(key)
       if (existing) {
         existing.quantity += qty
@@ -182,6 +184,20 @@ function parseOtherIngredients(sub: SubmissionResponse): Array<{ item: string; s
     /* fall through */
   }
   return []
+}
+
+/** Quantity is stored as "number unit" (e.g. "2 lb"). Return the numeric part for display. */
+function parseOtherIngredientQuantity(qtyStr: string): number {
+  const s = String(qtyStr ?? '').trim()
+  const m = s.match(/^\d+(\.\d+)?/)
+  return m ? parseFloat(m[0]) : 0
+}
+
+/** Quantity is stored as "number unit". Return the unit part (e.g. "lb") or "". */
+function getOtherIngredientUnit(qtyStr: string): string {
+  const s = String(qtyStr ?? '').trim()
+  const m = s.match(/^\d+(\.\d+)?\s*(.*)$/)
+  return (m?.[2] ?? '').trim()
 }
 
 const EMPTY_DIETARY: IngredientDietary = {
@@ -235,8 +251,8 @@ const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'placards' | 'not
 const groceryStore = ref<'giant' | 'other-stores' | 'utensils-equipment'>('giant') // tab bar: Giant | Other Stores | Utensils/Equipment
 /** Giant tab only: show list by aisle (default) or as one flat full list */
 const giantViewMode = ref<'by-aisle' | 'full-list'>('by-aisle')
-/** Tab inside each submission detail: Giant (ingredients from grocery) vs Other Stores (other_ingredients list) */
-const submissionDetailStoreTab = ref<'giant' | 'other-stores'>('giant')
+/** Tab inside each submission detail card: Giant vs Other Stores, tracked per submission id */
+const submissionDetailStoreTabById = ref<Record<number, 'giant' | 'other-stores'>>({})
 const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('fridges') // Kitchens & Utensils sub-tabs
 const addingKuType = ref<'fridge' | 'kitchen' | 'utensil' | 'helper_driver' | null>(null) // show add-card with input
 const kuAddInputRef = ref<HTMLInputElement | null>(null)
@@ -245,6 +261,17 @@ const groceryList = ref<GroceryListResponse | null>(null)
 const selectedPlacardIds = ref<Set<number>>(new Set())
 const { isExporting, exportProgress, exportPDF, exportPNG } = usePlacardExport()
 const expandedSubmissions = ref<Set<number>>(new Set())
+
+function getSubmissionDetailStoreTab(subId: number): 'giant' | 'other-stores' {
+  return submissionDetailStoreTabById.value[subId] ?? 'giant'
+}
+
+function setSubmissionDetailStoreTab(subId: number, tab: 'giant' | 'other-stores') {
+  submissionDetailStoreTabById.value = {
+    ...submissionDetailStoreTabById.value,
+    [subId]: tab,
+  }
+}
 
 const editPlacardFlagsMode = ref(false)
 const placardDietaryOverrides = ref<Record<number, IngredientDietary>>({})
@@ -478,6 +505,10 @@ async function loadSubmissions() {
   error.value = null
   try {
     submissions.value = await getAllSubmissions()
+    const first = submissions.value[0]
+    if (first) {
+      console.log('[OrganizerDashboard] first submission dish_description=', first.dish_description, 'allergen=', first.allergen)
+    }
     const pending = submissionStore.pendingOrganizerMerge
     if (pending) {
       const idx = submissions.value.findIndex((s) => s.id === pending.id)
@@ -664,8 +695,10 @@ async function handleOtherIngredientQty(
   addProductError.value = null
   const entries = parseOtherIngredients(sub)
   if (entryIndex < 0 || entryIndex >= entries.length) return
+  const unit = getOtherIngredientUnit(entries[entryIndex]!.quantity)
+  const newQuantityStr = unit ? `${newQty} ${unit}` : String(newQty)
   const updated = entries.map((e, i) =>
-    i === entryIndex ? { ...e, quantity: String(newQty) } : e
+    i === entryIndex ? { ...e, quantity: newQuantityStr } : e
   )
   const otherIngredientsJson = JSON.stringify(
     updated.map((e) => ({
@@ -1277,7 +1310,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 </script>
 
 <template>
-  <LockOverlay>
+  <LockOverlay :allow-password="!isStudentLookupOnly">
   <div class="md:h-full flex flex-col dashboard">
     <!-- Tab bar row: maroon pill bar + (when Notifications) Mark all read outside bar, far right -->
     <div class="dashboard-subtab-bar-row">
@@ -1549,26 +1582,36 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                   </div>
                 </div>
               </div>
+              <div class="submission-detail-meta submission-detail-dish-allergen">
+                <div class="submission-detail-dish-allergen-row">
+                  <span class="submission-detail-meta-label">Dish Description</span>
+                  <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.dish_description }">{{ sub.dish_description || '—' }}</span>
+                </div>
+                <div class="submission-detail-dish-allergen-row">
+                  <span class="submission-detail-meta-label">Known Allergens</span>
+                  <span class="submission-detail-meta-value" :class="{ 'submission-detail-meta-empty': !sub.allergen }">{{ sub.allergen || '—' }}</span>
+                </div>
+              </div>
               <div class="form-section-ingredients submission-detail-ingredients">
                 <div class="submission-detail-store-bar grocery-store-bar">
                   <button
                     type="button"
                     class="grocery-store-tab"
-                    :class="submissionDetailStoreTab === 'giant' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
-                    @click="submissionDetailStoreTab = 'giant'"
+                    :class="getSubmissionDetailStoreTab(sub.id) === 'giant' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+                    @click="setSubmissionDetailStoreTab(sub.id, 'giant')"
                   >
                     Giant
                   </button>
                   <button
                     type="button"
                     class="grocery-store-tab"
-                    :class="submissionDetailStoreTab === 'other-stores' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
-                    @click="submissionDetailStoreTab = 'other-stores'"
+                    :class="getSubmissionDetailStoreTab(sub.id) === 'other-stores' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+                    @click="setSubmissionDetailStoreTab(sub.id, 'other-stores')"
                   >
                     Other Stores
                   </button>
                 </div>
-                <template v-if="submissionDetailStoreTab === 'giant'">
+                <template v-if="getSubmissionDetailStoreTab(sub.id) === 'giant'">
                   <div class="submission-detail-list">
                     <IngredientRow
                       v-for="item in sub.ingredients"
@@ -1588,10 +1631,11 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                         v-for="(entry, i) in parseOtherIngredients(sub)"
                         :key="i"
                         :ingredient="otherEntryToIngredient(entry, i)"
-                        :quantity="Number(entry.quantity) || 0"
+                        :quantity="parseOtherIngredientQuantity(entry.quantity)"
+                        :quantity-unit="getOtherIngredientUnit(entry.quantity)"
                         :editable="true"
                         :show-price="false"
-                        @change-qty="(delta) => handleOtherIngredientQty(sub, i, Number(entry.quantity) || 0, delta)"
+                        @change-qty="(delta) => handleOtherIngredientQty(sub, i, parseOtherIngredientQuantity(entry.quantity), delta)"
                       />
                     </template>
                     <div v-else class="submission-detail-other-stores-empty">No items from other stores</div>
@@ -2821,6 +2865,29 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
   color: var(--color-lafayette-gray, #3c373c);
   opacity: 0.7;
   font-style: italic;
+}
+
+.submission-detail-dish-allergen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+.submission-detail-dish-allergen-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  min-width: 0;
+}
+.submission-detail-dish-allergen-row .submission-detail-meta-label {
+  flex: 0 0 10.5rem;
+  text-align: left;
+}
+.submission-detail-dish-allergen-row .submission-detail-meta-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .submission-detail-meta-phone .submission-detail-meta-value {

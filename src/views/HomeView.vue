@@ -7,7 +7,7 @@ import CountrySelect from '@/components/CountrySelect.vue'
 import YesNoSelect from '@/components/YesNoSelect.vue'
 import HotColdSelect from '@/components/HotColdSelect.vue'
 import { TriangleAlert } from 'lucide-vue-next'
-import { useSubmissionStore } from '@/stores/submission'
+import { useSubmissionStore, OTHER_INGREDIENT_SIZE_OPTIONS, OTHER_INGREDIENT_QUANTITY_UNITS } from '@/stores/submission'
 import { createSubmission, lookupSubmissionByPhone, updateSubmission } from '@/api/submissions'
 
 const IngredientSearch = defineAsyncComponent(
@@ -37,6 +37,7 @@ const {
   validUtensilEntries,
   otherIngredientEntries,
   validOtherIngredientEntries,
+  hasPartialOtherIngredientRows,
   validPhoneNumbers,
   validContacts,
   contacts,
@@ -53,6 +54,12 @@ const otherIngredientsDropdownOpen = ref(false)
 const otherIngredientsDropdownRef = ref<HTMLElement | null>(null)
 const otherIngredientsTriggerRef = ref<HTMLElement | null>(null)
 const otherIngredientsDropdownStyle = ref<Record<string, string>>({})
+const openPackageRowIndex = ref<number | null>(null)
+const openUnitRowIndex = ref<number | null>(null)
+const packageDropdownStyle = ref<Record<string, string>>({})
+const unitDropdownStyle = ref<Record<string, string>>({})
+const packageDropdownRef = ref<HTMLElement | null>(null)
+const unitDropdownRef = ref<HTMLElement | null>(null)
 const utensilsDropdownOpen = ref(false)
 const utensilsDropdownRef = ref<HTMLElement | null>(null)
 const utensilsTriggerRef = ref<HTMLElement | null>(null)
@@ -162,6 +169,20 @@ function handleContactClickOutside(e: MouseEvent) {
     otherIngredientsDropdownOpen.value = false
   }
   if (
+    openPackageRowIndex.value !== null &&
+    !(target as Element).closest?.('.home-other-ingredients-package-trigger') &&
+    !packageDropdownRef.value?.contains(target)
+  ) {
+    openPackageRowIndex.value = null
+  }
+  if (
+    openUnitRowIndex.value !== null &&
+    !(target as Element).closest?.('.home-other-ingredients-unit-trigger') &&
+    !unitDropdownRef.value?.contains(target)
+  ) {
+    openUnitRowIndex.value = null
+  }
+  if (
     utensilsDropdownOpen.value &&
     utensilsDropdownRef.value && !utensilsDropdownRef.value.contains(target) &&
     utensilsTriggerRef.value && !utensilsTriggerRef.value.contains(target)
@@ -181,6 +202,46 @@ function toggleOtherIngredientsDropdown() {
       left: `${left}px`,
       width: `${rect.width}px`,
     }
+  }
+}
+
+function openPackageDropdown(i: number, e: MouseEvent) {
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  packageDropdownStyle.value = {
+    position: 'fixed',
+    top: `${rect.bottom + 4}px`,
+    left: `${rect.left}px`,
+    minWidth: `${rect.width}px`,
+  }
+  openPackageRowIndex.value = i
+}
+
+function selectPackage(opt: string) {
+  if (openPackageRowIndex.value !== null) {
+    const entry = store.otherIngredientEntries[openPackageRowIndex.value]
+    if (entry) entry.size = opt
+    openPackageRowIndex.value = null
+  }
+}
+
+function openUnitDropdown(i: number, e: MouseEvent) {
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  unitDropdownStyle.value = {
+    position: 'fixed',
+    top: `${rect.bottom + 4}px`,
+    left: `${rect.left}px`,
+    minWidth: `${rect.width}px`,
+  }
+  openUnitRowIndex.value = i
+}
+
+function selectUnit(opt: string) {
+  if (openUnitRowIndex.value !== null) {
+    const entry = store.otherIngredientEntries[openUnitRowIndex.value]
+    if (entry) entry.quantityUnit = opt
+    openUnitRowIndex.value = null
   }
 }
 
@@ -229,10 +290,24 @@ const showGrocerySection = computed(() =>
   hasValidContact.value,
 )
 
+const showEditSubmissionCta = computed(() => {
+  const hasAnyTypedContact = contacts.value.some((contact) =>
+    Boolean((contact.name || '').trim()) || Boolean((contact.phone || '').trim()),
+  )
+  return !countryCode.value &&
+    !dishName.value.trim() &&
+    !countryNameOther.value.trim() &&
+    !hasAnyTypedContact
+})
+
 const remindersExpanded = ref(true)
 watch(showGrocerySection, (show) => {
   if (show) remindersExpanded.value = false
 })
+
+function goToSubmissionLookup() {
+  router.push({ path: '/organizer', query: { mode: 'student-edit' } })
+}
 
 // Page state: 1 = Dish Details + Grocery List, 2 = Additional Details
 const currentPage = ref(1)
@@ -291,16 +366,21 @@ async function handleSubmit() {
     has_cooking_place: hasCookingPlace.value || undefined,
     cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
     found_all_ingredients: foundAllIngredients.value || undefined,
-    // Always send other_ingredients when section is active: list when 'no', null when 'yes' so backend can save or clear
+    // Always send other_ingredients when section is active: list when 'no', null when 'yes' so backend can save or clear (only complete rows; quantity sent as "number unit")
     other_ingredients: foundAllIngredients.value === 'no'
-      ? JSON.stringify(otherIngredientEntries.value)
+      ? JSON.stringify(validOtherIngredientEntries.value.map((e) => ({
+          item: e.item,
+          size: e.size,
+          quantity: `${e.quantity} ${e.quantityUnit}`.trim(),
+          additionalDetails: e.additionalDetails,
+        })))
       : foundAllIngredients.value === 'yes'
         ? null
         : undefined,
     needs_fridge_space: needsFridgeSpace.value || undefined,
     dish_temperature: dishHotOrCold.value || undefined,
-    dish_description: dishDescription.value.trim() || undefined,
-    allergen: allergen.value.trim() || undefined,
+    dish_description: (dishDescription.value || '').trim(),
+    allergen: (allergen.value || '').trim(),
     needs_utensils: needsUtensils.value || undefined,
     utensils_notes: needsUtensils.value === 'yes' && utensilEntries.value.length > 0
       ? JSON.stringify(utensilEntries.value)
@@ -311,10 +391,13 @@ async function handleSubmit() {
     })),
   }
 
+  console.log('[Submit] payload dish_description=', payload.dish_description, 'allergen=', payload.allergen)
+
   try {
     const editingId = store.editingSubmissionId
     if (editingId != null) {
       const result = await updateSubmission(editingId, payload)
+      console.log('[Submit] update response dish_description=', result.dish_description, 'allergen=', result.allergen)
       const asOrganizer = store.editingAsOrganizer
       store.clearEdit()
       if (asOrganizer) {
@@ -326,6 +409,7 @@ async function handleSubmit() {
       }
     } else {
       const { submission } = await createSubmission(payload)
+      console.log('[Submit] create response dish_description=', submission.dish_description, 'allergen=', submission.allergen)
       console.log('[Other ingredients] Create response — submission.other_ingredients:', (submission as { other_ingredients?: string }).other_ingredients ?? '(undefined)')
       store.reset()
       store.setLastSubmitted(submission)
@@ -547,6 +631,178 @@ async function handleSubmit() {
                   <div class="form-section-pill form-section-pill-search">
                     <IngredientSearch :hide-price="true" />
                   </div>
+                  <div class="form-section-pill home-dish-pill home-dish-pill-grow home-other-ingredients-pill-wrap">
+                    <button
+                      ref="otherIngredientsTriggerRef"
+                      type="button"
+                      class="home-contact-trigger"
+                      :class="{ 'home-contact-trigger--saved': validOtherIngredientEntries.length >= 1 }"
+                      :aria-expanded="otherIngredientsDropdownOpen"
+                      aria-haspopup="dialog"
+                      @click="toggleOtherIngredientsDropdown"
+                    >
+                      {{ validOtherIngredientEntries.length >= 1 ? `${validOtherIngredientEntries.length} item(s) listed` : 'Add items you could not find' }}
+                      <span
+                        class="home-contact-chevron"
+                        :class="{ 'home-contact-chevron-open': otherIngredientsDropdownOpen }"
+                        aria-hidden="true"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </span>
+                    </button>
+                    <Teleport to="body">
+                      <div
+                        v-show="otherIngredientsDropdownOpen"
+                        ref="otherIngredientsDropdownRef"
+                        class="home-other-ingredients-dropdown"
+                        :style="otherIngredientsDropdownStyle"
+                        role="dialog"
+                      >
+                      <div
+                        v-for="(entry, i) in otherIngredientEntries"
+                        :key="i"
+                        class="home-other-ingredients-dropdown-row"
+                      >
+                        <div class="home-other-ingredients-pill home-other-ingredients-pill-item">
+                          <input
+                            v-model="entry.item"
+                            type="text"
+                            placeholder="Item (Pls be specific!)"
+                            class="home-contact-input"
+                          />
+                        </div>
+                        <div class="home-other-ingredients-pill home-other-ingredients-pill-size">
+                          <button
+                            type="button"
+                            class="home-other-ingredients-select-btn home-other-ingredients-package-trigger"
+                            :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.size }"
+                            aria-haspopup="listbox"
+                            :aria-expanded="openPackageRowIndex === i"
+                            :aria-label="entry.size || 'Package'"
+                            @click="openPackageDropdown(i, $event)"
+                          >
+                            {{ entry.size || 'Package' }}
+                            <span class="home-other-ingredients-select-chevron" aria-hidden="true">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6" />
+                              </svg>
+                            </span>
+                          </button>
+                        </div>
+                        <div class="home-other-ingredients-pill home-other-ingredients-pill-qty">
+                          <input
+                            v-model="entry.quantity"
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="Qty"
+                            class="home-contact-input home-other-ingredients-qty-input"
+                            aria-label="Quantity amount"
+                          />
+                          <button
+                            type="button"
+                            class="home-other-ingredients-select-btn home-other-ingredients-unit-trigger"
+                            :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.quantityUnit }"
+                            aria-haspopup="listbox"
+                            :aria-expanded="openUnitRowIndex === i"
+                            :aria-label="entry.quantityUnit || 'Unit'"
+                            @click="openUnitDropdown(i, $event)"
+                          >
+                            {{ entry.quantityUnit || 'Unit' }}
+                            <span class="home-other-ingredients-select-chevron" aria-hidden="true">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6" />
+                              </svg>
+                            </span>
+                          </button>
+                        </div>
+                        <div class="home-other-ingredients-pill home-other-ingredients-pill-details">
+                          <input
+                            v-model="entry.additionalDetails"
+                            type="text"
+                            placeholder="Details"
+                            class="home-contact-input"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          class="home-phone-remove"
+                          :aria-label="`Remove row ${i + 1}`"
+                          @click.stop="store.removeOtherIngredientEntry(i)"
+                        >
+                          <span class="home-contact-btn-icon" aria-hidden="true">×</span>
+                        </button>
+                      </div>
+                      <div class="home-contact-dropdown-row home-contact-add-row-wrap">
+                        <span class="home-other-ingredients-add-spacer" />
+                        <button
+                          type="button"
+                          class="home-contact-add-btn-circle"
+                          aria-label="Add row"
+                          @click="store.addOtherIngredientEntry()"
+                        >
+                          <span class="home-contact-btn-icon" aria-hidden="true">+</span>
+                        </button>
+                      </div>
+                      <div class="home-contact-dropdown-footer">
+                        <button
+                          type="button"
+                          class="btn-pill-primary"
+                          :disabled="validOtherIngredientEntries.length < 1 || hasPartialOtherIngredientRows"
+                          @click="handleOtherIngredientsSave"
+                        >
+                          Save
+                        </button>
+                      </div>
+                      </div>
+                    </Teleport>
+                    <Teleport to="body">
+                      <div
+                        v-show="openPackageRowIndex !== null"
+                        ref="packageDropdownRef"
+                        class="country-select-dropdown"
+                        :style="packageDropdownStyle"
+                        role="listbox"
+                        tabindex="-1"
+                      >
+                        <button
+                          v-for="opt in OTHER_INGREDIENT_SIZE_OPTIONS"
+                          :key="opt || 'empty'"
+                          type="button"
+                          role="option"
+                          class="country-select-option"
+                          :aria-selected="openPackageRowIndex !== null && store.otherIngredientEntries[openPackageRowIndex]?.size === opt"
+                          @click.stop="selectPackage(opt)"
+                        >
+                          {{ opt || 'Package' }}
+                        </button>
+                      </div>
+                    </Teleport>
+                    <Teleport to="body">
+                      <div
+                        v-show="openUnitRowIndex !== null"
+                        ref="unitDropdownRef"
+                        class="country-select-dropdown"
+                        :style="unitDropdownStyle"
+                        role="listbox"
+                        tabindex="-1"
+                      >
+                        <button
+                          v-for="u in OTHER_INGREDIENT_QUANTITY_UNITS"
+                          :key="u || 'empty'"
+                          type="button"
+                          role="option"
+                          class="country-select-option"
+                          :aria-selected="openUnitRowIndex !== null && store.otherIngredientEntries[openUnitRowIndex]?.quantityUnit === u"
+                          @click.stop="selectUnit(u)"
+                        >
+                          {{ u || 'Unit' }}
+                        </button>
+                      </div>
+                    </Teleport>
+                  </div>
                 </div>
                 <div class="form-section-ingredients-body">
                   <IngredientList />
@@ -569,6 +825,15 @@ async function handleSubmit() {
             </template>
           </Suspense>
         </div>
+        <div v-else-if="showEditSubmissionCta" class="home-main home-edit-submission-state" aria-live="polite">
+          <button
+            type="button"
+            class="btn-pill-primary home-edit-submission-btn"
+            @click="goToSubmissionLookup"
+          >
+            Click here to edit your submission
+          </button>
+        </div>
       </div>
     </div>
 
@@ -583,12 +848,6 @@ async function handleSubmit() {
           <div class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Additional Details</div>
-              <div class="form-section-pill home-dish-pill">
-                <YesNoSelect
-                  v-model="foundAllIngredients"
-                  placeholder="Did you find all ingredients?"
-                />
-              </div>
               <div class="form-section-pill home-dish-pill">
                 <YesNoSelect
                   v-model="hasCookingPlace"
@@ -612,115 +871,6 @@ async function handleSubmit() {
                   v-model="dishHotOrCold"
                   placeholder="Is your dish hot or cold?"
                 />
-              </div>
-            </div>
-          </div>
-
-          <!-- Other Ingredients section (shows when foundAllIngredients is answered) -->
-          <div v-if="foundAllIngredients !== ''" class="home-dish-bar form-section-top-bar">
-            <div class="home-dish-bar-inner">
-              <div class="form-section-pill form-section-pill-label">Other Ingredients</div>
-              <div v-if="foundAllIngredients === 'no'" class="form-section-pill home-dish-pill home-dish-pill-grow home-other-ingredients-pill-wrap">
-                <button
-                  ref="otherIngredientsTriggerRef"
-                  type="button"
-                  class="home-contact-trigger"
-                  :class="{ 'home-contact-trigger--saved': validOtherIngredientEntries.length >= 1 }"
-                  :aria-expanded="otherIngredientsDropdownOpen"
-                  aria-haspopup="dialog"
-                  @click="toggleOtherIngredientsDropdown"
-                >
-                  {{ validOtherIngredientEntries.length >= 1 ? `${validOtherIngredientEntries.length} item(s) listed` : 'List items you could not find on the previous page' }}
-                  <span
-                    class="home-contact-chevron"
-                    :class="{ 'home-contact-chevron-open': otherIngredientsDropdownOpen }"
-                    aria-hidden="true"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </span>
-                </button>
-                <Teleport to="body">
-                  <div
-                    v-show="otherIngredientsDropdownOpen"
-                    ref="otherIngredientsDropdownRef"
-                    class="home-other-ingredients-dropdown"
-                    :style="otherIngredientsDropdownStyle"
-                    role="dialog"
-                  >
-                  <div
-                    v-for="(entry, i) in otherIngredientEntries"
-                    :key="i"
-                    class="home-other-ingredients-dropdown-row"
-                  >
-                    <div class="home-other-ingredients-pill home-other-ingredients-pill-item">
-                      <input
-                        v-model="entry.item"
-                        type="text"
-                        placeholder="Item (PLEASE BE SPECIFIC!)"
-                        class="home-contact-input"
-                      />
-                    </div>
-                    <div class="home-other-ingredients-pill home-other-ingredients-pill-size">
-                      <input
-                        v-model="entry.size"
-                        type="text"
-                        placeholder="Size"
-                        class="home-contact-input"
-                      />
-                    </div>
-                    <div class="home-other-ingredients-pill home-other-ingredients-pill-qty">
-                      <input
-                        v-model="entry.quantity"
-                        type="text"
-                        placeholder="Quantity"
-                        class="home-contact-input"
-                      />
-                    </div>
-                    <div class="home-other-ingredients-pill home-other-ingredients-pill-details">
-                      <input
-                        v-model="entry.additionalDetails"
-                        type="text"
-                        placeholder="Additional Details"
-                        class="home-contact-input"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      class="home-phone-remove"
-                      :aria-label="`Remove row ${i + 1}`"
-                      @click.stop="store.removeOtherIngredientEntry(i)"
-                    >
-                      <span class="home-contact-btn-icon" aria-hidden="true">×</span>
-                    </button>
-                  </div>
-                  <div class="home-contact-dropdown-row home-contact-add-row-wrap">
-                    <span class="home-other-ingredients-add-spacer" />
-                    <button
-                      type="button"
-                      class="home-contact-add-btn-circle"
-                      aria-label="Add row"
-                      @click="store.addOtherIngredientEntry()"
-                    >
-                      <span class="home-contact-btn-icon" aria-hidden="true">+</span>
-                    </button>
-                  </div>
-                  <div class="home-contact-dropdown-footer">
-                    <button
-                      type="button"
-                      class="btn-pill-primary"
-                      :disabled="validOtherIngredientEntries.length < 1"
-                      @click="handleOtherIngredientsSave"
-                    >
-                      Save
-                    </button>
-                  </div>
-                  </div>
-                </Teleport>
-              </div>
-              <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
-                Thanks! Feel free to edit your form later
               </div>
             </div>
           </div>
@@ -1239,6 +1389,15 @@ async function handleSubmit() {
   overflow: hidden;
 }
 
+.home-edit-submission-state {
+  align-items: center;
+  justify-content: center;
+}
+
+.home-edit-submission-btn {
+  min-height: 2.75rem;
+}
+
 .home-main-page2 {
   flex: 1;
   min-height: 0;
@@ -1527,28 +1686,97 @@ async function handleSubmit() {
   background: #fff;
   overflow: visible;
   min-width: 0;
+  min-height: 2.5rem;
 }
 .home-other-ingredients-pill-item {
   flex: 1 1 28%;
   min-width: 5rem;
 }
+.home-other-ingredients-pill-item .home-contact-input {
+  min-height: 2.5rem;
+}
 .home-other-ingredients-pill-size {
   flex: 0 1 15%;
-  min-width: 4rem;
+  min-width: 5rem;
 }
 .home-other-ingredients-pill-qty {
-  flex: 0 1 12%;
-  min-width: 3.5rem;
+  flex: 0 1 18%;
+  min-width: 8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.home-other-ingredients-qty-input {
+  width: 3.5rem;
+  min-width: 3rem;
+  min-height: 2.5rem;
+  text-align: center;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 9999px;
+  padding: 0.25rem 0.5rem;
+  background: #fff;
+  -moz-appearance: textfield;
+}
+.home-other-ingredients-qty-input::-webkit-outer-spin-button,
+.home-other-ingredients-qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.home-other-ingredients-qty-input::placeholder {
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
+}
+/* Same as country-select-btn (custom dropdown trigger, not native select) */
+.home-other-ingredients-select-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.25rem 1rem;
+  min-height: 2.5rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--color-lafayette-gray, #3c373c) !important;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  outline: none;
+}
+.home-other-ingredients-select-btn--placeholder {
+  opacity: 0.7;
+}
+.home-other-ingredients-select-btn:hover {
+  opacity: 0.85;
+}
+.home-other-ingredients-select-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.82;
+}
+.home-other-ingredients-pill-qty .home-other-ingredients-select-btn {
+  flex: 1;
+  min-width: 0;
 }
 .home-other-ingredients-pill-details {
   flex: 1 1 30%;
   min-width: 5rem;
 }
+.home-other-ingredients-pill-details .home-contact-input {
+  min-height: 2.5rem;
+}
 .home-other-ingredients-add-spacer {
   flex: 1 1 0;
   min-width: 0;
 }
-
 /* ── Utensils dropdown ── */
 .home-utensils-dropdown {
   max-height: 22rem;

@@ -8,25 +8,43 @@ class Api::V1::SubmissionsController < ApplicationController
     raw_country = params[:country_code] || params["country_code"]
     raw_country_name = params[:country_name_other] || params["country_name_other"]
     raw_members = params[:members] || params["members"]
+
+    # Read all simple scalar fields via the common helper so JSON shape (wrapped vs top-level) never matters.
+    raw_dish_name         = submission_param(:dish_name)
+    raw_team_name         = submission_param(:team_name)
+    raw_notes             = submission_param(:notes)
+    raw_phone_number      = submission_param(:phone_number)
+    raw_has_cooking_place = submission_param(:has_cooking_place)
+    raw_cooking_location  = submission_param(:cooking_location)
+    raw_found_all         = submission_param(:found_all_ingredients)
+    raw_other_ingredients = submission_param(:other_ingredients)
+    raw_needs_fridge      = submission_param(:needs_fridge_space)
+    raw_needs_utensils    = submission_param(:needs_utensils)
+    raw_utensils_notes    = submission_param(:utensils_notes)
+    raw_dish_temperature  = submission_param(:dish_temperature)
+    raw_dish_description  = submission_param(:dish_description)
+    raw_allergen          = submission_param(:allergen)
+
     attrs = {
-      dish_name: params[:dish_name],
-      team_name: params[:team_name],
-      notes: params[:notes],
+      dish_name: raw_dish_name,
+      team_name: raw_team_name,
+      notes: raw_notes,
       country_code: raw_country.presence,
       country_name: (raw_country == "OTHER" ? raw_country_name.presence : nil),
       members: raw_members.is_a?(Array) ? raw_members : nil,
-      phone_number: params[:phone_number].presence,
-      has_cooking_place: params[:has_cooking_place].presence,
-      cooking_location: params[:cooking_location].presence,
-      found_all_ingredients: params[:found_all_ingredients].presence,
-      other_ingredients: params[:other_ingredients].presence,
-      needs_fridge_space: params[:needs_fridge_space].presence,
-      needs_utensils: params[:needs_utensils].presence,
-      utensils_notes: params[:utensils_notes].presence,
-      dish_temperature: params[:dish_temperature].presence,
-      dish_description: params[:dish_description].presence,
-      allergen: params[:allergen].presence
+      phone_number: raw_phone_number.presence,
+      has_cooking_place: raw_has_cooking_place.presence,
+      cooking_location: raw_cooking_location.presence,
+      found_all_ingredients: raw_found_all.presence,
+      other_ingredients: raw_other_ingredients.presence,
+      needs_fridge_space: raw_needs_fridge.presence,
+      needs_utensils: raw_needs_utensils.presence,
+      utensils_notes: raw_utensils_notes.presence,
+      dish_temperature: raw_dish_temperature.presence,
+      dish_description: raw_dish_description.presence,
+      allergen: raw_allergen.presence
     }
+    Rails.logger.info "[Submissions#create] dish_description=#{raw_dish_description.inspect} allergen=#{raw_allergen.inspect}"
     Rails.logger.info "[Submissions#create] other_ingredients param: #{params[:other_ingredients].inspect}"
     @submission = Submission.new(attrs)
     Rails.logger.info "[Submissions#create] @submission.other_ingredients after new: #{@submission.other_ingredients.inspect}"
@@ -51,7 +69,9 @@ class Api::V1::SubmissionsController < ApplicationController
       message: "by #{members_str} \u00b7 #{n} ingredient#{n == 1 ? '' : 's'}"
     )
 
+    @submission.reload
     json = submission_json(@submission)
+    Rails.logger.info "[Submissions#create] after reload dish_description=#{@submission.dish_description.inspect} allergen=#{@submission.allergen.inspect}"
     Rails.logger.info "[Submissions#create] submission_json other_ingredients: #{json[:other_ingredients].inspect}"
     render json: { submission: json }, status: :created
   rescue ActiveRecord::RecordInvalid => e
@@ -115,25 +135,42 @@ class Api::V1::SubmissionsController < ApplicationController
     raw_country_name = params[:country_name_other] || params["country_name_other"]
     raw_members = params[:members] || params["members"]
 
-    Rails.logger.info "[Submissions#update] other_ingredients=#{params[:other_ingredients].inspect}"
+    # Read all simple scalar fields via the common helper so JSON shape (wrapped vs top-level) never matters.
+    raw_dish_name         = submission_param(:dish_name)
+    raw_team_name         = submission_param(:team_name)
+    raw_notes             = submission_param(:notes)
+    raw_phone_number      = submission_param(:phone_number)
+    raw_has_cooking_place = submission_param(:has_cooking_place)
+    raw_cooking_location  = submission_param(:cooking_location)
+    raw_found_all         = submission_param(:found_all_ingredients)
+    raw_other_ingredients = submission_param(:other_ingredients)
+    raw_needs_fridge      = submission_param(:needs_fridge_space)
+    raw_needs_utensils    = submission_param(:needs_utensils)
+    raw_utensils_notes    = submission_param(:utensils_notes)
+    raw_dish_temperature  = submission_param(:dish_temperature)
+    raw_dish_description  = submission_param(:dish_description)
+    raw_allergen          = submission_param(:allergen)
+
+    Rails.logger.info "[Submissions#update] dish_description=#{raw_dish_description.inspect} allergen=#{raw_allergen.inspect}"
+    Rails.logger.info "[Submissions#update] other_ingredients=#{raw_other_ingredients.inspect}"
     submission.assign_attributes(
-      dish_name: params[:dish_name],
-      team_name: params[:team_name],
-      notes: params[:notes],
+      dish_name: raw_dish_name,
+      team_name: raw_team_name,
+      notes: raw_notes,
       country_code: raw_country.presence,
       country_name: (raw_country == "OTHER" ? raw_country_name.presence : nil),
       members: raw_members.is_a?(Array) ? raw_members : submission.members,
-      phone_number: params[:phone_number].presence,
-      has_cooking_place: params[:has_cooking_place].presence,
-      cooking_location: params[:cooking_location].presence,
-      found_all_ingredients: params[:found_all_ingredients].presence,
-      other_ingredients: params[:other_ingredients].presence,
-      needs_fridge_space: params[:needs_fridge_space].presence,
-      needs_utensils: params[:needs_utensils].presence,
-      utensils_notes: params[:utensils_notes].presence,
-      dish_temperature: params[:dish_temperature].presence,
-      dish_description: params[:dish_description].presence,
-      allergen: params[:allergen].presence
+      phone_number: raw_phone_number.presence,
+      has_cooking_place: raw_has_cooking_place.presence,
+      cooking_location: raw_cooking_location.presence,
+      found_all_ingredients: raw_found_all.presence,
+      other_ingredients: raw_other_ingredients.presence,
+      needs_fridge_space: raw_needs_fridge.presence,
+      needs_utensils: raw_needs_utensils.presence,
+      utensils_notes: raw_utensils_notes.presence,
+      dish_temperature: raw_dish_temperature.presence,
+      dish_description: raw_dish_description.presence,
+      allergen: raw_allergen.presence
     )
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
@@ -178,7 +215,9 @@ class Api::V1::SubmissionsController < ApplicationController
       message: "by #{editor_label} \u00b7 #{change_str}"
     )
 
-    render json: submission_json(submission.reload), status: :ok
+    submission.reload
+    Rails.logger.info "[Submissions#update] after save dish_description=#{submission.dish_description.inspect} allergen=#{submission.allergen.inspect}"
+    render json: submission_json(submission), status: :ok
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
@@ -234,7 +273,6 @@ class Api::V1::SubmissionsController < ApplicationController
 
     input_tail = digits.last(10)
     Rails.logger.info "[lookup] input_tail=#{input_tail.inspect} (length #{input_tail.length})"
-    return render json: { error: "Phone required" }, status: :unprocessable_entity if input_tail.length < 7
 
     matches = Submission
       .includes(submission_ingredients: :ingredient)
@@ -246,8 +284,15 @@ class Api::V1::SubmissionsController < ApplicationController
       parts = [raw_stored] if parts.empty?
       match = parts.any? do |part|
         stored = part.gsub(/\D/, '')
+        next false if stored.blank?
+
+        # For short user-entered numbers, require exact normalized match.
+        if input_tail.length < 7
+          next stored == digits
+        end
+
         stored_tail = stored.last(10)
-        stored.length >= 7 && stored_tail == input_tail
+        stored_tail == input_tail
       end
       Rails.logger.info "[lookup] submission id=#{s.id} phone_number=#{s.phone_number.inspect} input_tail=#{input_tail.inspect} match=#{match}"
       match
@@ -263,6 +308,16 @@ class Api::V1::SubmissionsController < ApplicationController
   end
 
   private
+
+  # Read a scalar submission param from top-level or nested params (e.g. params[:submission][:dish_description])
+  def submission_param(key)
+    val = params[key] || params[key.to_s]
+    if val.nil? && params[:submission].respond_to?(:[])
+      nested = params[:submission]
+      val = nested[key] || nested[key.to_s]
+    end
+    val
+  end
 
   def submission_json(submission)
     {

@@ -9,10 +9,16 @@ const props = withDefaults(
   defineProps<{
     ingredient: Ingredient
     quantity: number
+    /** When set (e.g. "lb", "each"), displayed next to quantity: "2 lb" */
+    quantityUnit?: string
     editable?: boolean
     showPrice?: boolean
   }>(),
   { editable: false, showPrice: false }
+)
+
+const quantityDisplay = computed(() =>
+  props.quantityUnit ? `${props.quantity} ${props.quantityUnit}` : String(props.quantity)
 )
 
 const emit = defineEmits<{
@@ -71,7 +77,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEsc))
     </div>
     <div v-if="editable" class="ingredient-row-actions">
       <span class="qty-controls">
-        <span class="tabular-nums qty-num">{{ quantity }}</span>
+        <span class="tabular-nums qty-num">{{ quantityDisplay }}</span>
         <span class="qty-btn-stack">
           <button
             type="button"
@@ -93,7 +99,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEsc))
       </span>
     </div>
     <template v-else>
-      <span v-if="quantity > 0" class="ingredient-row-qty-readonly tabular-nums">× {{ quantity }}</span>
+      <span v-if="quantity > 0" class="ingredient-row-qty-readonly tabular-nums">× {{ quantityDisplay }}</span>
       <span v-if="showPrice" class="ingredient-row-price tabular-nums text-right">
         ${{ ((ingredient.price_cents * quantity) / 100).toFixed(2) }}
       </span>
