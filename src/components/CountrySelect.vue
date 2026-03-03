@@ -80,10 +80,29 @@ function toggle() {
         const dropdownWidth = Math.min(352, window.innerWidth * 0.95)
         // Clamp left so the dropdown doesn't overflow the right edge
         const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 8)
+        const viewportHeight = window.innerHeight
+        const spaceBelow = viewportHeight - rect.bottom - 8
+        const spaceAbove = rect.top - 8
+
+        // Prefer opening below when there's reasonable space; otherwise open upward.
+        let top: number
+        let availableHeight: number
+        if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+          top = rect.bottom + 4
+          availableHeight = spaceBelow - 4
+        } else {
+          // Open above the trigger
+          const desired = Math.min(spaceAbove - 4, 360)
+          top = Math.max(8, rect.top - desired - 4)
+          availableHeight = spaceAbove - 4
+        }
+
+        const maxHeight = Math.max(160, availableHeight)
         dropdownStyle.value = {
           position: 'fixed',
-          top: `${rect.bottom + 4}px`,
+          top: `${top}px`,
           left: `${Math.max(8, left)}px`,
+          maxHeight: `${maxHeight}px`,
         }
       }
     })
