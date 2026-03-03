@@ -80,6 +80,29 @@ function formatUtensilsNotesLines(notes: string | null | undefined): string[] {
   return [notes]
 }
 
+/** Equipment lines as { name, details } for two-line display (name; details in smaller print) */
+function formatUtensilsNotesStructured(notes: string | null | undefined): { name: string; details: string }[] {
+  if (!notes || !notes.trim()) return []
+  try {
+    const parsed = JSON.parse(notes) as unknown
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((row: { utensil?: string; size?: string; quantity?: string }) => {
+          const u = String(row?.utensil ?? '').trim()
+          if (!u) return null
+          const s = String(row?.size ?? '').trim()
+          const q = String(row?.quantity ?? '').trim()
+          const details = [s, q].filter(Boolean).join(', ')
+          return { name: u, details }
+        })
+        .filter((x): x is { name: string; details: string } => x != null)
+    }
+  } catch {
+    /* fall through to raw */
+  }
+  return [{ name: notes, details: '' }]
+}
+
 /** Parsed utensil entry from utensils_notes JSON for aggregation */
 interface UtensilParsed {
   utensil: string
@@ -1389,8 +1412,8 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
             <div class="sub-header-cell sub-header-center">Country &amp; Dish</div>
             <div class="sub-header-cell sub-header-center">Members</div>
             <div class="sub-header-cell sub-header-center">Kitchen</div>
-            <div class="sub-header-cell sub-header-center">Fridge Needed</div>
-            <div class="sub-header-cell sub-header-center">Requested</div>
+            <div class="sub-header-cell sub-header-center">Fridge</div>
+            <div class="sub-header-cell sub-header-center">Equipment</div>
             <div class="sub-header-cell sub-header-center">Allocated</div>
             <div class="sub-header-cell sub-header-center">Helper/Driver</div>
             <div class="sub-header-cell"></div>
@@ -1459,7 +1482,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 </template>
               </div>
 
-              <!-- Col 4: Fridge Needed -->
+              <!-- Col 4: Fridge -->
               <div class="kitchen-cell kitchen-cell-editable" @click.stop>
                 <template v-if="sub.needs_fridge_space === 'yes'">
                   <div class="form-section-pill kitchen-resource-pill">
@@ -1477,10 +1500,13 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 </template>
               </div>
 
-              <!-- Col 5: Equipment Requested (read-only, one per line) -->
+              <!-- Col 5: Equipment Requested (read-only, one per line: name + details on next line in smaller print) -->
               <div class="kitchen-cell kitchen-cell-equipment">
-                <template v-if="sub.needs_utensils === 'yes' && formatUtensilsNotesLines(sub.utensils_notes).length">
-                  <span v-for="(line, i) in formatUtensilsNotesLines(sub.utensils_notes)" :key="i" class="kitchen-cell-equipment-line">{{ line }}</span>
+                <template v-if="sub.needs_utensils === 'yes' && formatUtensilsNotesStructured(sub.utensils_notes).length">
+                  <div v-for="(item, i) in formatUtensilsNotesStructured(sub.utensils_notes)" :key="i" class="kitchen-cell-equipment-line">
+                    <span class="kitchen-cell-equipment-name">{{ item.name }}</span>
+                    <span v-if="item.details" class="kitchen-cell-equipment-details">({{ item.details }})</span>
+                  </div>
                 </template>
                 <span v-else-if="sub.needs_utensils === 'yes'">Needs utensils</span>
                 <span v-else-if="sub.needs_utensils === 'no'">—</span>
@@ -3613,6 +3639,19 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 }
 .kitchen-cell-equipment-line {
   display: block;
+  line-height: 1.35;
+}
+
+.kitchen-cell-equipment-name {
+  display: block;
+  font-weight: 500;
+}
+
+.kitchen-cell-equipment-details {
+  display: block;
+  font-size: 0.8em;
+  opacity: 0.88;
+  font-weight: 400;
 }
 
 .kitchen-cell *,
