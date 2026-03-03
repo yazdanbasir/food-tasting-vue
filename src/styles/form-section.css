@@ -57,6 +57,19 @@
   min-width: 0;
 }
 
+/* Grocery List bar: stack search + "Add items" on separate lines, full width (better on phone) */
+@media (max-width: 600px) {
+  .form-section-grocery-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .form-section-grocery-bar .form-section-pill {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+}
+
 .form-section-pill-input {
   width: 100%;
   min-width: 0;

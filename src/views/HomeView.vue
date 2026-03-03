@@ -626,7 +626,7 @@ async function handleSubmit() {
           <Suspense>
             <template #default>
               <div class="form-section-ingredients">
-                <div class="form-section-top-bar-inner">
+                <div class="form-section-top-bar-inner form-section-grocery-bar">
                   <div class="form-section-pill form-section-pill-label">Grocery List</div>
                   <div class="form-section-pill form-section-pill-search">
                     <IngredientSearch :hide-price="true" />
@@ -1203,6 +1203,20 @@ async function handleSubmit() {
   font-style: normal;
   font-weight: 500;
   text-align: center;
+}
+
+/* On phone: let Dish Type (and other thank-you) pills grow in height for multi-line text */
+@media (max-width: 600px) {
+  .home-dish-bar .form-section-pill.home-dish-display-pill {
+    height: auto;
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    white-space: normal;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* Contact pill: trigger only, opens dropdown. Width synced with dropdown. */
