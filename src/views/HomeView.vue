@@ -1409,7 +1409,11 @@ async function handleSubmit() {
 }
 
 .home-edit-submission-btn {
-  min-height: 2.75rem;
+  min-height: 3.5rem;
+  padding: 0.75rem 2rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(107, 15, 42, 0.35);
 }
 
 .home-main-page2 {
