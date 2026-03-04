@@ -35,11 +35,31 @@ watch(showDropdown, async (visible) => {
     await nextTick()
     if (searchWrapRef.value) {
       const rect = searchWrapRef.value.getBoundingClientRect()
+      const vv = typeof window !== 'undefined' && window.visualViewport
+      const viewportHeight = vv ? vv.height : window.innerHeight
+      const viewportTop = vv ? vv.offsetTop : 0
+      const viewportBottom = viewportTop + viewportHeight
+
+      const spaceBelow = viewportBottom - rect.bottom - 8
+      const spaceAbove = rect.top - viewportTop - 8
+      const maxDropdownHeight = 380
+
+      let top: number
+      let maxHeight: number
+      if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+        top = rect.bottom + 4
+        maxHeight = Math.max(120, Math.min(maxDropdownHeight, spaceBelow - 4))
+      } else {
+        maxHeight = Math.max(120, Math.min(maxDropdownHeight, spaceAbove - 4))
+        top = rect.top - 4 - maxHeight
+      }
+
       dropdownStyle.value = {
         position: 'fixed',
-        top: `${rect.bottom + 4}px`,
+        top: `${top}px`,
         left: `${rect.left}px`,
         width: `${rect.width}px`,
+        maxHeight: `${maxHeight}px`,
       }
     }
   }
