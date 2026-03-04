@@ -46,6 +46,7 @@ const {
   countryNameOther,
   dishName,
   editingSubmissionId,
+  editingAsOrganizer,
 } = storeToRefs(store)
 const contactDropdownOpen = ref(false)
 const contactDropdownRef = ref<HTMLElement | null>(null)
@@ -65,7 +66,10 @@ const utensilsDropdownOpen = ref(false)
 const utensilsDropdownRef = ref<HTMLElement | null>(null)
 const utensilsTriggerRef = ref<HTMLElement | null>(null)
 const utensilsDropdownStyle = ref<Record<string, string>>({})
-const { isResponsesLocked, refreshFormLockStatus } = useFormLockState()
+const { isResponsesLocked, hasLoadedFormLock, refreshFormLockStatus } = useFormLockState()
+
+/** Lock the form for students only — organizers editing a submission are always allowed through. */
+const shouldLockForm = computed(() => isResponsesLocked.value && !editingAsOrganizer.value)
 
 /** True only after user has clicked Save in the group info dropdown with at least one valid contact. Cleared when contacts become invalid. */
 const groupInfoCommitted = ref(false)
@@ -321,7 +325,7 @@ watch(showGrocerySection, (show) => {
 })
 
 function goToSubmissionLookup() {
-  if (isResponsesLocked.value) return
+  if (shouldLockForm.value) return
   router.push({ path: '/organizer', query: { mode: 'student-edit' } })
 }
 
@@ -342,7 +346,7 @@ watch(
 )
 
 function handleNext() {
-  if (!canAdvancePage1.value || isResponsesLocked.value) return
+  if (!canAdvancePage1.value || shouldLockForm.value) return
   currentPage.value = 2
 }
 
@@ -463,7 +467,7 @@ async function handleSubmit() {
     </section>
 
     <!-- PAGE 1 -->
-    <div v-show="currentPage === 1" class="page-wrapper" :class="{ 'form-locked': isResponsesLocked }">
+    <div v-show="currentPage === 1" class="page-wrapper" :class="{ 'form-locked': shouldLockForm }">
       <section
         class="home-reminders-section form-section-top-bar"
         aria-label="Important reminders"
@@ -849,21 +853,21 @@ async function handleSubmit() {
             </template>
           </Suspense>
         </div>
-        <div v-else-if="showEditSubmissionCta" class="home-main home-edit-submission-state" aria-live="polite">
+        <div v-else-if="showEditSubmissionCta && hasLoadedFormLock" class="home-main home-edit-submission-state" aria-live="polite">
           <button
             type="button"
             class="btn-pill-primary home-edit-submission-btn"
-            :disabled="isResponsesLocked"
+            :disabled="shouldLockForm"
             @click="goToSubmissionLookup"
           >
-            {{ isResponsesLocked ? 'Form Closed' : 'Click here to edit your submission' }}
+            {{ shouldLockForm ? 'Form Closed' : 'Click here to edit your submission' }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- PAGE 2 -->
-    <div v-show="currentPage === 2" class="page-wrapper" :class="{ 'form-locked': isResponsesLocked }">
+    <div v-show="currentPage === 2" class="page-wrapper" :class="{ 'form-locked': shouldLockForm }">
       <div class="home-layout home-layout-page2">
 
         <!-- Scrollable content area -->
