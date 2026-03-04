@@ -1,0 +1,11 @@
+new_submission:
+  event_type: "new_submission"
+  title: "SUBMISSION — Test Dish"
+  message: "by Alice · 2 ingredients"
+  read: false
+
+read_notification:
+  event_type: "submission_updated_user"
+  title: "EDIT — Old Dish"
+  message: "by Bob · Details updated"
+  read: true

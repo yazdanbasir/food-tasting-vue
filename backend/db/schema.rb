@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_04_040000) do
   create_table "app_settings", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "submissions_locked", default: false, null: false
@@ -41,11 +41,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
     t.boolean "lactose_free", default: false, null: false
     t.string "name", null: false
     t.boolean "peanut", default: false, null: false
-    t.boolean "pork", default: false
+    t.boolean "pork", default: false, null: false
     t.integer "price_cents", default: 0, null: false
     t.string "product_id", null: false
     t.datetime "scraped_at"
-    t.boolean "shellfish", default: false
+    t.boolean "shellfish", default: false, null: false
     t.string "size"
     t.datetime "updated_at", null: false
     t.boolean "vegan", default: false, null: false
@@ -96,6 +96,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
     t.integer "submission_id", null: false
     t.datetime "updated_at", null: false
     t.index ["ingredient_id"], name: "index_submission_ingredients_on_ingredient_id"
+    t.index ["submission_id", "ingredient_id"], name: "idx_submission_ingredients_unique", unique: true
     t.index ["submission_id"], name: "index_submission_ingredients_on_submission_id"
   end
 
@@ -109,16 +110,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
     t.string "dish_name", null: false
     t.string "dish_temperature"
     t.string "equipment_allocated"
-    t.string "found_all_ingredients"
+    t.boolean "found_all_ingredients", default: false, null: false
     t.string "fridge_location"
-    t.string "has_cooking_place"
+    t.boolean "has_cooking_place", default: false, null: false
     t.string "helper_driver_needed"
     t.text "members"
-    t.string "needs_fridge_space"
-    t.string "needs_utensils"
+    t.boolean "needs_fridge_space", default: false, null: false
+    t.boolean "needs_utensils", default: false, null: false
     t.text "notes"
     t.text "other_ingredients"
     t.string "phone_number"
+    t.text "phone_tails"
     t.string "team_name", null: false
     t.datetime "updated_at", null: false
     t.text "utensils_notes"

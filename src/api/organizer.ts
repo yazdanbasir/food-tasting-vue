@@ -94,7 +94,6 @@ export async function organizerLogin(
   username: string,
   password: string,
 ): Promise<{ token: string; username: string }> {
-  console.log('[Organizer Auth]', 'organizerLogin: POST', `${BASE}/api/v1/organizer_session`, { username })
   const res = await fetch(`${BASE}/api/v1/organizer_session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -106,7 +105,6 @@ export async function organizerLogin(
     throw new Error((body as { error?: string }).error || 'Login failed')
   }
   const result = body as { token: string; username: string }
-  console.log('[Organizer Auth]', 'organizerLogin SUCCESS:', { username: result.username, tokenPrefix: result.token?.slice(0, 8) + '...' })
   return result
 }
 
@@ -191,7 +189,7 @@ export async function addSubmissionIngredient(
   ingredientId: number,
   quantity: number,
 ): Promise<void> {
-  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/by_id/${submissionId}/ingredients`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/${submissionId}/ingredients`, {
     method: 'POST',
     headers: organizerHeaders(),
     body: JSON.stringify({ ingredient_id: ingredientId, quantity }),
@@ -208,7 +206,7 @@ export async function updateSubmissionIngredientQuantity(
   quantity: number,
 ): Promise<void> {
   const res = await organizerFetchWithRetry(
-    `${BASE}/api/v1/submissions/by_id/${submissionId}/ingredients/${ingredientId}`,
+    `${BASE}/api/v1/submissions/${submissionId}/ingredients/${ingredientId}`,
     {
       method: 'PATCH',
       headers: organizerHeaders(),
@@ -234,7 +232,7 @@ export async function updateKitchenAllocation(
   id: number,
   fields: KitchenAllocationPayload,
 ): Promise<SubmissionResponse> {
-  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/by_id/${id}/kitchen_allocation`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/${id}/kitchen_allocation`, {
     method: 'PATCH',
     headers: organizerHeaders(),
     body: JSON.stringify(fields),
@@ -246,16 +244,14 @@ export async function updateKitchenAllocation(
 
 export async function deleteSubmission(submissionId: number): Promise<void> {
   const headers = organizerHeaders()
-  console.log('[Organizer Auth]', 'deleteSubmission:', submissionId)
-  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/by_id/${submissionId}`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/${submissionId}`, {
     method: 'DELETE',
     headers,
   })
-  const body = await res.json().catch(() => ({}))
   if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
     throw new Error((body as { error?: string }).error || 'Could not delete this submission right now. Please try again.')
   }
-  console.log('[Organizer Auth]', 'deleteSubmission SUCCESS:', submissionId)
 }
 
 // ─── Kitchens & Utensils resources ─────────────────────────────────────────
@@ -318,38 +314,12 @@ export async function updateKitchenResource(
   id: number,
   attrs: Partial<Pick<KitchenResourceItem, 'name' | 'position' | 'point_person' | 'phone' | 'is_driver'>>,
 ): Promise<KitchenResourceItem> {
-  console.log('[KU TRACE][API] updateKitchenResource request', {
-    id,
-    attrs,
-    hasAuthToken: hasOrganizerToken(),
-  })
   const res = await organizerFetchWithRetry(`${BASE}/api/v1/kitchen_resources/${id}`, {
     method: 'PATCH',
     headers: organizerHeaders(),
     body: JSON.stringify(attrs),
   })
   const body = await res.json().catch(() => ({}))
-  console.log('[KU TRACE][API] updateKitchenResource response', {
-    id,
-    status: res.status,
-    ok: res.ok,
-    body,
-  })
-  if (res.ok) {
-    const responseObj = body as Partial<KitchenResourceItem>
-    const missingEchoedFields: string[] = []
-    if ('phone' in attrs && responseObj.phone === undefined) missingEchoedFields.push('phone')
-    if ('point_person' in attrs && responseObj.point_person === undefined) missingEchoedFields.push('point_person')
-    if ('is_driver' in attrs && responseObj.is_driver === undefined) missingEchoedFields.push('is_driver')
-    if (missingEchoedFields.length) {
-      console.warn('[KU TRACE][API] response missing edited fields', {
-        id,
-        missingEchoedFields,
-        attrs,
-        body,
-      })
-    }
-  }
   if (!res.ok) {
     throw new Error((body as { error?: string }).error || 'Could not save this resource right now. Please try again.')
   }

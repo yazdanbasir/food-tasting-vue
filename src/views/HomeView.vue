@@ -10,6 +10,7 @@ import { TriangleAlert } from 'lucide-vue-next'
 import { useSubmissionStore, OTHER_INGREDIENT_SIZE_OPTIONS, OTHER_INGREDIENT_QUANTITY_UNITS } from '@/stores/submission'
 import { createSubmission, lookupSubmissionByPhone, updateSubmission } from '@/api/submissions'
 import { useFormLockState } from '@/composables/useFormLockState'
+import { useIngredientCacheStore } from '@/stores/ingredientCache'
 
 const IngredientSearch = defineAsyncComponent(
   () => import('@/components/IngredientSearch.vue')
@@ -252,7 +253,6 @@ function selectUnit(opt: string) {
 }
 
 function handleOtherIngredientsSave() {
-  console.log('[Other ingredients] Save clicked — current store entries:', JSON.parse(JSON.stringify(otherIngredientEntries.value)))
   otherIngredientsDropdownOpen.value = false
 }
 
@@ -281,6 +281,7 @@ function handleVisibilityChange() {
 }
 
 onMounted(() => {
+  useIngredientCacheStore().preload()
   document.addEventListener('click', handleContactClickOutside)
   document.addEventListener('visibilitychange', handleVisibilityChange)
   void refreshFormLockStatus()
@@ -378,11 +379,8 @@ async function handleSubmit() {
     return
   }
 
-  console.log('[Other ingredients] Submit — store otherIngredientEntries:', JSON.parse(JSON.stringify(otherIngredientEntries.value)))
-  console.log('[Other ingredients] Submit — foundAllIngredients:', foundAllIngredients.value)
-
   const payload = {
-    team_name: store.teamName,
+    team_name: store.teamName || validContacts.value[0]?.name.trim() || 'Team',
     dish_name: store.dishName,
     notes: '',
     country_code: store.countryCode || '',
@@ -391,26 +389,24 @@ async function handleSubmit() {
     phone_number: validPhoneNumbers.value.length > 0
       ? validPhoneNumbers.value.join(', ')
       : undefined,
-    has_cooking_place: hasCookingPlace.value || undefined,
-    cooking_location: hasCookingPlace.value === 'yes' ? cookingLocation.value.trim() || undefined : undefined,
-    found_all_ingredients: foundAllIngredients.value || undefined,
-    // Always send other_ingredients when section is active: list when 'no', null when 'yes' so backend can save or clear (only complete rows; quantity sent as "number unit")
-    other_ingredients: foundAllIngredients.value === 'no'
+    has_cooking_place: hasCookingPlace.value ?? undefined,
+    cooking_location: hasCookingPlace.value === true ? cookingLocation.value.trim() || undefined : undefined,
+    found_all_ingredients: foundAllIngredients.value,
+    // Always send other_ingredients: list when not-all-found, null when all-found so backend can save or clear (only complete rows; quantity sent as "number unit")
+    other_ingredients: !foundAllIngredients.value
       ? JSON.stringify(validOtherIngredientEntries.value.map((e) => ({
           item: e.item,
           size: e.size,
           quantity: `${e.quantity} ${e.quantityUnit}`.trim(),
           additionalDetails: e.additionalDetails,
         })))
-      : foundAllIngredients.value === 'yes'
-        ? null
-        : undefined,
-    needs_fridge_space: needsFridgeSpace.value || undefined,
+      : null,
+    needs_fridge_space: needsFridgeSpace.value ?? undefined,
     dish_temperature: dishHotOrCold.value || undefined,
     dish_description: (dishDescription.value || '').trim(),
     allergen: (allergen.value || '').trim(),
-    needs_utensils: needsUtensils.value || undefined,
-    utensils_notes: needsUtensils.value === 'yes' && utensilEntries.value.length > 0
+    needs_utensils: needsUtensils.value ?? undefined,
+    utensils_notes: needsUtensils.value === true && utensilEntries.value.length > 0
       ? JSON.stringify(utensilEntries.value)
       : undefined,
     ingredients: ingredients.value.map((item) => ({
@@ -419,13 +415,10 @@ async function handleSubmit() {
     })),
   }
 
-  console.log('[Submit] payload dish_description=', payload.dish_description, 'allergen=', payload.allergen)
-
   try {
     const editingId = store.editingSubmissionId
     if (editingId != null) {
       const result = await updateSubmission(editingId, payload)
-      console.log('[Submit] update response dish_description=', result.dish_description, 'allergen=', result.allergen)
       const asOrganizer = store.editingAsOrganizer
       store.clearEdit()
       if (asOrganizer) {
@@ -437,8 +430,6 @@ async function handleSubmit() {
       }
     } else {
       const { submission } = await createSubmission(payload)
-      console.log('[Submit] create response dish_description=', submission.dish_description, 'allergen=', submission.allergen)
-      console.log('[Other ingredients] Create response — submission.other_ingredients:', (submission as { other_ingredients?: string }).other_ingredients ?? '(undefined)')
       store.reset()
       store.setLastSubmitted(submission)
       router.push('/confirmation')
@@ -905,10 +896,10 @@ async function handleSubmit() {
           </div>
 
           <!-- Cooking Location section (shows when hasCookingPlace answered; input if yes, message pill if no) -->
-          <div v-if="hasCookingPlace !== ''" class="home-dish-bar form-section-top-bar">
+          <div v-if="hasCookingPlace !== null" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Cooking Location</div>
-              <div v-if="hasCookingPlace === 'yes'" class="form-section-pill home-dish-pill">
+              <div v-if="hasCookingPlace === true" class="form-section-pill home-dish-pill">
                 <input
                   v-model="cookingLocation"
                   type="text"
@@ -924,10 +915,10 @@ async function handleSubmit() {
           </div>
 
           <!-- Utensils / Equipment section (shows when needsUtensils answered; dropdown if yes, message pill if no) -->
-          <div v-if="needsUtensils !== ''" class="home-dish-bar form-section-top-bar">
+          <div v-if="needsUtensils !== null" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Utensils / Equipment</div>
-              <div v-if="needsUtensils === 'yes'" class="form-section-pill home-dish-pill home-dish-pill-grow home-utensils-pill-wrap">
+              <div v-if="needsUtensils === true" class="form-section-pill home-dish-pill home-dish-pill-grow home-utensils-pill-wrap">
                 <button
                   ref="utensilsTriggerRef"
                   type="button"
@@ -1025,10 +1016,10 @@ async function handleSubmit() {
           </div>
 
           <!-- Fridge Space section (shows when needsFridgeSpace answered; same pattern as Cooking Location) -->
-          <div v-if="needsFridgeSpace !== ''" class="home-dish-bar form-section-top-bar">
+          <div v-if="needsFridgeSpace !== null" class="home-dish-bar form-section-top-bar">
             <div class="home-dish-bar-inner">
               <div class="form-section-pill form-section-pill-label">Fridge Space</div>
-              <div v-if="needsFridgeSpace === 'yes'" class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
+              <div v-if="needsFridgeSpace === true" class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">
                 No worries! We'll assign one and notify you
               </div>
               <div v-else class="form-section-pill home-dish-pill home-dish-pill-grow home-dish-display-pill">

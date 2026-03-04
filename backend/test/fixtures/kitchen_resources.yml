@@ -1,0 +1,20 @@
+fridge_one:
+  kind: "fridge"
+  name: "Main Fridge"
+  position: 1
+
+kitchen_one:
+  kind: "kitchen"
+  name: "Building A Kitchen"
+  position: 1
+
+utensil_one:
+  kind: "utensil"
+  name: "Large Wok"
+  position: 1
+
+helper_one:
+  kind: "helper_driver"
+  name: "John Helper"
+  position: 1
+  is_driver: true

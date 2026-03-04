@@ -1,0 +1,59 @@
+apple:
+  product_id: "apple-001"
+  name: "Fuji Apple"
+  size: "1 lb"
+  aisle: "Produce"
+  price_cents: 299
+  image_url: "https://example.com/apple.jpg"
+  is_alcohol: false
+  gluten: false
+  dairy: false
+  egg: false
+  peanut: false
+  pork: false
+  shellfish: false
+  kosher: true
+  vegan: true
+  vegetarian: true
+  lactose_free: true
+  wheat_free: true
+
+chicken:
+  product_id: "chicken-001"
+  name: "Chicken Breast"
+  size: "2 lb"
+  aisle: "3"
+  price_cents: 799
+  image_url: "https://example.com/chicken.jpg"
+  is_alcohol: false
+  gluten: false
+  dairy: false
+  egg: false
+  peanut: false
+  pork: false
+  shellfish: false
+  kosher: true
+  vegan: false
+  vegetarian: false
+  lactose_free: true
+  wheat_free: true
+
+beer:
+  product_id: "beer-001"
+  name: "Craft IPA"
+  size: "6 pack"
+  aisle: "A5"
+  price_cents: 1099
+  image_url: "https://example.com/beer.jpg"
+  is_alcohol: true
+  gluten: true
+  dairy: false
+  egg: false
+  peanut: false
+  pork: false
+  shellfish: false
+  kosher: false
+  vegan: false
+  vegetarian: false
+  lactose_free: true
+  wheat_free: false

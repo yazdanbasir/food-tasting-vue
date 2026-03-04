@@ -10,11 +10,11 @@ export interface SubmissionPayload {
   country_name_other?: string
   members?: string[]
   phone_number?: string
-  has_cooking_place?: string
+  has_cooking_place?: boolean
   cooking_location?: string
-  found_all_ingredients?: string
-  needs_fridge_space?: string
-  needs_utensils?: string
+  found_all_ingredients?: boolean
+  needs_fridge_space?: boolean
+  needs_utensils?: boolean
   utensils_notes?: string
   dish_temperature?: string
   dish_description?: string
@@ -48,11 +48,11 @@ export interface SubmissionResponse {
   country_name?: string | null
   members: string[]
   phone_number?: string | null
-  has_cooking_place?: string | null
+  has_cooking_place?: boolean
   cooking_location?: string | null
-  found_all_ingredients?: string | null
-  needs_fridge_space?: string | null
-  needs_utensils?: string | null
+  found_all_ingredients?: boolean
+  needs_fridge_space?: boolean
+  needs_utensils?: boolean
   utensils_notes?: string | null
   dish_temperature?: string | null
   dish_description?: string | null
@@ -103,8 +103,7 @@ export async function updateSubmission(
   payload: SubmissionPayload,
 ): Promise<SubmissionResponse> {
   const headers = organizerHeaders()
-  console.log('[Organizer Auth] updateSubmission:', id)
-  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/by_id/${id}`, {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/submissions/${id}`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify(payload),

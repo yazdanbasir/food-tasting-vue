@@ -1,20 +1,15 @@
 module Notifiable
   extend ActiveSupport::Concern
 
+  NOTIFICATIONS_CHANNEL = "notifications"
+
   private
 
   def create_and_broadcast_notification(event_type:, title:, message: nil)
     n = Notification.create!(event_type: event_type, title: title, message: message)
-    ActionCable.server.broadcast("notifications", {
+    ActionCable.server.broadcast(NOTIFICATIONS_CHANNEL, {
       type: event_type,
-      notification: {
-        id: n.id,
-        event_type: n.event_type,
-        title: n.title,
-        message: n.message,
-        read: false,
-        created_at: n.created_at
-      }
+      notification: n.to_broadcast_json
     })
     n
   end

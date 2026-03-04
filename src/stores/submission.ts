@@ -38,16 +38,16 @@ export const useSubmissionStore = defineStore('submission', () => {
     { name: '', phone: '', countryCode: '' },
     { name: '', phone: '', countryCode: '' },
   ])
-  const hasCookingPlace = ref<'yes' | 'no' | ''>('')
+  const hasCookingPlace = ref<boolean | null>(null)
   const cookingLocation = ref('')
-  const needsFridgeSpace = ref<'yes' | 'no' | ''>('')
-  const needsUtensils = ref<'yes' | 'no' | ''>('')
+  const needsFridgeSpace = ref<boolean | null>(null)
+  const needsUtensils = ref<boolean | null>(null)
   const dishHotOrCold = ref<'hot' | 'cold' | ''>('')
   const dishDescription = ref('')
   const allergen = ref('')
-  /** Utensil/equipment entries when needs_utensils is 'yes'. Each entry: utensil, size, quantity. Start with one empty row. */
+  /** Utensil/equipment entries when needs_utensils is true. Each entry: utensil, size, quantity. Start with one empty row. */
   const utensilEntries = ref<UtensilEntry[]>([{ utensil: '', size: '', quantity: '' }])
-  /** Other-store items when found_all_ingredients is 'no'. Each entry: item, size, quantity, additionalDetails. Start with one empty row. */
+  /** Other-store items when foundAllIngredients is false. Each entry: item, size, quantity, additionalDetails. Start with one empty row. */
   const otherIngredientEntries = ref<OtherIngredientEntry[]>([{ item: '', size: '', quantity: '', quantityUnit: '', additionalDetails: '' }])
 
   /** When set, form is in edit mode; submit becomes PATCH update */
@@ -200,12 +200,12 @@ export const useSubmissionStore = defineStore('submission', () => {
     otherIngredientEntries.value.some((e) => isOtherIngredientRowPartial(e)),
   )
 
-  /** Derived: 'no' if user listed any other ingredients, 'yes' otherwise. Backed by validOtherIngredientEntries. */
-  const foundAllIngredients = computed<'yes' | 'no'>(() =>
-    validOtherIngredientEntries.value.length >= 1 ? 'no' : 'yes',
+  /** Derived: false if user listed any other ingredients, true otherwise. Backed by validOtherIngredientEntries. */
+  const foundAllIngredients = computed<boolean>(() =>
+    validOtherIngredientEntries.value.length === 0,
   )
 
-  /** Entries with at least utensil filled (required to submit when needs_utensils is 'yes'). */
+  /** Entries with at least utensil filled (required to submit when needs_utensils is true). */
   const validUtensilEntries = computed(() =>
     utensilEntries.value.filter((e) => e.utensil.trim() !== ''),
   )
@@ -214,13 +214,13 @@ export const useSubmissionStore = defineStore('submission', () => {
   const canShowDishDescriptionSection = computed(
     () =>
       canAdvancePage1.value &&
-      (foundAllIngredients.value === 'yes' || validOtherIngredientEntries.value.length >= 1) &&
-      hasCookingPlace.value !== '' &&
-      (hasCookingPlace.value !== 'yes' || cookingLocation.value.trim().length > 0) &&
-      needsFridgeSpace.value !== '' &&
+      (foundAllIngredients.value || validOtherIngredientEntries.value.length >= 1) &&
+      hasCookingPlace.value !== null &&
+      (hasCookingPlace.value !== true || cookingLocation.value.trim().length > 0) &&
+      needsFridgeSpace.value !== null &&
       dishHotOrCold.value !== '' &&
-      needsUtensils.value !== '' &&
-      (needsUtensils.value !== 'yes' || validUtensilEntries.value.length >= 1),
+      needsUtensils.value !== null &&
+      (needsUtensils.value !== true || validUtensilEntries.value.length >= 1),
   )
 
   /** Allergen section appears as soon as user has filled dish description. */
@@ -275,10 +275,10 @@ export const useSubmissionStore = defineStore('submission', () => {
       { name: '', phone: '', countryCode: '' },
       { name: '', phone: '', countryCode: '' },
     ]
-    hasCookingPlace.value = ''
+    hasCookingPlace.value = null
     cookingLocation.value = ''
-    needsFridgeSpace.value = ''
-    needsUtensils.value = ''
+    needsFridgeSpace.value = null
+    needsUtensils.value = null
     dishHotOrCold.value = ''
     dishDescription.value = ''
     allergen.value = ''
@@ -299,6 +299,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   function loadForEdit(sub: SubmissionResponse, asOrganizer = false) {
     editingSubmissionId.value = sub.id
     editingAsOrganizer.value = asOrganizer
+    teamName.value = sub.team_name
     dishName.value = sub.dish_name
     countryCode.value = sub.country_code ?? ''
     countryNameOther.value = (sub.country_code === 'OTHER' && (sub as { country_name?: string | null }).country_name)
@@ -321,10 +322,10 @@ export const useSubmissionStore = defineStore('submission', () => {
     ]
     contacts.value =
       zipped.length >= 3 ? zipped : [...zipped, ...defaultRows.slice(zipped.length)]
-    hasCookingPlace.value = (sub.has_cooking_place as 'yes' | 'no' | '') ?? ''
+    hasCookingPlace.value = sub.has_cooking_place ?? null
     cookingLocation.value = sub.cooking_location ?? ''
-    needsFridgeSpace.value = (sub.needs_fridge_space as 'yes' | 'no' | '') ?? ''
-    needsUtensils.value = (sub.needs_utensils as 'yes' | 'no' | '') ?? ''
+    needsFridgeSpace.value = sub.needs_fridge_space ?? null
+    needsUtensils.value = sub.needs_utensils ?? null
     dishHotOrCold.value = (sub.dish_temperature as 'hot' | 'cold' | '') ?? ''
     dishDescription.value = sub.dish_description ?? ''
     allergen.value = sub.allergen ?? ''
@@ -348,7 +349,6 @@ export const useSubmissionStore = defineStore('submission', () => {
       utensilEntries.value = [{ utensil: '', size: '', quantity: '' }]
     }
     const rawOther = (sub.other_ingredients ?? '').trim()
-    console.log('[Other ingredients] loadForEdit — sub.other_ingredients (raw):', rawOther || '(empty)')
     if (rawOther) {
       try {
         const parsed = JSON.parse(rawOther) as unknown
@@ -373,13 +373,10 @@ export const useSubmissionStore = defineStore('submission', () => {
         } else {
           otherIngredientEntries.value = [{ item: rawOther, size: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
         }
-        console.log('[Other ingredients] loadForEdit — parsed entries:', JSON.parse(JSON.stringify(otherIngredientEntries.value)))
       } catch (e) {
-        console.log('[Other ingredients] loadForEdit — JSON parse error:', e)
         otherIngredientEntries.value = [{ item: rawOther, size: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
       }
     } else {
-      console.log('[Other ingredients] loadForEdit — no raw value, setting default empty row')
       otherIngredientEntries.value = [{ item: '', size: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
     }
     ingredients.value = sub.ingredients.map((item) => ({

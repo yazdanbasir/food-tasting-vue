@@ -9,12 +9,10 @@ export const useIngredientCacheStore = defineStore('ingredientCache', () => {
 
   async function preload() {
     if (loaded.value) return
-    console.log('[cache] preload start')
     try {
       const data = await fetchAllIngredients()
       all.value = data
       loaded.value = true
-      console.log(`[cache] preload done — ${data.length} ingredients`)
     } catch (err) {
       console.error('[cache] preload FAILED', err)
     }

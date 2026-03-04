@@ -4,6 +4,6 @@ class KitchenResource < ApplicationRecord
   validates :kind, presence: true, inclusion: { in: KINDS }
   validates :name, presence: true
 
-  default_scope { order(:kind, :position, :id) }
+  scope :ordered, -> { order(:kind, :position, :id) }
 end
 

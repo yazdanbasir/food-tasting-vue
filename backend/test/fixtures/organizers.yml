@@ -1,0 +1,4 @@
+admin:
+  username: "admin"
+  password_digest: <%= BCrypt::Password.create("testpass123") %>
+  token: "valid-test-token-123"

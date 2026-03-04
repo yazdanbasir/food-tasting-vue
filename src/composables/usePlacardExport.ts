@@ -15,19 +15,7 @@ import { ref, createApp, type App as VueApp } from 'vue'
 import type { SubmissionResponse } from '@/api/submissions'
 import type { IngredientDietary } from '@/types/ingredient'
 import PlacardRenderer from '@/components/PlacardRenderer.vue'
-
-function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
-  const keys = [
-    'is_alcohol', 'gluten', 'dairy', 'egg', 'peanut',
-    'pork', 'shellfish',
-    'kosher', 'vegan', 'vegetarian', 'lactose_free', 'wheat_free',
-  ] as const
-  const out = {} as IngredientDietary
-  for (const k of keys) {
-    out[k] = sub.ingredients.some((i) => i.ingredient.dietary?.[k])
-  }
-  return out
-}
+import { aggregateDietary } from '@/utils/submission'
 
 /** Format current date-time as MM_DD_YYYY_HH_MM */
 function dateTimeSuffix(): string {

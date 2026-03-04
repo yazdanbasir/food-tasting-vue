@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import ConfirmationView from '../views/ConfirmationView.vue'
-import OrganizerDashboardView from '../views/OrganizerDashboardView.vue'
+
+const ConfirmationView = () => import('../views/ConfirmationView.vue')
+const OrganizerDashboardView = () => import('../views/OrganizerDashboardView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

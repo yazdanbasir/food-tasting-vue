@@ -1,0 +1,32 @@
+team_alpha:
+  team_name: "Team Alpha"
+  dish_name: "Pad Thai"
+  country_code: "TH"
+  members: '["Alice","Bob"]'
+  phone_number: "555-123-4567, 555-987-6543"
+  phone_tails: "5551234567,5559876543"
+  has_cooking_place: true
+  cooking_location: "Building A Floor 2"
+  needs_fridge_space: false
+  needs_utensils: true
+  utensils_notes: '[{"utensil":"Wok","size":"Large","quantity":"1"}]'
+  found_all_ingredients: true
+  dish_temperature: "hot"
+  dish_description: "Traditional Thai stir-fried noodles"
+  allergen: "Peanuts"
+
+team_beta:
+  team_name: "Team Beta"
+  dish_name: "Caesar Salad"
+  country_code: "US"
+  members: '["Charlie"]'
+  phone_number: "555-222-3333"
+  phone_tails: "5552223333"
+  has_cooking_place: false
+  needs_fridge_space: true
+  needs_utensils: false
+  found_all_ingredients: false
+  other_ingredients: '[{"item":"Parmesan","size":"Block","quantity":"1 lb","additionalDetails":"Aged"}]'
+  dish_temperature: "cold"
+  dish_description: "Classic Caesar with romaine"
+  allergen: "Dairy, Gluten"

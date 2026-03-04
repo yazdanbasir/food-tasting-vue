@@ -1,0 +1,14 @@
+alpha_apple:
+  submission: team_alpha
+  ingredient: apple
+  quantity: 3
+
+alpha_chicken:
+  submission: team_alpha
+  ingredient: chicken
+  quantity: 2
+
+beta_apple:
+  submission: team_beta
+  ingredient: apple
+  quantity: 1

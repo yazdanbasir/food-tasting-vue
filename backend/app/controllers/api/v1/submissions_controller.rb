@@ -7,49 +7,8 @@ class Api::V1::SubmissionsController < ApplicationController
   def create
     return if reject_if_locked_for_students!
 
-    raw_country = params[:country_code] || params["country_code"]
-    raw_country_name = params[:country_name_other] || params["country_name_other"]
-    raw_members = params[:members] || params["members"]
-
-    # Read all simple scalar fields via the common helper so JSON shape (wrapped vs top-level) never matters.
-    raw_dish_name         = submission_param(:dish_name)
-    raw_team_name         = submission_param(:team_name)
-    raw_notes             = submission_param(:notes)
-    raw_phone_number      = submission_param(:phone_number)
-    raw_has_cooking_place = submission_param(:has_cooking_place)
-    raw_cooking_location  = submission_param(:cooking_location)
-    raw_found_all         = submission_param(:found_all_ingredients)
-    raw_other_ingredients = submission_param(:other_ingredients)
-    raw_needs_fridge      = submission_param(:needs_fridge_space)
-    raw_needs_utensils    = submission_param(:needs_utensils)
-    raw_utensils_notes    = submission_param(:utensils_notes)
-    raw_dish_temperature  = submission_param(:dish_temperature)
-    raw_dish_description  = submission_param(:dish_description)
-    raw_allergen          = submission_param(:allergen)
-
-    attrs = {
-      dish_name: raw_dish_name,
-      team_name: raw_team_name,
-      notes: raw_notes,
-      country_code: raw_country.presence,
-      country_name: (raw_country == "OTHER" ? raw_country_name.presence : nil),
-      members: raw_members.is_a?(Array) ? raw_members : nil,
-      phone_number: raw_phone_number.presence,
-      has_cooking_place: raw_has_cooking_place.presence,
-      cooking_location: raw_cooking_location.presence,
-      found_all_ingredients: raw_found_all.presence,
-      other_ingredients: raw_other_ingredients.presence,
-      needs_fridge_space: raw_needs_fridge.presence,
-      needs_utensils: raw_needs_utensils.presence,
-      utensils_notes: raw_utensils_notes.presence,
-      dish_temperature: raw_dish_temperature.presence,
-      dish_description: raw_dish_description.presence,
-      allergen: raw_allergen.presence
-    }
-    Rails.logger.info "[Submissions#create] dish_description=#{raw_dish_description.inspect} allergen=#{raw_allergen.inspect}"
-    Rails.logger.info "[Submissions#create] other_ingredients param: #{params[:other_ingredients].inspect}"
+    attrs = SubmissionBuilder.new(params).attributes
     @submission = Submission.new(attrs)
-    Rails.logger.info "[Submissions#create] @submission.other_ingredients after new: #{@submission.other_ingredients.inspect}"
 
     Submission.transaction do
       @submission.save!
@@ -72,114 +31,27 @@ class Api::V1::SubmissionsController < ApplicationController
     )
 
     @submission.reload
-    json = submission_json(@submission)
-    Rails.logger.info "[Submissions#create] after reload dish_description=#{@submission.dish_description.inspect} allergen=#{@submission.allergen.inspect}"
-    Rails.logger.info "[Submissions#create] submission_json other_ingredients: #{json[:other_ingredients].inspect}"
-    render json: { submission: json }, status: :created
+    render json: { submission: SubmissionSerializer.as_json(@submission) }, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActiveRecord::StatementInvalid => e
+    render json: { error: e.message.truncate(200) }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Ingredient not found" }, status: :not_found
   end
 
-  # POST /api/v1/submissions/by_id/:submission_id/ingredients (organizer only)
-  def add_ingredient
-    submission = Submission.find(params[:submission_id])
-    quantity = (params[:quantity].presence || 1).to_i
-    quantity = 1 if quantity < 1
-    ingredient = Ingredient.find(params[:ingredient_id])
-    si = submission.submission_ingredients.find_or_initialize_by(ingredient: ingredient)
-    si.quantity = si.quantity.to_i + quantity
-    si.save!
-    create_and_broadcast_notification(
-      event_type: "ingredient_added",
-      title: "EDIT \u2014 #{submission.dish_name}",
-      message: "1 item added \u00b7 #{ingredient.name}"
-    )
-    render json: submission_json(submission.reload), status: :ok
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: "Submission or ingredient not found" }, status: :not_found
-  end
-
-  # PATCH /api/v1/submissions/by_id/:submission_id/ingredients/:ingredient_id (organizer only)
-  def update_ingredient_quantity
-    submission = Submission.find(params[:submission_id])
-    ingredient = Ingredient.find(params[:ingredient_id])
-    si = submission.submission_ingredients.find_by!(ingredient: ingredient)
-    quantity = (params[:quantity].presence || 0).to_i
-    if quantity < 1
-      si.destroy!
-    else
-      si.update!(quantity: quantity)
-    end
-    if quantity < 1
-      create_and_broadcast_notification(
-        event_type: "ingredient_removed",
-        title: "EDIT \u2014 #{submission.dish_name}",
-        message: "1 item removed \u00b7 #{ingredient.name}"
-      )
-    else
-      create_and_broadcast_notification(
-        event_type: "ingredient_updated",
-        title: "EDIT \u2014 #{submission.dish_name}",
-        message: "Qty updated \u00b7 #{ingredient.name}"
-      )
-    end
-    render json: submission_json(submission.reload), status: :ok
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: "Submission or ingredient not found" }, status: :not_found
-  end
-
-  # PATCH /api/v1/submissions/by_id/:id (organizer only)
+  # PATCH /api/v1/submissions/:id
   def update
     return if reject_if_locked_for_students!
 
     submission = Submission.find(params[:id])
-    raw_country = params[:country_code] || params["country_code"]
-    raw_country_name = params[:country_name_other] || params["country_name_other"]
+    attrs = SubmissionBuilder.new(params).attributes
+
+    # Preserve existing members if not provided
     raw_members = params[:members] || params["members"]
-
-    # Read all simple scalar fields via the common helper so JSON shape (wrapped vs top-level) never matters.
-    raw_dish_name         = submission_param(:dish_name)
-    raw_team_name         = submission_param(:team_name)
-    raw_notes             = submission_param(:notes)
-    raw_phone_number      = submission_param(:phone_number)
-    raw_has_cooking_place = submission_param(:has_cooking_place)
-    raw_cooking_location  = submission_param(:cooking_location)
-    raw_found_all         = submission_param(:found_all_ingredients)
-    raw_other_ingredients = submission_param(:other_ingredients)
-    raw_needs_fridge      = submission_param(:needs_fridge_space)
-    raw_needs_utensils    = submission_param(:needs_utensils)
-    raw_utensils_notes    = submission_param(:utensils_notes)
-    raw_dish_temperature  = submission_param(:dish_temperature)
-    raw_dish_description  = submission_param(:dish_description)
-    raw_allergen          = submission_param(:allergen)
-
-    Rails.logger.info "[Submissions#update] dish_description=#{raw_dish_description.inspect} allergen=#{raw_allergen.inspect}"
-    Rails.logger.info "[Submissions#update] other_ingredients=#{raw_other_ingredients.inspect}"
-    submission.assign_attributes(
-      dish_name: raw_dish_name,
-      team_name: raw_team_name,
-      notes: raw_notes,
-      country_code: raw_country.presence,
-      country_name: (raw_country == "OTHER" ? raw_country_name.presence : nil),
-      members: raw_members.is_a?(Array) ? raw_members : submission.members,
-      phone_number: raw_phone_number.presence,
-      has_cooking_place: raw_has_cooking_place.presence,
-      cooking_location: raw_cooking_location.presence,
-      found_all_ingredients: raw_found_all.presence,
-      other_ingredients: raw_other_ingredients.presence,
-      needs_fridge_space: raw_needs_fridge.presence,
-      needs_utensils: raw_needs_utensils.presence,
-      utensils_notes: raw_utensils_notes.presence,
-      dish_temperature: raw_dish_temperature.presence,
-      dish_description: raw_dish_description.presence,
-      allergen: raw_allergen.presence
-    )
+    attrs[:members] = submission.members unless raw_members.is_a?(Array)
 
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
-
-    # Soft organizer detection — update skips require_organizer_auth but token may still be present
     is_organizer = organizer_request?
 
     # Compute ingredient diff before transaction
@@ -189,6 +61,7 @@ class Api::V1::SubmissionsController < ApplicationController
     removed_count = (current_ids - desired_ids).size
 
     Submission.transaction do
+      submission.assign_attributes(attrs)
       submission.save!
       current_by_ingredient = submission.submission_ingredients.index_by(&:ingredient_id)
 
@@ -219,15 +92,16 @@ class Api::V1::SubmissionsController < ApplicationController
     )
 
     submission.reload
-    Rails.logger.info "[Submissions#update] after save dish_description=#{submission.dish_description.inspect} allergen=#{submission.allergen.inspect}"
-    render json: submission_json(submission), status: :ok
+    render json: SubmissionSerializer.as_json(submission), status: :ok
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActiveRecord::StatementInvalid => e
+    render json: { error: e.message.truncate(200) }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Submission or ingredient not found" }, status: :not_found
   end
 
-  # PATCH /api/v1/submissions/by_id/:id/kitchen_allocation (organizer only)
+  # PATCH /api/v1/submissions/:id/kitchen_allocation
   def kitchen_allocation
     submission = Submission.find(params[:id])
     attrs = {}
@@ -236,14 +110,14 @@ class Api::V1::SubmissionsController < ApplicationController
     attrs[:helper_driver_needed] = params[:helper_driver_needed] if params.key?(:helper_driver_needed)
     attrs[:fridge_location]      = params[:fridge_location]      if params.key?(:fridge_location)
     submission.update!(attrs)
-    render json: submission_json(submission.reload), status: :ok
+    render json: SubmissionSerializer.as_json(submission.reload), status: :ok
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Submission not found" }, status: :not_found
   end
 
-  # DELETE /api/v1/submissions/by_id/:id (organizer only)
+  # DELETE /api/v1/submissions/:id
   def destroy
     submission = Submission.find(params[:id])
     dish = submission.dish_name
@@ -259,68 +133,42 @@ class Api::V1::SubmissionsController < ApplicationController
     render json: { error: "Submission not found" }, status: :not_found
   end
 
-  # GET /api/v1/submissions (organizer only)
+  # GET /api/v1/submissions
   def index
     @submissions = Submission.includes(submission_ingredients: :ingredient).order(created_at: :desc)
-    render json: @submissions.map { |s| submission_json(s) }
+    render json: @submissions.map { |s| SubmissionSerializer.as_json(s) }
   end
 
-  # GET /api/v1/submissions/lookup?phone=<phone> (public)
-  # Finds a submission by phone number. Matches on the last 10 digits of both sides so
-  # country-code prefixes (e.g. +1, 1) are transparent to the comparison.
+  # GET /api/v1/submissions/lookup?phone=<phone>
   def lookup
     raw = params[:phone].to_s
     digits = raw.gsub(/\D/, '')
-    Rails.logger.info "[lookup] raw=#{raw.inspect} digits=#{digits.inspect}"
     return render json: { error: "Phone required" }, status: :unprocessable_entity if digits.blank?
 
     input_tail = digits.last(10)
-    Rails.logger.info "[lookup] input_tail=#{input_tail.inspect} (length #{input_tail.length})"
 
-    matches = Submission
-      .includes(submission_ingredients: :ingredient)
-      .order(updated_at: :desc, created_at: :desc)
-      .select do |s|
-      # Support comma-separated numbers: match if user's input matches any stored number
-      raw_stored = s.phone_number.to_s
-      parts = raw_stored.split(/\s*,\s*/).map(&:strip).reject(&:blank?)
-      parts = [raw_stored] if parts.empty?
-      match = parts.any? do |part|
-        stored = part.gsub(/\D/, '')
-        next false if stored.blank?
-
-        # For short user-entered numbers, require exact normalized match.
-        if input_tail.length < 7
-          next stored == digits
-        end
-
-        stored_tail = stored.last(10)
-        stored_tail == input_tail
-      end
-      Rails.logger.info "[lookup] submission id=#{s.id} phone_number=#{s.phone_number.inspect} input_tail=#{input_tail.inspect} match=#{match}"
-      match
-    end
-
-    submission = matches.first
-    Rails.logger.info "[lookup] total_matches=#{matches.length} chosen_submission_id=#{submission&.id}"
+    # Use the indexed phone_tails column for an efficient DB-level match
+    submission = if input_tail.length >= 7
+                   Submission
+                     .includes(submission_ingredients: :ingredient)
+                     .where("phone_tails LIKE ?", "%#{Submission.sanitize_sql_like(input_tail)}%")
+                     .order(updated_at: :desc, created_at: :desc)
+                     .first
+                 else
+                   # Short input: fall back to exact digit match
+                   Submission
+                     .includes(submission_ingredients: :ingredient)
+                     .where("phone_tails LIKE ?", "%#{Submission.sanitize_sql_like(digits)}%")
+                     .order(updated_at: :desc, created_at: :desc)
+                     .first
+                 end
 
     return render json: { error: "No submission found for that phone number" }, status: :not_found unless submission
 
-    Rails.logger.info "[lookup] FOUND submission id=#{submission.id}"
-    render json: { submission: submission_json(submission) }
+    render json: { submission: SubmissionSerializer.as_json(submission) }
   end
 
   private
-
-  # Read a scalar submission param from top-level or nested params (e.g. params[:submission][:dish_description])
-  def submission_param(key)
-    val = params[key] || params[key.to_s]
-    if val.nil? && params[:submission].respond_to?(:[])
-      nested = params[:submission]
-      val = nested[key] || nested[key.to_s]
-    end
-    val
-  end
 
   def organizer_request?
     token = request.headers["Authorization"]&.sub(/\ABearer /, "")
@@ -333,42 +181,5 @@ class Api::V1::SubmissionsController < ApplicationController
 
     render json: { error: "Form is closed", code: "submissions_locked" }, status: :forbidden
     true
-  end
-
-  def submission_json(submission)
-    {
-      id: submission.id,
-      team_name: submission.team_name,
-      dish_name: submission.dish_name,
-      notes: submission.notes,
-      country_code: submission.country_code,
-      country_name: submission.respond_to?(:country_name) ? submission.country_name : nil,
-      members: submission.members.is_a?(Array) ? submission.members : [],
-      phone_number: submission.phone_number,
-      has_cooking_place: submission.has_cooking_place,
-      cooking_location: submission.cooking_location,
-      found_all_ingredients: submission.found_all_ingredients,
-      other_ingredients: submission.other_ingredients,
-      needs_fridge_space: submission.needs_fridge_space,
-      needs_utensils: submission.needs_utensils,
-      utensils_notes: submission.utensils_notes,
-      dish_temperature: submission.dish_temperature,
-      dish_description: submission.dish_description,
-      allergen: submission.allergen,
-      equipment_allocated: submission.equipment_allocated,
-      helper_driver_needed: submission.helper_driver_needed,
-      fridge_location: submission.fridge_location,
-      submitted_at: submission.created_at,
-      ingredients: submission.submission_ingredients.map do |si|
-        {
-          ingredient: ingredient_json(si.ingredient),
-          quantity: si.quantity
-        }
-      end
-    }
-  end
-
-  def ingredient_json(ingredient)
-    IngredientSerializer.as_json(ingredient, variant: :summary)
   end
 end

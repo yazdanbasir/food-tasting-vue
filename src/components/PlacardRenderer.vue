@@ -16,29 +16,16 @@ import { DIETARY_FLAGS } from '@/data/dietaryFlags'
 import { COUNTRIES, flagEmoji } from '@/data/countries'
 import type { SubmissionResponse } from '@/api/submissions'
 import type { IngredientDietary } from '@/types/ingredient'
+import { aggregateDietary } from '@/utils/submission'
 
 const props = defineProps<{
   submission: SubmissionResponse
   effectiveDietary?: IngredientDietary | null
 }>()
 
-/** Aggregate dietary from ingredients when effectiveDietary not provided */
-function aggregateDietaryFromSubmission(sub: SubmissionResponse): IngredientDietary {
-  const keys = [
-    'is_alcohol', 'gluten', 'dairy', 'egg', 'peanut',
-    'pork', 'shellfish',
-    'kosher', 'vegan', 'vegetarian', 'lactose_free', 'wheat_free',
-  ] as const
-  const out = {} as IngredientDietary
-  for (const k of keys) {
-    out[k] = sub.ingredients.some((i) => i.ingredient.dietary?.[k])
-  }
-  return out
-}
-
 const dietary = computed<IngredientDietary>(() => {
   if (props.effectiveDietary != null) return props.effectiveDietary
-  return aggregateDietaryFromSubmission(props.submission)
+  return aggregateDietary(props.submission)
 })
 
 const activeFlags = computed(() => DIETARY_FLAGS.filter(({ key }) => dietary.value[key]))

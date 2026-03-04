@@ -4,14 +4,16 @@ class Submission < ApplicationRecord
 
   serialize :members, coder: JSON
 
-  validates :dish_name, presence: true
+  before_validation :sync_phone_tails
+
+  validates :team_name, :dish_name, presence: true
   validate :phone_numbers_must_be_unique_across_groups
 
-  def needs_fridge_space?
-    needs_fridge_space == "yes"
-  end
-
   private
+
+  def sync_phone_tails
+    self.phone_tails = normalized_phone_tails(phone_number).join(",").presence
+  end
 
   def phone_numbers_must_be_unique_across_groups
     return if phone_number.blank?
@@ -19,8 +21,9 @@ class Submission < ApplicationRecord
     current_tails = normalized_phone_tails(phone_number)
     return if current_tails.empty?
 
-    Submission.where.not(id: id).where.not(phone_number: [nil, ""]).find_each do |submission|
-      existing_tails = normalized_phone_tails(submission.phone_number)
+    # Query the DB for overlapping tails instead of loading all records
+    Submission.where.not(id: id).where.not(phone_tails: [nil, ""]).find_each do |submission|
+      existing_tails = submission.phone_tails.to_s.split(",")
       next if existing_tails.empty?
       overlap = (current_tails & existing_tails).first
       if overlap.present?

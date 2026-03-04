@@ -69,7 +69,6 @@ export function useLockOverlay() {
     const apiPass = import.meta.env.VITE_ORGANIZER_API_PASSWORD as string | undefined
     const username = apiUser ?? 'organizer'
     const pass = apiPass ?? password
-    console.log('[Organizer Auth]', 'unlock: attempting organizer login', { username, hasApiPass: !!apiPass })
     try {
       const result = await organizerLogin(username, pass)
       const storage = getStorage()
@@ -78,7 +77,6 @@ export function useLockOverlay() {
         storage.setItem('organizer_username', result.username)
         storage.setItem(STORAGE_KEY, 'true')
         isLocked.value = false
-        console.log('[Organizer Auth]', 'unlock SUCCESS: token stored, overlay unlocked')
         return { ok: true }
       }
       return { ok: false, error: 'Login succeeded but could not store token' }

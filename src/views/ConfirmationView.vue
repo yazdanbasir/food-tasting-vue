@@ -26,7 +26,6 @@ function handleEditSubmission() {
   if (isResponsesLocked.value) return
   const sub = lastSubmittedSubmission.value
   if (!sub) return
-  console.log('[Other ingredients] Edit Form clicked — submission.other_ingredients from lastSubmitted:', (sub as { other_ingredients?: string }).other_ingredients ?? '(undefined)')
   store.loadForEdit(sub)
   store.setLastSubmitted(null)
   router.push('/')
