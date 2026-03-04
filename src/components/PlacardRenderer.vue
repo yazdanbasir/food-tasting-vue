@@ -26,6 +26,7 @@ const props = defineProps<{
 function aggregateDietaryFromSubmission(sub: SubmissionResponse): IngredientDietary {
   const keys = [
     'is_alcohol', 'gluten', 'dairy', 'egg', 'peanut',
+    'pork', 'shellfish',
     'kosher', 'vegan', 'vegetarian', 'lactose_free', 'wheat_free',
   ] as const
   const out = {} as IngredientDietary

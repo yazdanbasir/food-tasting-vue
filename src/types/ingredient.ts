@@ -4,6 +4,8 @@ export interface IngredientDietary {
   dairy: boolean
   egg: boolean
   peanut: boolean
+  pork: boolean
+  shellfish: boolean
   kosher: boolean
   vegan: boolean
   vegetarian: boolean

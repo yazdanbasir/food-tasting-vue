@@ -229,6 +229,8 @@ const EMPTY_DIETARY: IngredientDietary = {
   dairy: false,
   egg: false,
   peanut: false,
+  pork: false,
+  shellfish: false,
   kosher: false,
   vegan: false,
   vegetarian: false,
@@ -260,6 +262,7 @@ function otherEntryToIngredient(
 function aggregateDietary(sub: SubmissionResponse): IngredientDietary {
   const keys = [
     'is_alcohol', 'gluten', 'dairy', 'egg', 'peanut',
+    'pork', 'shellfish',
     'kosher', 'vegan', 'vegetarian', 'lactose_free', 'wheat_free',
   ] as const
   const out = {} as IngredientDietary
