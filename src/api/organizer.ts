@@ -2,6 +2,7 @@ import type { SubmissionResponse } from '@/api/submissions'
 import type { IngredientDietary } from '@/types/ingredient'
 
 const BASE = import.meta.env.VITE_API_BASE_URL
+const FORM_LOCK_FALLBACK_KEY = 'form_lock_fallback'
 
 let onUnauthorized: (() => void | Promise<void>) | null = null
 let reauthInFlight: Promise<boolean> | null = null
@@ -13,6 +14,14 @@ export function setOnUnauthorized(cb: () => void | Promise<void>): void {
 
 function getStorage(): Storage | null {
   return typeof localStorage !== 'undefined' ? localStorage : null
+}
+
+function getFallbackFormLockState(): boolean {
+  return getStorage()?.getItem(FORM_LOCK_FALLBACK_KEY) === 'true'
+}
+
+function setFallbackFormLockState(locked: boolean): void {
+  getStorage()?.setItem(FORM_LOCK_FALLBACK_KEY, locked ? 'true' : 'false')
 }
 
 export function organizerHeaders(): HeadersInit {
@@ -356,4 +365,37 @@ export async function deleteKitchenResource(id: number): Promise<void> {
     const body = await res.json().catch(() => ({}))
     throw new Error((body as { error?: string }).error || 'Could not delete this resource right now. Please try again.')
   }
+}
+
+export interface FormLockStatusResponse {
+  submissions_locked: boolean
+}
+
+export async function getFormLockStatus(): Promise<FormLockStatusResponse> {
+  const res = await fetch(`${BASE}/api/v1/form_lock`)
+  if (res.status === 404) {
+    return { submissions_locked: getFallbackFormLockState() }
+  }
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error((body as { error?: string }).error || `Failed to load form lock status: ${res.status}`)
+  }
+  return body as FormLockStatusResponse
+}
+
+export async function setFormLockStatus(submissionsLocked: boolean): Promise<FormLockStatusResponse> {
+  const res = await organizerFetchWithRetry(`${BASE}/api/v1/form_lock`, {
+    method: 'PATCH',
+    headers: organizerHeaders(),
+    body: JSON.stringify({ submissions_locked: submissionsLocked }),
+  })
+  if (res.status === 404) {
+    setFallbackFormLockState(submissionsLocked)
+    return { submissions_locked: submissionsLocked }
+  }
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error((body as { error?: string }).error || `Failed to update form lock status: ${res.status}`)
+  }
+  return body as FormLockStatusResponse
 }

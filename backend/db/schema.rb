@@ -10,7 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_01_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
+  create_table "app_settings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "submissions_locked", default: false, null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "grocery_checkins", force: :cascade do |t|
     t.boolean "checked", default: false, null: false
     t.datetime "checked_at"

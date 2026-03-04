@@ -1,12 +1,20 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useSubmissionStore } from '@/stores/submission'
+import { useFormLockState } from '@/composables/useFormLockState'
 import '@/styles/form-section.css'
 
 const router = useRouter()
 const store = useSubmissionStore()
 const { lastSubmittedSubmission } = storeToRefs(store)
+const { isResponsesLocked, refreshFormLockStatus } = useFormLockState()
+const canEditSubmission = computed(() => !!lastSubmittedSubmission.value && !isResponsesLocked.value)
+
+onMounted(() => {
+  void refreshFormLockStatus()
+})
 
 function handleImDone() {
   store.setLastSubmitted(null)
@@ -15,6 +23,7 @@ function handleImDone() {
 }
 
 function handleEditSubmission() {
+  if (isResponsesLocked.value) return
   const sub = lastSubmittedSubmission.value
   if (!sub) return
   console.log('[Other ingredients] Edit Form clicked — submission.other_ingredients from lastSubmitted:', (sub as { other_ingredients?: string }).other_ingredients ?? '(undefined)')
@@ -51,9 +60,10 @@ function handleEditSubmission() {
           v-if="lastSubmittedSubmission"
           type="button"
           class="btn-pill-secondary confirmation-btn"
+          :disabled="!canEditSubmission"
           @click="handleEditSubmission"
         >
-          Edit Form
+          {{ canEditSubmission ? 'Edit Form' : 'Form Closed' }}
         </button>
         <button type="button" class="btn-pill-primary confirmation-btn" @click="handleImDone">
           Close

@@ -25,6 +25,7 @@ Rails.application.routes.draw do
       get "notifications", to: "notifications#index"
       patch "notifications/mark_all_read", to: "notifications#mark_all_read"
       resources :kitchen_resources, only: [:index, :create, :update, :destroy]
+      resource :form_lock, only: [:show, :update], controller: "form_lock"
     end
   end
 end

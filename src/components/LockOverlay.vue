@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLockOverlay } from '@/composables/useLockOverlay'
+import { useFormLockState } from '@/composables/useFormLockState'
 import { useSubmissionStore } from '@/stores/submission'
 import '@/styles/form-section.css'
 
@@ -16,6 +17,7 @@ const props = withDefaults(
 
 const router = useRouter()
 const { isLocked, verifyPassword, unlock, lookupByPhone } = useLockOverlay()
+const { isResponsesLocked, refreshFormLockStatus } = useFormLockState()
 const submissionStore = useSubmissionStore()
 
 const input = ref('')
@@ -39,6 +41,11 @@ async function onInput(e: Event) {
 
 async function performLookup(value: string) {
   if (isLookingUp.value) return
+  await refreshFormLockStatus()
+  if (isResponsesLocked.value) {
+    error.value = 'Form is closed'
+    return
+  }
   isLookingUp.value = true
   error.value = null
   const result = await lookupByPhone(value)
@@ -75,6 +82,7 @@ watch(overlayVisible, (visible) => {
   if (visible) {
     input.value = ''
     error.value = null
+    void refreshFormLockStatus()
     requestAnimationFrame(() => inputRef.value?.focus({ preventScroll: true }))
   }
 })
@@ -170,7 +178,8 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .lock-error {
-  font-size: 0.9375rem;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: #b91c1c;
   text-align: center;
   max-width: min(400px, 90vw);

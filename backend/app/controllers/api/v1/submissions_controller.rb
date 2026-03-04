@@ -5,6 +5,8 @@ class Api::V1::SubmissionsController < ApplicationController
 
   # POST /api/v1/submissions
   def create
+    return if reject_if_locked_for_students!
+
     raw_country = params[:country_code] || params["country_code"]
     raw_country_name = params[:country_name_other] || params["country_name_other"]
     raw_members = params[:members] || params["members"]
@@ -130,6 +132,8 @@ class Api::V1::SubmissionsController < ApplicationController
 
   # PATCH /api/v1/submissions/by_id/:id (organizer only)
   def update
+    return if reject_if_locked_for_students!
+
     submission = Submission.find(params[:id])
     raw_country = params[:country_code] || params["country_code"]
     raw_country_name = params[:country_name_other] || params["country_name_other"]
@@ -176,8 +180,7 @@ class Api::V1::SubmissionsController < ApplicationController
     desired = (params[:ingredients] || []).map { |item| [item[:ingredient_id].to_i, (item[:quantity] || 1).to_i] }.to_h
 
     # Soft organizer detection — update skips require_organizer_auth but token may still be present
-    token = request.headers["Authorization"]&.sub(/\ABearer /, "")
-    is_organizer = token.present? && Organizer.exists?(token: token)
+    is_organizer = organizer_request?
 
     # Compute ingredient diff before transaction
     current_ids = submission.submission_ingredients.pluck(:ingredient_id).to_set
@@ -317,6 +320,19 @@ class Api::V1::SubmissionsController < ApplicationController
       val = nested[key] || nested[key.to_s]
     end
     val
+  end
+
+  def organizer_request?
+    token = request.headers["Authorization"]&.sub(/\ABearer /, "")
+    token.present? && Organizer.exists?(token: token)
+  end
+
+  def reject_if_locked_for_students!
+    return false unless AppSetting.current.submissions_locked
+    return false if organizer_request?
+
+    render json: { error: "Form is closed", code: "submissions_locked" }, status: :forbidden
+    true
   end
 
   def submission_json(submission)

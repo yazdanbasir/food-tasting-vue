@@ -9,6 +9,7 @@ import HotColdSelect from '@/components/HotColdSelect.vue'
 import { TriangleAlert } from 'lucide-vue-next'
 import { useSubmissionStore, OTHER_INGREDIENT_SIZE_OPTIONS, OTHER_INGREDIENT_QUANTITY_UNITS } from '@/stores/submission'
 import { createSubmission, lookupSubmissionByPhone, updateSubmission } from '@/api/submissions'
+import { useFormLockState } from '@/composables/useFormLockState'
 
 const IngredientSearch = defineAsyncComponent(
   () => import('@/components/IngredientSearch.vue')
@@ -64,6 +65,7 @@ const utensilsDropdownOpen = ref(false)
 const utensilsDropdownRef = ref<HTMLElement | null>(null)
 const utensilsTriggerRef = ref<HTMLElement | null>(null)
 const utensilsDropdownStyle = ref<Record<string, string>>({})
+const { isResponsesLocked, refreshFormLockStatus } = useFormLockState()
 
 /** True only after user has clicked Save in the group info dropdown with at least one valid contact. Cleared when contacts become invalid. */
 const groupInfoCommitted = ref(false)
@@ -268,8 +270,21 @@ function handleUtensilsSave() {
   utensilsDropdownOpen.value = false
 }
 
-onMounted(() => document.addEventListener('click', handleContactClickOutside))
-onUnmounted(() => document.removeEventListener('click', handleContactClickOutside))
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    void refreshFormLockStatus()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleContactClickOutside)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  void refreshFormLockStatus()
+})
+onUnmounted(() => {
+  document.removeEventListener('click', handleContactClickOutside)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 
 const router = useRouter()
 
@@ -306,6 +321,7 @@ watch(showGrocerySection, (show) => {
 })
 
 function goToSubmissionLookup() {
+  if (isResponsesLocked.value) return
   router.push({ path: '/organizer', query: { mode: 'student-edit' } })
 }
 
@@ -326,7 +342,7 @@ watch(
 )
 
 function handleNext() {
-  if (!canAdvancePage1.value) return
+  if (!canAdvancePage1.value || isResponsesLocked.value) return
   currentPage.value = 2
 }
 
@@ -337,6 +353,14 @@ function handleBack() {
 
 async function handleSubmit() {
   if (!canSubmit.value || isSubmitting.value) return
+
+  if (!store.editingAsOrganizer) {
+    const locked = await refreshFormLockStatus()
+    if (locked) {
+      submitError.value = 'Form is closed'
+      return
+    }
+  }
 
   isSubmitting.value = true
   submitError.value = null
@@ -439,7 +463,7 @@ async function handleSubmit() {
     </section>
 
     <!-- PAGE 1 -->
-    <div v-show="currentPage === 1" class="page-wrapper">
+    <div v-show="currentPage === 1" class="page-wrapper" :class="{ 'form-locked': isResponsesLocked }">
       <section
         class="home-reminders-section form-section-top-bar"
         aria-label="Important reminders"
@@ -829,16 +853,17 @@ async function handleSubmit() {
           <button
             type="button"
             class="btn-pill-primary home-edit-submission-btn"
+            :disabled="isResponsesLocked"
             @click="goToSubmissionLookup"
           >
-            Click here to edit your submission
+            {{ isResponsesLocked ? 'Form Closed' : 'Click here to edit your submission' }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- PAGE 2 -->
-    <div v-show="currentPage === 2" class="page-wrapper">
+    <div v-show="currentPage === 2" class="page-wrapper" :class="{ 'form-locked': isResponsesLocked }">
       <div class="home-layout home-layout-page2">
 
         <!-- Scrollable content area -->
@@ -1086,6 +1111,28 @@ async function handleSubmit() {
 /* Page wrappers — transparent to flex layout when visible; hidden by v-show when switching pages */
 .page-wrapper {
   display: contents;
+}
+
+/* ── Locked form state — disable all interaction ── */
+.form-locked {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.45;
+  filter: grayscale(0.3);
+}
+
+.form-locked-banner {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  border-radius: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 /* 1rem gap between all sections (matches gap below maroon header) */
