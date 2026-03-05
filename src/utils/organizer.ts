@@ -168,6 +168,48 @@ export const EMPTY_DIETARY: IngredientDietary = {
   wheat_free: false,
 }
 
+/** Parse meat_items JSON into rows for "Meat" tab in submission detail */
+export function parseMeatItems(sub: SubmissionResponse): Array<{ meatType: string; cut: string; quantity: string; quantityUnit: string; additionalDetails: string }> {
+  const raw = (sub.meat_items ?? '').trim()
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (Array.isArray(parsed)) {
+      return (parsed as Record<string, unknown>[]).map((row) => ({
+        meatType: String(row?.meatType ?? row?.meat_type ?? '').trim(),
+        cut: String(row?.cut ?? '').trim(),
+        quantity: String(row?.quantity ?? '').trim(),
+        quantityUnit: String(row?.quantityUnit ?? row?.quantity_unit ?? '').trim(),
+        additionalDetails: String(row?.additionalDetails ?? row?.additional_details ?? '').trim(),
+      })).filter((e) => e.meatType || e.cut || e.quantity)
+    }
+  } catch {
+    /* fall through */
+  }
+  return []
+}
+
+/** Map a meat entry to a minimal Ingredient for IngredientRow */
+export function meatEntryToIngredient(
+  entry: { meatType: string; cut: string; quantity: string; quantityUnit: string; additionalDetails: string },
+  index: number
+): Ingredient {
+  const nameParts = [entry.meatType, entry.cut].filter(Boolean)
+  const sizePart = [entry.additionalDetails].filter(Boolean).join(' · ') || null
+  return {
+    id: -index - 1000,
+    product_id: `meat-${index}`,
+    name: nameParts.join(' – ') || '—',
+    size: sizePart,
+    aisle: null,
+    category: null,
+    image_url: null,
+    price_cents: 0,
+    price: 0,
+    dietary: EMPTY_DIETARY,
+  }
+}
+
 /** Map an "other stores" entry to a minimal Ingredient for IngredientRow (placeholder thumb, name, size, qty) */
 export function otherEntryToIngredient(
   entry: { item: string; size: string; quantity: string; additionalDetails: string },

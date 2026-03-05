@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_04_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_05_120000) do
   create_table "app_settings", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "submissions_locked", default: false, null: false
@@ -114,6 +114,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_04_040000) do
     t.string "fridge_location"
     t.boolean "has_cooking_place", default: false, null: false
     t.string "helper_driver_needed"
+    t.text "meat_items"
     t.text "members"
     t.boolean "needs_fridge_space", default: false, null: false
     t.boolean "needs_utensils", default: false, null: false

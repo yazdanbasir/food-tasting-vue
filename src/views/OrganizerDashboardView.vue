@@ -22,7 +22,7 @@ import { aggregateDietary, notifRelativeTime, notifDotColor } from '@/utils/subm
 import type { NotificationItem } from '@/api/notifications'
 import type { Ingredient, IngredientDietary } from '@/types/ingredient'
 import { usePlacardExport } from '@/composables/usePlacardExport'
-import { toIngredient, formatUtensilsNotes, formatUtensilsNotesLines, formatUtensilsNotesStructured, parseUtensilsNotes, parseOtherIngredients, parseOtherIngredientQuantity, getOtherIngredientUnit, submissionPhoneNumbers, formatAisleTitle, countryLabel, EMPTY_DIETARY, otherEntryToIngredient } from '@/utils/organizer'
+import { toIngredient, formatUtensilsNotes, formatUtensilsNotesLines, formatUtensilsNotesStructured, parseUtensilsNotes, parseOtherIngredients, parseOtherIngredientQuantity, getOtherIngredientUnit, submissionPhoneNumbers, formatAisleTitle, countryLabel, EMPTY_DIETARY, otherEntryToIngredient, parseMeatItems, meatEntryToIngredient } from '@/utils/organizer'
 
 const router = useRouter()
 const route = useRoute()
@@ -91,11 +91,11 @@ const otherStoresMasterList = computed(() => aggregatedOtherStoresList())
 
 
 const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'placards' | 'notifications'>('submissions')
-const groceryStore = ref<'giant' | 'other-stores' | 'utensils-equipment'>('giant') // tab bar: Giant | Other Stores | Utensils/Equipment
+const groceryStore = ref<'giant' | 'other-stores' | 'utensils-equipment' | 'meat'>('giant') // tab bar: Giant | Other Stores | Utensils/Equipment | Meat
 /** Giant tab only: show list by aisle (default) or as one flat full list */
 const giantViewMode = ref<'by-aisle' | 'full-list'>('by-aisle')
-/** Tab inside each submission detail card: Giant vs Other Stores, tracked per submission id */
-const submissionDetailStoreTabById = ref<Record<number, 'giant' | 'other-stores'>>({})
+/** Tab inside each submission detail card: Giant vs Other Stores vs Meat, tracked per submission id */
+const submissionDetailStoreTabById = ref<Record<number, 'giant' | 'other-stores' | 'meat'>>({})
 const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('kitchens') // Kitchens & Utensils sub-tabs
 const addingKuType = ref<'fridge' | 'kitchen' | 'utensil' | 'helper_driver' | null>(null) // show add-card with input
 const kuAddInputRef = ref<HTMLInputElement | null>(null)
@@ -105,11 +105,11 @@ const selectedPlacardIds = ref<Set<number>>(new Set())
 const { isExporting, exportProgress, exportPDF, exportPNG } = usePlacardExport()
 const expandedSubmissions = ref<Set<number>>(new Set())
 
-function getSubmissionDetailStoreTab(subId: number): 'giant' | 'other-stores' {
+function getSubmissionDetailStoreTab(subId: number): 'giant' | 'other-stores' | 'meat' {
   return submissionDetailStoreTabById.value[subId] ?? 'giant'
 }
 
-function setSubmissionDetailStoreTab(subId: number, tab: 'giant' | 'other-stores') {
+function setSubmissionDetailStoreTab(subId: number, tab: 'giant' | 'other-stores' | 'meat') {
   submissionDetailStoreTabById.value = {
     ...submissionDetailStoreTabById.value,
     [subId]: tab,
@@ -487,6 +487,7 @@ function submissionToPayload(sub: SubmissionResponse): Parameters<typeof updateS
     cooking_location: sub.cooking_location ?? undefined,
     found_all_ingredients: sub.found_all_ingredients ?? undefined,
     other_ingredients: sub.other_ingredients ?? undefined,
+    meat_items: sub.meat_items ?? undefined,
     needs_fridge_space: sub.needs_fridge_space ?? undefined,
     dish_temperature: sub.dish_temperature ?? undefined,
     dish_description: sub.dish_description ?? undefined,
@@ -526,6 +527,37 @@ async function handleOtherIngredientQty(
   try {
     const payload = submissionToPayload(sub)
     await updateSubmission(sub.id, { ...payload, other_ingredients: otherIngredientsJson })
+    await loadSubmissions()
+  } catch (err) {
+    addProductError.value = err instanceof Error ? err.message : 'Failed to update quantity'
+  }
+}
+
+async function handleMeatItemQty(
+  sub: SubmissionResponse,
+  entryIndex: number,
+  currentQty: number,
+  delta: number,
+) {
+  const newQty = Math.max(0, currentQty + delta)
+  addProductError.value = null
+  const entries = parseMeatItems(sub)
+  if (entryIndex < 0 || entryIndex >= entries.length) return
+  const updated = entries.map((e, i) =>
+    i === entryIndex ? { ...e, quantity: String(newQty) } : e
+  )
+  const meatItemsJson = JSON.stringify(
+    updated.map((e) => ({
+      meatType: e.meatType,
+      cut: e.cut,
+      quantity: e.quantity,
+      quantityUnit: e.quantityUnit,
+      ...(e.additionalDetails ? { additionalDetails: e.additionalDetails } : {}),
+    }))
+  )
+  try {
+    const payload = submissionToPayload(sub)
+    await updateSubmission(sub.id, { ...payload, meat_items: meatItemsJson })
     await loadSubmissions()
   } catch (err) {
     addProductError.value = err instanceof Error ? err.message : 'Failed to update quantity'
@@ -1374,6 +1406,14 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                   >
                     Other Stores
                   </button>
+                  <button
+                    type="button"
+                    class="grocery-store-tab"
+                    :class="getSubmissionDetailStoreTab(sub.id) === 'meat' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+                    @click="setSubmissionDetailStoreTab(sub.id, 'meat')"
+                  >
+                    Meat
+                  </button>
                 </div>
                 <template v-if="getSubmissionDetailStoreTab(sub.id) === 'giant'">
                   <div class="submission-detail-list">
@@ -1388,7 +1428,7 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                     />
                   </div>
                 </template>
-                <template v-else>
+                <template v-else-if="getSubmissionDetailStoreTab(sub.id) === 'other-stores'">
                   <div class="submission-detail-list submission-detail-other-stores-list">
                     <template v-if="parseOtherIngredients(sub).length">
                       <IngredientRow
@@ -1403,6 +1443,23 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                       />
                     </template>
                     <div v-else class="submission-detail-other-stores-empty">No items from other stores</div>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="submission-detail-list submission-detail-other-stores-list">
+                    <template v-if="parseMeatItems(sub).length">
+                      <IngredientRow
+                        v-for="(entry, i) in parseMeatItems(sub)"
+                        :key="i"
+                        :ingredient="meatEntryToIngredient(entry, i)"
+                        :quantity="Number(entry.quantity) || 0"
+                        :quantity-unit="entry.quantityUnit"
+                        :editable="true"
+                        :show-price="false"
+                        @change-qty="(delta) => handleMeatItemQty(sub, i, Number(entry.quantity) || 0, delta)"
+                      />
+                    </template>
+                    <div v-else class="submission-detail-other-stores-empty">No meat items listed</div>
                   </div>
                 </template>
               </div>

@@ -7,7 +7,7 @@ class SubmissionBuilder
 
   OPTIONAL_FIELDS = %i[
     notes phone_number cooking_location
-    utensils_notes dish_temperature dish_description allergen other_ingredients
+    utensils_notes dish_temperature dish_description allergen other_ingredients meat_items
   ].freeze
 
   BOOLEAN_FIELDS = %i[

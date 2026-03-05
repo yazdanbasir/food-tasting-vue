@@ -287,12 +287,21 @@ export const useSubmissionStore = defineStore('submission', () => {
 
   /** True if a meat entry row is fully filled. */
   function isMeatRowComplete(e: MeatEntry): boolean {
-    return e.meatType.trim() !== '' && e.cut.trim() !== '' && e.quantity.trim() !== '' && e.quantityUnit.trim() !== ''
+    const meatType = String(e?.meatType ?? '').trim()
+    const cut = String(e?.cut ?? '').trim()
+    const quantity = String(e?.quantity ?? '').trim()
+    const quantityUnit = String(e?.quantityUnit ?? '').trim()
+    return meatType !== '' && cut !== '' && quantity !== '' && quantityUnit !== ''
   }
 
   /** True if a meat entry row has some but not all required fields filled. */
   function isMeatRowPartial(e: MeatEntry): boolean {
-    const hasAny = e.meatType.trim() !== '' || e.cut.trim() !== '' || e.quantity.trim() !== '' || e.quantityUnit.trim() !== '' || e.additionalDetails.trim() !== ''
+    const meatType = String(e?.meatType ?? '').trim()
+    const cut = String(e?.cut ?? '').trim()
+    const quantity = String(e?.quantity ?? '').trim()
+    const quantityUnit = String(e?.quantityUnit ?? '').trim()
+    const additionalDetails = String(e?.additionalDetails ?? '').trim()
+    const hasAny = meatType !== '' || cut !== '' || quantity !== '' || quantityUnit !== '' || additionalDetails !== ''
     return hasAny && !isMeatRowComplete(e)
   }
 
@@ -442,7 +451,7 @@ export const useSubmissionStore = defineStore('submission', () => {
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
     }))
-    const rawMeat = ((sub as unknown as Record<string, unknown>).meat_items as string | undefined ?? '').trim()
+    const rawMeat = (sub.meat_items ?? '').trim()
     if (rawMeat) {
       try {
         const parsed = JSON.parse(rawMeat) as unknown

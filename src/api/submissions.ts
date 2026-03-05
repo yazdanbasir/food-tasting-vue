@@ -20,6 +20,7 @@ export interface SubmissionPayload {
   dish_description?: string
   allergen?: string
   other_ingredients?: string | null
+  meat_items?: string | null
   ingredients: { ingredient_id: number; quantity: number }[]
 }
 
@@ -58,6 +59,7 @@ export interface SubmissionResponse {
   dish_description?: string | null
   allergen?: string | null
   other_ingredients?: string | null
+  meat_items?: string | null
   equipment_allocated?: string | null
   helper_driver_needed?: string | null
   fridge_location?: string | null

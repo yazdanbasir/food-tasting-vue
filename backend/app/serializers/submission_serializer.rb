@@ -22,6 +22,7 @@ class SubmissionSerializer
       cooking_location: @s.cooking_location,
       found_all_ingredients: @s.found_all_ingredients,
       other_ingredients: @s.other_ingredients,
+      meat_items: @s.meat_items,
       needs_fridge_space: @s.needs_fridge_space,
       needs_utensils: @s.needs_utensils,
       utensils_notes: @s.utensils_notes,

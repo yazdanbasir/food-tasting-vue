@@ -218,6 +218,27 @@ function handleContactClickOutside(e: MouseEvent) {
   ) {
     utensilsDropdownOpen.value = false
   }
+  if (
+    openMeatTypeRowIndex.value !== null &&
+    !(target as Element).closest?.('.home-meat-type-trigger') &&
+    !meatTypeDropdownRef.value?.contains(target)
+  ) {
+    openMeatTypeRowIndex.value = null
+  }
+  if (
+    openMeatCutRowIndex.value !== null &&
+    !(target as Element).closest?.('.home-meat-cut-trigger') &&
+    !meatCutDropdownRef.value?.contains(target)
+  ) {
+    openMeatCutRowIndex.value = null
+  }
+  if (
+    openMeatUnitRowIndex.value !== null &&
+    !(target as Element).closest?.('.home-meat-unit-trigger') &&
+    !meatUnitDropdownRef.value?.contains(target)
+  ) {
+    openMeatUnitRowIndex.value = null
+  }
 }
 
 function toggleOtherIngredientsDropdown() {
@@ -297,7 +318,6 @@ function handleUtensilsSave() {
 }
 
 function openMeatTypeDropdown(i: number, e: MouseEvent) {
-  if (openMeatTypeRowIndex.value === i) { openMeatTypeRowIndex.value = null; return }
   const el = e.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
   meatTypeDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
@@ -313,7 +333,6 @@ function selectMeatType(opt: string) {
 }
 
 function openMeatCutDropdown(i: number, e: MouseEvent) {
-  if (openMeatCutRowIndex.value === i) { openMeatCutRowIndex.value = null; return }
   const el = e.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
   meatCutDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
@@ -329,7 +348,6 @@ function selectMeatCut(opt: string) {
 }
 
 function openMeatUnitDropdown(i: number, e: MouseEvent) {
-  if (openMeatUnitRowIndex.value === i) { openMeatUnitRowIndex.value = null; return }
   const el = e.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
   meatUnitDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
@@ -986,7 +1004,7 @@ async function handleSubmit() {
                   <div class="home-other-ingredients-pill home-other-ingredients-pill-item">
                     <button
                       type="button"
-                      class="home-other-ingredients-select-btn"
+                      class="home-other-ingredients-select-btn home-meat-type-trigger"
                       :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.meatType }"
                       aria-haspopup="listbox"
                       :aria-expanded="openMeatTypeRowIndex === i"
@@ -1004,7 +1022,7 @@ async function handleSubmit() {
                   <div class="home-other-ingredients-pill home-other-ingredients-pill-size">
                     <button
                       type="button"
-                      class="home-other-ingredients-select-btn"
+                      class="home-other-ingredients-select-btn home-meat-cut-trigger"
                       :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.cut }"
                       aria-haspopup="listbox"
                       :aria-expanded="openMeatCutRowIndex === i"
@@ -1032,7 +1050,7 @@ async function handleSubmit() {
                   <div class="home-other-ingredients-pill home-other-ingredients-pill-unit">
                     <button
                       type="button"
-                      class="home-other-ingredients-select-btn home-other-ingredients-unit-trigger"
+                      class="home-other-ingredients-select-btn home-meat-unit-trigger"
                       :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.quantityUnit }"
                       aria-haspopup="listbox"
                       :aria-expanded="openMeatUnitRowIndex === i"
