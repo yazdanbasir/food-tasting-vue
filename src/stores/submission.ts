@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { Ingredient } from '@/types/ingredient'
+import { DIAL_CODES } from '@/data/countries'
 import type { MasterListItem, SubmissionIngredient } from '@/types/submission'
 import type { SubmissionResponse } from '@/api/submissions'
 
@@ -180,9 +181,13 @@ export const useSubmissionStore = defineStore('submission', () => {
     ),
   )
 
-  /** Valid phone numbers (for API payload). */
+  /** Valid phone numbers (for API payload). Prefixes the contact's dial code when set. */
   const validPhoneNumbers = computed(() =>
-    validContacts.value.map((c) => c.phone.trim()),
+    validContacts.value.map((c) => {
+      const phone = c.phone.trim()
+      const dial = c.countryCode ? DIAL_CODES[c.countryCode] : ''
+      return dial ? `${dial}${phone}` : phone
+    }),
   )
 
   const canAdvancePage1 = computed(
@@ -209,7 +214,8 @@ export const useSubmissionStore = defineStore('submission', () => {
     const size = String(e?.size ?? '').trim()
     const quantity = String(e?.quantity ?? '').trim()
     const quantityUnit = String(e?.quantityUnit ?? '').trim()
-    const hasAny = item !== '' || size !== '' || quantity !== '' || quantityUnit !== ''
+    const additionalDetails = String(e?.additionalDetails ?? '').trim()
+    const hasAny = item !== '' || size !== '' || quantity !== '' || quantityUnit !== '' || additionalDetails !== ''
     const hasAll = item !== '' && size !== '' && quantity !== '' && quantityUnit !== ''
     return hasAny && !hasAll
   }
@@ -336,7 +342,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     allergen.value = ''
     utensilEntries.value = [{ utensil: '', size: '', quantity: '' }]
     otherIngredientEntries.value = [{ item: '', size: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
-    meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+    meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
     ingredients.value = []
   }
 
@@ -436,7 +442,7 @@ export const useSubmissionStore = defineStore('submission', () => {
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
     }))
-    const rawMeat = ((sub as Record<string, unknown>).meat_items as string | undefined ?? '').trim()
+    const rawMeat = ((sub as unknown as Record<string, unknown>).meat_items as string | undefined ?? '').trim()
     if (rawMeat) {
       try {
         const parsed = JSON.parse(rawMeat) as unknown
@@ -448,19 +454,20 @@ export const useSubmissionStore = defineStore('submission', () => {
               cut: String(r?.cut ?? '').trim(),
               quantity: String(r?.quantity ?? '').trim(),
               quantityUnit: String(r?.quantityUnit ?? r?.quantity_unit ?? '').trim(),
+              additionalDetails: String(r?.additionalDetails ?? r?.additional_details ?? '').trim(),
             }
           })
           if (meatEntries.value.length === 0) {
-            meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+            meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
           }
         } else {
-          meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+          meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
         }
       } catch {
-        meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+        meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
       }
     } else {
-      meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+      meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
     }
   }
 

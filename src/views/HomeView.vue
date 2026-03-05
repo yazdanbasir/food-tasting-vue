@@ -121,14 +121,18 @@ function toggleContactDropdown() {
   }
 }
 
-function normalizedConflictPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '')
-  if (digits.length >= 10) return digits.slice(-10)
-  return digits || raw.trim()
+function phoneDigits(val: string): string {
+  return val.replace(/\D/g, '')
+}
+
+function storedPhonesDigits(submission: { phone_number?: string | null }): string[] {
+  const raw = (submission.phone_number ?? '').trim()
+  if (!raw) return []
+  return raw.split(/\s*,\s*/).map((s) => phoneDigits(s)).filter(Boolean)
 }
 
 function conflictMessageForPhone(raw: string): string {
-  return `${normalizedConflictPhone(raw)} has already been added to another group`
+  return `${raw} has already been added to another group`
 }
 
 async function hasPhoneConflictWithAnotherGroup(): Promise<boolean> {
@@ -139,7 +143,10 @@ async function hasPhoneConflictWithAnotherGroup(): Promise<boolean> {
     for (const phone of validPhoneNumbers.value) {
       try {
         const { submission } = await lookupSubmissionByPhone(phone)
-        if (editingId == null || submission.id !== editingId) {
+        if (editingId != null && submission.id === editingId) continue
+        const queryDigits = phoneDigits(phone)
+        const stored = storedPhonesDigits(submission)
+        if (stored.some((d) => d === queryDigits)) {
           contactPhoneConflictError.value = conflictMessageForPhone(phone)
           return true
         }
@@ -2163,6 +2170,7 @@ async function handleSubmit() {
   padding: 0.5rem 0.75rem;
   background: #fff;
   -moz-appearance: textfield;
+  appearance: textfield;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
