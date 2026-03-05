@@ -23,14 +23,16 @@ const imageSrc = computed(() => {
   if (!url || typeof url !== 'string') return null
   const trimmed = url.trim()
   if (!trimmed) return null
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) return trimmed
   const base = API_BASE.replace(/\/$/, '')
   const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
   return `${base}${path}`
 })
 
+const isDataUri = computed(() => !!imageSrc.value?.startsWith('data:'))
+
 const showImage = computed(
-  () => imageSrc.value && !imageLoadFailed.value && imageLoaded.value
+  () => imageSrc.value && !imageLoadFailed.value && (imageLoaded.value || isDataUri.value)
 )
 </script>
 
@@ -41,7 +43,7 @@ const showImage = computed(
       :src="imageSrc"
       :alt="ingredient.name"
       class="ingredient-thumb"
-      loading="lazy"
+      :loading="isDataUri ? 'eager' : 'lazy'"
       decoding="async"
       @load="imageLoaded = true"
       @error="imageLoadFailed = true"

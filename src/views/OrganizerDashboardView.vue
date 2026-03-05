@@ -22,7 +22,7 @@ import { aggregateDietary, notifRelativeTime, notifDotColor } from '@/utils/subm
 import type { NotificationItem } from '@/api/notifications'
 import type { Ingredient, IngredientDietary } from '@/types/ingredient'
 import { usePlacardExport } from '@/composables/usePlacardExport'
-import { toIngredient, formatUtensilsNotes, formatUtensilsNotesLines, formatUtensilsNotesStructured, parseUtensilsNotes, parseOtherIngredients, parseOtherIngredientQuantity, getOtherIngredientUnit, submissionPhoneNumbers, formatAisleTitle, countryLabel, EMPTY_DIETARY, otherEntryToIngredient, parseMeatItems, meatEntryToIngredient } from '@/utils/organizer'
+import { toIngredient, formatUtensilsNotes, formatUtensilsNotesLines, formatUtensilsNotesStructured, parseUtensilsNotes, parseOtherIngredients, parseOtherIngredientQuantity, getOtherIngredientUnit, submissionPhoneNumbers, formatAisleTitle, countryLabel, EMPTY_DIETARY, otherEntryToIngredient, parseMeatItems, meatEntryToIngredient, MEAT_ICON_URL } from '@/utils/organizer'
 
 const router = useRouter()
 const route = useRoute()
@@ -88,7 +88,79 @@ function aggregatedOtherStoresList(): { name: string; subline: string; quantity:
 
 const otherStoresMasterList = computed(() => aggregatedOtherStoresList())
 
+interface MeatMasterItem {
+  key: string
+  meatType: string
+  cut: string
+  quantityUnit: string
+  quantity: number
+  teams: string[]
+}
 
+function aggregatedMeatListFn(): MeatMasterItem[] {
+  const byKey = new Map<string, MeatMasterItem>()
+  for (const sub of submissions.value) {
+    for (const entry of parseMeatItems(sub)) {
+      const key = `${entry.meatType}|${entry.cut}|${entry.quantityUnit}`
+      const qty = Number(entry.quantity) || 0
+      const existing = byKey.get(key)
+      if (existing) {
+        existing.quantity += qty
+        if (!existing.teams.includes(sub.team_name)) existing.teams.push(sub.team_name)
+      } else {
+        byKey.set(key, {
+          key,
+          meatType: entry.meatType || '—',
+          cut: entry.cut || '',
+          quantityUnit: entry.quantityUnit || '',
+          quantity: qty,
+          teams: [sub.team_name],
+        })
+      }
+    }
+  }
+  return Array.from(byKey.values()).sort((a, b) =>
+    a.meatType.localeCompare(b.meatType) || a.cut.localeCompare(b.cut)
+  )
+}
+
+const meatMasterList = computed(() => aggregatedMeatListFn())
+
+const meatListByType = computed(() => {
+  const groups = new Map<string, { meatType: string; items: MeatMasterItem[]; totalQty: number }>()
+  for (const item of meatMasterList.value) {
+    const existing = groups.get(item.meatType)
+    if (existing) {
+      existing.items.push(item)
+      existing.totalQty += item.quantity
+    } else {
+      groups.set(item.meatType, { meatType: item.meatType, items: [item], totalQty: item.quantity })
+    }
+  }
+  return Array.from(groups.values())
+})
+
+const meatGrandTotalQty = computed(() =>
+  meatMasterList.value.reduce((sum, i) => sum + i.quantity, 0)
+)
+
+const meatViewMode = ref<'by-type' | 'full-list'>('by-type')
+const expandedMeatTypes = ref<Set<string>>(new Set())
+const checkedMeatKeys = ref<Set<string>>(new Set())
+
+function toggleMeatTypeExpanded(meatType: string) {
+  const next = new Set(expandedMeatTypes.value)
+  if (next.has(meatType)) next.delete(meatType)
+  else next.add(meatType)
+  expandedMeatTypes.value = next
+}
+
+function toggleMeatCheck(key: string) {
+  const next = new Set(checkedMeatKeys.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  checkedMeatKeys.value = next
+}
 
 const activeTab = ref<'submissions' | 'grocery' | 'kitchens' | 'placards' | 'notifications'>('submissions')
 const groceryStore = ref<'giant' | 'other-stores' | 'utensils-equipment' | 'meat'>('giant') // tab bar: Giant | Other Stores | Utensils/Equipment | Meat
@@ -1497,6 +1569,14 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
             <button
               type="button"
               class="grocery-store-tab"
+              :class="groceryStore === 'meat' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="groceryStore = 'meat'"
+            >
+              Meat
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
               :class="groceryStore === 'utensils-equipment' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
               @click="groceryStore = 'utensils-equipment'"
             >
@@ -1517,6 +1597,24 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
               class="grocery-store-tab"
               :class="giantViewMode === 'full-list' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
               @click="giantViewMode = 'full-list'"
+            >
+              Full List
+            </button>
+          </div>
+          <div v-if="groceryStore === 'meat'" class="grocery-store-bar grocery-view-mode-bar">
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="meatViewMode === 'by-type' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="meatViewMode = 'by-type'"
+            >
+              By Type
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="meatViewMode === 'full-list' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="meatViewMode = 'full-list'"
             >
               Full List
             </button>
@@ -1750,6 +1848,124 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Meat: By Type (collapsible groups) -->
+        <div v-if="groceryStore === 'meat' && meatViewMode === 'by-type'" class="grocery-sections">
+          <div v-for="group in meatListByType" :key="group.meatType" class="grocery-aisle-card">
+            <button type="button" class="grocery-aisle-header" @click="toggleMeatTypeExpanded(group.meatType)">
+              <div class="grocery-aisle-name-col">
+                <div class="form-section-pill grocery-aisle-dish-pill">
+                  <span class="form-section-pill-input grocery-aisle-dish-text">{{ group.meatType }}</span>
+                </div>
+              </div>
+              <span class="grocery-aisle-header-spacer"></span>
+              <div class="grocery-product-actions grocery-aisle-header-actions">
+                <span class="qty-controls">
+                  <span class="tabular-nums qty-num grocery-aisle-header-val">{{ group.totalQty }}</span>
+                  <span class="qty-btn-stack grocery-aisle-header-qty-placeholder" style="visibility: hidden;">
+                    <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg></button>
+                    <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
+                  </span>
+                </span>
+              </div>
+              <span class="grocery-aisle-arrow" :class="{ 'grocery-aisle-arrow-open': expandedMeatTypes.has(group.meatType) }">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </span>
+            </button>
+            <div v-if="expandedMeatTypes.has(group.meatType)" class="grocery-aisle-body">
+              <div
+                v-for="item in group.items"
+                :key="item.key"
+                class="grocery-product-row"
+                :class="{ 'grocery-product-row-checked': checkedMeatKeys.has(item.key) }"
+              >
+                <label class="grocery-product-checkbox-wrap">
+                  <input type="checkbox" :checked="checkedMeatKeys.has(item.key)" class="grocery-checkbox" @change="toggleMeatCheck(item.key)" />
+                </label>
+                <IngredientThumb :ingredient="{ id: -1, name: item.cut || item.meatType, image_url: MEAT_ICON_URL }" />
+                <div class="grocery-product-info">
+                  <span class="grocery-product-name truncate" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.cut || '—' }}</span>
+                  <span class="grocery-product-size" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.quantityUnit }}</span>
+                </div>
+                <div class="grocery-product-dietary"></div>
+                <div class="grocery-product-teams truncate" :title="item.teams.join(', ')">
+                  {{ item.teams.join(', ') }}
+                </div>
+                <div class="grocery-product-price tabular-nums"></div>
+                <div class="grocery-product-actions">
+                  <span class="qty-controls">
+                    <span class="tabular-nums qty-num">{{ item.quantity }}</span>
+                    <span class="qty-btn-stack">
+                      <button type="button" class="qty-btn" tabindex="-1" disabled aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg></button>
+                      <button type="button" class="qty-btn" tabindex="-1" disabled aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-if="!meatListByType.length" class="grocery-utensils-empty">No meat items yet.</div>
+        </div>
+
+        <!-- Meat: Full List -->
+        <div v-if="groceryStore === 'meat' && meatViewMode === 'full-list'" class="grocery-sections">
+          <div class="grocery-aisle-card">
+            <div class="grocery-aisle-body">
+              <div
+                v-for="item in meatMasterList"
+                :key="item.key"
+                class="grocery-product-row"
+                :class="{ 'grocery-product-row-checked': checkedMeatKeys.has(item.key) }"
+              >
+                <label class="grocery-product-checkbox-wrap">
+                  <input type="checkbox" :checked="checkedMeatKeys.has(item.key)" class="grocery-checkbox" @change="toggleMeatCheck(item.key)" />
+                </label>
+                <IngredientThumb :ingredient="{ id: -1, name: item.cut || item.meatType, image_url: MEAT_ICON_URL }" />
+                <div class="grocery-product-info">
+                  <span class="grocery-product-name truncate" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.meatType }}{{ item.cut ? ' – ' + item.cut : '' }}</span>
+                  <span class="grocery-product-size" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.quantityUnit }}</span>
+                </div>
+                <div class="grocery-product-dietary"></div>
+                <div class="grocery-product-teams truncate" :title="item.teams.join(', ')">
+                  {{ item.teams.join(', ') }}
+                </div>
+                <div class="grocery-product-price tabular-nums"></div>
+                <div class="grocery-product-actions">
+                  <span class="qty-controls">
+                    <span class="tabular-nums qty-num">{{ item.quantity }}</span>
+                    <span class="qty-btn-stack">
+                      <button type="button" class="qty-btn" tabindex="-1" disabled aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg></button>
+                      <button type="button" class="qty-btn" tabindex="-1" disabled aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
+                    </span>
+
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-if="!meatMasterList.length" class="grocery-utensils-empty">No meat items yet.</div>
+        </div>
+
+        <!-- Meat: Total -->
+        <div v-if="groceryStore === 'meat'" class="grocery-aisle-card grocery-grand-total">
+          <div class="grocery-aisle-header grocery-grand-total-header">
+            <div class="grocery-aisle-name-col">
+              <div class="form-section-pill grocery-aisle-dish-pill">
+                <span class="form-section-pill-input grocery-aisle-dish-text">Total</span>
+              </div>
+            </div>
+            <span class="grocery-aisle-header-spacer"></span>
+            <div class="grocery-product-actions grocery-aisle-header-actions">
+              <span class="qty-controls">
+                <span class="tabular-nums qty-num grocery-aisle-header-val">{{ meatGrandTotalQty }}</span>
+                <span class="qty-btn-stack grocery-aisle-header-qty-placeholder" style="visibility: hidden;">
+                  <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6" /></svg></button>
+                  <button type="button" class="qty-btn" tabindex="-1" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
+                </span>
+              </span>
             </div>
           </div>
         </div>

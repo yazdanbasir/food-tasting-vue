@@ -38,7 +38,7 @@ const lightboxSrc = computed(() => {
   if (!url || typeof url !== 'string') return null
   const trimmed = url.trim()
   if (!trimmed) return null
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) return trimmed
   const base = API_BASE.replace(/\/$/, '')
   const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
   return `${base}${path}`
