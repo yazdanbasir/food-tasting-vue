@@ -10,6 +10,7 @@ import { TriangleAlert } from 'lucide-vue-next'
 import { useSubmissionStore, OTHER_INGREDIENT_SIZE_OPTIONS, OTHER_INGREDIENT_QUANTITY_UNITS } from '@/stores/submission'
 import { createSubmission, lookupSubmissionByPhone, updateSubmission } from '@/api/submissions'
 import { useFormLockState } from '@/composables/useFormLockState'
+import { hasOrganizerToken } from '@/api/organizer'
 import { useIngredientCacheStore } from '@/stores/ingredientCache'
 
 const IngredientSearch = defineAsyncComponent(
@@ -69,8 +70,8 @@ const utensilsTriggerRef = ref<HTMLElement | null>(null)
 const utensilsDropdownStyle = ref<Record<string, string>>({})
 const { isResponsesLocked, hasLoadedFormLock, refreshFormLockStatus } = useFormLockState()
 
-/** Lock the form for students only — organizers editing a submission are always allowed through. */
-const shouldLockForm = computed(() => isResponsesLocked.value && !editingAsOrganizer.value)
+/** Lock the form for students only — any authenticated organizer is always allowed through. */
+const shouldLockForm = computed(() => isResponsesLocked.value && !editingAsOrganizer.value && !hasOrganizerToken())
 
 /** True only after user has clicked Save in the group info dropdown with at least one valid contact. Cleared when contacts become invalid. */
 const groupInfoCommitted = ref(false)
@@ -359,7 +360,7 @@ function handleBack() {
 async function handleSubmit() {
   if (!canSubmit.value || isSubmitting.value) return
 
-  if (!store.editingAsOrganizer) {
+  if (!store.editingAsOrganizer && !hasOrganizerToken()) {
     const locked = await refreshFormLockStatus()
     if (locked) {
       submitError.value = 'Form is closed'

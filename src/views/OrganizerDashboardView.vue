@@ -96,7 +96,7 @@ const groceryStore = ref<'giant' | 'other-stores' | 'utensils-equipment'>('giant
 const giantViewMode = ref<'by-aisle' | 'full-list'>('by-aisle')
 /** Tab inside each submission detail card: Giant vs Other Stores, tracked per submission id */
 const submissionDetailStoreTabById = ref<Record<number, 'giant' | 'other-stores'>>({})
-const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('fridges') // Kitchens & Utensils sub-tabs
+const kuSubTab = ref<'fridges' | 'kitchens' | 'utensils' | 'helpers'>('kitchens') // Kitchens & Utensils sub-tabs
 const addingKuType = ref<'fridge' | 'kitchen' | 'utensil' | 'helper_driver' | null>(null) // show add-card with input
 const kuAddInputRef = ref<HTMLInputElement | null>(null)
 const submissions = ref<SubmissionResponse[]>([])
@@ -1731,18 +1731,18 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
             <button
               type="button"
               class="grocery-store-tab"
-              :class="kuSubTab === 'fridges' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
-              @click="kuSubTab = 'fridges'"
-            >
-              Fridges
-            </button>
-            <button
-              type="button"
-              class="grocery-store-tab"
               :class="kuSubTab === 'kitchens' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
               @click="kuSubTab = 'kitchens'"
             >
               Kitchens
+            </button>
+            <button
+              type="button"
+              class="grocery-store-tab"
+              :class="kuSubTab === 'fridges' ? 'grocery-store-tab-active' : 'grocery-store-tab-inactive'"
+              @click="kuSubTab = 'fridges'"
+            >
+              Fridges
             </button>
             <button
               type="button"
@@ -2294,4 +2294,8 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
 
 <style scoped>
 @import "@/styles/organizer-dashboard.css";
+
+.placard-card-selected :deep(.dietary-icon) {
+  color: #fff;
+}
 </style>
