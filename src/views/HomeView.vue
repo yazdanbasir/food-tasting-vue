@@ -491,6 +491,7 @@ async function handleSubmit() {
               <li><span class="home-reminders-line">Please remain available on <strong>DATE</strong> around <strong>TIME</strong> so we can call you while we are shopping in case we need clarification</span></li>
               <li><span class="home-reminders-line">If you need to edit your submission, click Submissions in the top right and enter your phone number</span></li>
               <li><span class="home-reminders-line">We will provide basic equipment on the day of the event - gloves, trays, serving utensils, heating units - so please don't request those. Anything else you may need, feel free to add (pots, pans, strainers, ladles etc)</span></li>
+              <li><span class="home-reminders-line">Please do not submit from the Giant search. There will be another section to specify what you need. We will buy it in bulk from the Halal store</span></li>
             </ul>
           </div>
         </div>
@@ -1456,7 +1457,6 @@ async function handleSubmit() {
   padding: 0.75rem 2rem;
   font-size: 1.35rem;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(107, 15, 42, 0.35);
 }
 
 .home-main-page2 {
