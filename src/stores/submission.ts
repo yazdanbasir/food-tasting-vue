@@ -18,6 +18,28 @@ export const OTHER_INGREDIENT_QUANTITY_UNITS = [
 
 export type UtensilEntry = { utensil: string; size: string; quantity: string }
 
+export type MeatEntry = { meatType: string; cut: string; quantity: string; quantityUnit: string; additionalDetails: string }
+
+/** Available meat types for the Meat section. */
+export const MEAT_TYPE_OPTIONS = [
+  '', 'Chicken', 'Beef', 'Lamb', 'Goat', 'Turkey', 'Other',
+] as const
+
+/** Cut/type options per meat. */
+export const MEAT_CUT_OPTIONS: Record<string, readonly string[]> = {
+  Chicken: ['', 'Whole', 'Breast', 'Thigh', 'Drumstick', 'Wings', 'Leg Quarters', 'Tenders', 'Ground', 'Other'],
+  Beef: ['', 'Ground', 'Stew Meat', 'Chuck Roast', 'Ribeye', 'Sirloin', 'Flank', 'Brisket', 'Short Ribs', 'Shank', 'Other'],
+  Lamb: ['', 'Ground', 'Leg', 'Shoulder', 'Rack', 'Chops', 'Shank', 'Stew Meat', 'Other'],
+  Goat: ['', 'Whole', 'Leg', 'Shoulder', 'Chops', 'Stew Meat', 'Ground', 'Ribs', 'Other'],
+  Turkey: ['', 'Whole', 'Breast', 'Ground', 'Thigh', 'Drumstick', 'Wings', 'Other'],
+  Other: ['', 'Other'],
+} as const
+
+/** Quantity units for meat. */
+export const MEAT_QUANTITY_UNITS = [
+  '', 'lb', 'kg', 'oz', 'each', 'pack', 'whole', 'Other',
+] as const
+
 /** True if the string contains only digits and common phone formatting (+, spaces, dashes, parentheses). */
 function isPhoneNumbersOnly(value: string): boolean {
   if (!value.trim()) return true
@@ -49,6 +71,8 @@ export const useSubmissionStore = defineStore('submission', () => {
   const utensilEntries = ref<UtensilEntry[]>([{ utensil: '', size: '', quantity: '' }])
   /** Other-store items when foundAllIngredients is false. Each entry: item, size, quantity, additionalDetails. Start with one empty row. */
   const otherIngredientEntries = ref<OtherIngredientEntry[]>([{ item: '', size: '', quantity: '', quantityUnit: '', additionalDetails: '' }])
+  /** Meat entries for bulk halal store ordering. Start with one empty row. */
+  const meatEntries = ref<MeatEntry[]>([{ meatType: '', cut: '', quantity: '', quantityUnit: '', additionalDetails: '' }])
 
   /** When set, form is in edit mode; submit becomes PATCH update */
   const editingSubmissionId = ref<number | null>(null)
@@ -246,6 +270,34 @@ export const useSubmissionStore = defineStore('submission', () => {
     otherIngredientEntries.value = otherIngredientEntries.value.filter((_, i) => i !== index)
   }
 
+  function addMeatEntry() {
+    meatEntries.value = [...meatEntries.value, { meatType: '', cut: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
+  }
+
+  function removeMeatEntry(index: number) {
+    if (meatEntries.value.length <= 1) return
+    meatEntries.value = meatEntries.value.filter((_, i) => i !== index)
+  }
+
+  /** True if a meat entry row is fully filled. */
+  function isMeatRowComplete(e: MeatEntry): boolean {
+    return e.meatType.trim() !== '' && e.cut.trim() !== '' && e.quantity.trim() !== '' && e.quantityUnit.trim() !== ''
+  }
+
+  /** True if a meat entry row has some but not all required fields filled. */
+  function isMeatRowPartial(e: MeatEntry): boolean {
+    const hasAny = e.meatType.trim() !== '' || e.cut.trim() !== '' || e.quantity.trim() !== '' || e.quantityUnit.trim() !== '' || e.additionalDetails.trim() !== ''
+    return hasAny && !isMeatRowComplete(e)
+  }
+
+  const validMeatEntries = computed(() =>
+    meatEntries.value.filter((e) => isMeatRowComplete(e)),
+  )
+
+  const hasPartialMeatRows = computed(() =>
+    meatEntries.value.some((e) => isMeatRowPartial(e)),
+  )
+
   function addUtensilEntry() {
     utensilEntries.value = [...utensilEntries.value, { utensil: '', size: '', quantity: '' }]
   }
@@ -284,6 +336,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     allergen.value = ''
     utensilEntries.value = [{ utensil: '', size: '', quantity: '' }]
     otherIngredientEntries.value = [{ item: '', size: '', quantity: '', quantityUnit: '', additionalDetails: '' }]
+    meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
     ingredients.value = []
   }
 
@@ -383,6 +436,32 @@ export const useSubmissionStore = defineStore('submission', () => {
       ingredient: mapResponseIngredient(item.ingredient),
       quantity: item.quantity,
     }))
+    const rawMeat = ((sub as Record<string, unknown>).meat_items as string | undefined ?? '').trim()
+    if (rawMeat) {
+      try {
+        const parsed = JSON.parse(rawMeat) as unknown
+        if (Array.isArray(parsed)) {
+          meatEntries.value = parsed.map((row) => {
+            const r = row as Record<string, unknown>
+            return {
+              meatType: String(r?.meatType ?? r?.meat_type ?? '').trim(),
+              cut: String(r?.cut ?? '').trim(),
+              quantity: String(r?.quantity ?? '').trim(),
+              quantityUnit: String(r?.quantityUnit ?? r?.quantity_unit ?? '').trim(),
+            }
+          })
+          if (meatEntries.value.length === 0) {
+            meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+          }
+        } else {
+          meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+        }
+      } catch {
+        meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+      }
+    } else {
+      meatEntries.value = [{ meatType: '', cut: '', quantity: '', quantityUnit: '' }]
+    }
   }
 
   function clearEdit() {
@@ -426,6 +505,11 @@ export const useSubmissionStore = defineStore('submission', () => {
     isOtherIngredientRowPartial,
     addOtherIngredientEntry,
     removeOtherIngredientEntry,
+    meatEntries,
+    validMeatEntries,
+    hasPartialMeatRows,
+    addMeatEntry,
+    removeMeatEntry,
     editingSubmissionId,
     editingAsOrganizer,
     addMember,

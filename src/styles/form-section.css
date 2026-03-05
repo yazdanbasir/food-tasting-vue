@@ -149,14 +149,14 @@
 }
 
 .btn-pill-secondary {
-  background: #fff;
-  color: var(--color-lafayette-gray, #3c373c);
-  border: 1px solid var(--color-lafayette-gray, #3c373c);
+  background: var(--color-lafayette-red, #6b0f2a);
+  color: #fff;
+  border: 1px solid var(--color-lafayette-red, #6b0f2a);
   cursor: pointer;
 }
 
 .btn-pill-secondary:hover {
-  background: var(--color-menu-gray, #e5e3e0);
+  background: #4a0a1f;
 }
 
 .btn-pill-secondary.btn-pill-danger:hover {

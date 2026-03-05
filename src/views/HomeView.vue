@@ -7,7 +7,7 @@ import CountrySelect from '@/components/CountrySelect.vue'
 import YesNoSelect from '@/components/YesNoSelect.vue'
 import HotColdSelect from '@/components/HotColdSelect.vue'
 import { TriangleAlert } from 'lucide-vue-next'
-import { useSubmissionStore, OTHER_INGREDIENT_SIZE_OPTIONS, OTHER_INGREDIENT_QUANTITY_UNITS } from '@/stores/submission'
+import { useSubmissionStore, OTHER_INGREDIENT_SIZE_OPTIONS, OTHER_INGREDIENT_QUANTITY_UNITS, MEAT_TYPE_OPTIONS, MEAT_CUT_OPTIONS, MEAT_QUANTITY_UNITS } from '@/stores/submission'
 import { createSubmission, lookupSubmissionByPhone, updateSubmission } from '@/api/submissions'
 import { useFormLockState } from '@/composables/useFormLockState'
 import { hasOrganizerToken } from '@/api/organizer'
@@ -50,6 +50,11 @@ const {
   editingSubmissionId,
   editingAsOrganizer,
 } = storeToRefs(store)
+const {
+  meatEntries,
+  validMeatEntries,
+  hasPartialMeatRows,
+} = storeToRefs(store)
 const contactDropdownOpen = ref(false)
 const contactDropdownRef = ref<HTMLElement | null>(null)
 const contactTriggerRef = ref<HTMLElement | null>(null)
@@ -68,6 +73,15 @@ const utensilsDropdownOpen = ref(false)
 const utensilsDropdownRef = ref<HTMLElement | null>(null)
 const utensilsTriggerRef = ref<HTMLElement | null>(null)
 const utensilsDropdownStyle = ref<Record<string, string>>({})
+const openMeatTypeRowIndex = ref<number | null>(null)
+const openMeatCutRowIndex = ref<number | null>(null)
+const openMeatUnitRowIndex = ref<number | null>(null)
+const meatTypeDropdownStyle = ref<Record<string, string>>({})
+const meatCutDropdownStyle = ref<Record<string, string>>({})
+const meatUnitDropdownStyle = ref<Record<string, string>>({})
+const meatTypeDropdownRef = ref<HTMLElement | null>(null)
+const meatCutDropdownRef = ref<HTMLElement | null>(null)
+const meatUnitDropdownRef = ref<HTMLElement | null>(null)
 const { isResponsesLocked, hasLoadedFormLock, refreshFormLockStatus } = useFormLockState()
 
 /** Lock the form for students only — any authenticated organizer is always allowed through. */
@@ -275,6 +289,59 @@ function handleUtensilsSave() {
   utensilsDropdownOpen.value = false
 }
 
+function openMeatTypeDropdown(i: number, e: MouseEvent) {
+  if (openMeatTypeRowIndex.value === i) { openMeatTypeRowIndex.value = null; return }
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  meatTypeDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
+  openMeatTypeRowIndex.value = i
+}
+
+function selectMeatType(opt: string) {
+  if (openMeatTypeRowIndex.value !== null) {
+    const entry = store.meatEntries[openMeatTypeRowIndex.value]
+    if (entry) { entry.meatType = opt; entry.cut = '' }
+    openMeatTypeRowIndex.value = null
+  }
+}
+
+function openMeatCutDropdown(i: number, e: MouseEvent) {
+  if (openMeatCutRowIndex.value === i) { openMeatCutRowIndex.value = null; return }
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  meatCutDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
+  openMeatCutRowIndex.value = i
+}
+
+function selectMeatCut(opt: string) {
+  if (openMeatCutRowIndex.value !== null) {
+    const entry = store.meatEntries[openMeatCutRowIndex.value]
+    if (entry) entry.cut = opt
+    openMeatCutRowIndex.value = null
+  }
+}
+
+function openMeatUnitDropdown(i: number, e: MouseEvent) {
+  if (openMeatUnitRowIndex.value === i) { openMeatUnitRowIndex.value = null; return }
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  meatUnitDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
+  openMeatUnitRowIndex.value = i
+}
+
+function selectMeatUnit(opt: string) {
+  if (openMeatUnitRowIndex.value !== null) {
+    const entry = store.meatEntries[openMeatUnitRowIndex.value]
+    if (entry) entry.quantityUnit = opt
+    openMeatUnitRowIndex.value = null
+  }
+}
+
+function meatCutOptionsForRow(i: number): readonly string[] {
+  const type = store.meatEntries[i]?.meatType || ''
+  return MEAT_CUT_OPTIONS[type] ?? ['', 'Other']
+}
+
 function handleVisibilityChange() {
   if (document.visibilityState === 'visible') {
     void refreshFormLockStatus()
@@ -331,8 +398,14 @@ function goToSubmissionLookup() {
   router.push({ path: '/organizer', query: { mode: 'student-edit' } })
 }
 
-// Page state: 1 = Dish Details + Grocery List, 2 = Additional Details
+// Page state: 1 = Grocery/Other/Meat sections, 2 = Additional Details
 const currentPage = ref(1)
+
+// Which collapsible section is expanded on page 1 (null = all collapsed)
+const activeSection = ref<'grocery' | 'other' | 'meat' | null>('grocery')
+function toggleSection(section: 'grocery' | 'other' | 'meat') {
+  activeSection.value = activeSection.value === section ? null : section
+}
 
 const isSubmitting = ref(false)
 const submitError = ref<string | null>(null)
@@ -349,12 +422,33 @@ watch(
 
 function handleNext() {
   if (!canAdvancePage1.value || shouldLockForm.value) return
+  activeSection.value = 'other'
+}
+
+function handleNextToMeat() {
+  if (shouldLockForm.value || hasPartialOtherIngredientRows.value) return
+  activeSection.value = 'meat'
+}
+
+function handleNextToDetails() {
+  if (shouldLockForm.value || hasPartialMeatRows.value) return
   currentPage.value = 2
 }
 
 function handleBack() {
-  currentPage.value = 1
+  if (currentPage.value === 2) {
+    currentPage.value = 1
+    activeSection.value = 'meat'
+  }
   submitError.value = null
+}
+
+function handleBackToGrocery() {
+  activeSection.value = 'grocery'
+}
+
+function handleBackToOther() {
+  activeSection.value = 'other'
 }
 
 async function handleSubmit() {
@@ -400,6 +494,14 @@ async function handleSubmit() {
           size: e.size,
           quantity: `${e.quantity} ${e.quantityUnit}`.trim(),
           additionalDetails: e.additionalDetails,
+        })))
+      : null,
+    meat_items: validMeatEntries.value.length > 0
+      ? JSON.stringify(validMeatEntries.value.map((e) => ({
+          meatType: e.meatType,
+          cut: e.cut,
+          quantity: e.quantity,
+          quantityUnit: e.quantityUnit,
         })))
       : null,
     needs_fridge_space: needsFridgeSpace.value ?? undefined,
@@ -643,208 +745,403 @@ async function handleSubmit() {
       </div>
 
       <div class="home-layout">
-        <div v-if="showGrocerySection" class="home-main">
-          <Suspense>
-            <template #default>
-              <div class="form-section-ingredients">
-                <div class="form-section-top-bar-inner form-section-grocery-bar">
-                  <div class="form-section-pill form-section-pill-label">Grocery List</div>
-                  <div class="form-section-pill form-section-pill-search">
-                    <IngredientSearch :hide-price="true" />
-                  </div>
-                  <div class="form-section-pill home-dish-pill home-dish-pill-grow home-other-ingredients-pill-wrap">
-                    <button
-                      ref="otherIngredientsTriggerRef"
-                      type="button"
-                      class="home-contact-trigger"
-                      :class="{ 'home-contact-trigger--saved': validOtherIngredientEntries.length >= 1 }"
-                      :aria-expanded="otherIngredientsDropdownOpen"
-                      aria-haspopup="dialog"
-                      @click="toggleOtherIngredientsDropdown"
-                    >
-                      {{ validOtherIngredientEntries.length >= 1 ? `${validOtherIngredientEntries.length} item(s) listed` : 'Add items you could not find' }}
-                      <span
-                        class="home-contact-chevron"
-                        :class="{ 'home-contact-chevron-open': otherIngredientsDropdownOpen }"
-                        aria-hidden="true"
+        <div v-if="showGrocerySection" class="home-main home-main-collapsible">
+
+          <!-- SECTION: Grocery List (collapsible) -->
+          <section
+            class="form-section-ingredients home-collapsible-section"
+            :class="{ 'home-collapsible-section--collapsed': activeSection !== 'grocery' }"
+          >
+            <div class="form-section-top-bar-inner form-section-grocery-bar home-collapsible-header">
+              <div class="form-section-pill form-section-pill-label home-collapsible-toggle" @click="toggleSection('grocery')">Grocery List</div>
+              <div v-if="activeSection === 'grocery'" class="form-section-pill form-section-pill-search">
+                <Suspense>
+                  <IngredientSearch :hide-price="true" />
+                </Suspense>
+              </div>
+              <span v-if="activeSection !== 'grocery' && ingredients.length" class="home-collapsible-summary">{{ ingredients.length }} item(s) added</span>
+              <span
+                class="home-collapsible-chevron"
+                :class="{ 'home-collapsible-chevron-open': activeSection === 'grocery' }"
+                aria-hidden="true"
+                @click="toggleSection('grocery')"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </span>
+            </div>
+            <template v-if="activeSection === 'grocery'">
+              <Suspense>
+                <template #default>
+                  <div class="home-collapsible-body">
+                    <div class="form-section-ingredients-body">
+                      <IngredientList />
+                    </div>
+                    <div class="ingredient-list-footer">
+                      <button
+                        type="button"
+                        class="btn-pill-primary"
+                        :disabled="!canAdvancePage1"
+                        @click="handleNext"
                       >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                </template>
+                <template #fallback>
+                  <div class="ingredients-section-fallback" aria-hidden="true" />
+                </template>
+              </Suspense>
+            </template>
+          </section>
+
+          <!-- SECTION: Other Ingredients (collapsible) -->
+          <section
+            class="form-section-ingredients home-collapsible-section"
+            :class="{ 'home-collapsible-section--collapsed': activeSection !== 'other' }"
+          >
+            <div class="form-section-top-bar-inner form-section-grocery-bar home-collapsible-header">
+              <div class="form-section-pill form-section-pill-label home-collapsible-toggle" @click="toggleSection('other')">Other Ingredients</div>
+              <span v-if="activeSection !== 'other' && validOtherIngredientEntries.length" class="home-collapsible-summary">{{ validOtherIngredientEntries.length }} item(s) listed</span>
+              <span
+                class="home-collapsible-chevron"
+                :class="{ 'home-collapsible-chevron-open': activeSection === 'other' }"
+                aria-hidden="true"
+                @click="toggleSection('other')"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </span>
+            </div>
+            <div v-if="activeSection === 'other'" class="home-collapsible-body">
+              <div class="home-other-ingredients-inline-body">
+                <div
+                  v-for="(entry, i) in otherIngredientEntries"
+                  :key="i"
+                  class="home-other-ingredients-dropdown-row"
+                >
+                  <div class="home-other-ingredients-pill home-other-ingredients-pill-item">
+                    <input
+                      v-model="entry.item"
+                      type="text"
+                      placeholder="Item (Pls be specific!)"
+                      class="home-contact-input"
+                    />
+                  </div>
+                  <div class="home-other-ingredients-pill home-other-ingredients-pill-size">
+                    <button
+                      type="button"
+                      class="home-other-ingredients-select-btn home-other-ingredients-package-trigger"
+                      :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.size }"
+                      aria-haspopup="listbox"
+                      :aria-expanded="openPackageRowIndex === i"
+                      :aria-label="entry.size || 'Package'"
+                      @click="openPackageDropdown(i, $event)"
+                    >
+                      {{ entry.size || 'Package' }}
+                      <span class="home-other-ingredients-select-chevron" aria-hidden="true">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M6 9l6 6 6-6" />
                         </svg>
                       </span>
                     </button>
-                    <Teleport to="body">
-                      <div
-                        v-show="otherIngredientsDropdownOpen"
-                        ref="otherIngredientsDropdownRef"
-                        class="home-other-ingredients-dropdown"
-                        :style="otherIngredientsDropdownStyle"
-                        role="dialog"
-                      >
-                      <div
-                        v-for="(entry, i) in otherIngredientEntries"
-                        :key="i"
-                        class="home-other-ingredients-dropdown-row"
-                      >
-                        <div class="home-other-ingredients-pill home-other-ingredients-pill-item">
-                          <input
-                            v-model="entry.item"
-                            type="text"
-                            placeholder="Item (Pls be specific!)"
-                            class="home-contact-input"
-                          />
-                        </div>
-                        <div class="home-other-ingredients-pill home-other-ingredients-pill-size">
-                          <button
-                            type="button"
-                            class="home-other-ingredients-select-btn home-other-ingredients-package-trigger"
-                            :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.size }"
-                            aria-haspopup="listbox"
-                            :aria-expanded="openPackageRowIndex === i"
-                            :aria-label="entry.size || 'Package'"
-                            @click="openPackageDropdown(i, $event)"
-                          >
-                            {{ entry.size || 'Package' }}
-                            <span class="home-other-ingredients-select-chevron" aria-hidden="true">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M6 9l6 6 6-6" />
-                              </svg>
-                            </span>
-                          </button>
-                        </div>
-                        <div class="home-other-ingredients-pill home-other-ingredients-pill-qty">
-                          <input
-                            v-model="entry.quantity"
-                            type="number"
-                            min="0"
-                            step="any"
-                            placeholder="Qty"
-                            class="home-contact-input home-other-ingredients-qty-input"
-                            aria-label="Quantity amount"
-                          />
-                          <button
-                            type="button"
-                            class="home-other-ingredients-select-btn home-other-ingredients-unit-trigger"
-                            :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.quantityUnit }"
-                            aria-haspopup="listbox"
-                            :aria-expanded="openUnitRowIndex === i"
-                            :aria-label="entry.quantityUnit || 'Unit'"
-                            @click="openUnitDropdown(i, $event)"
-                          >
-                            {{ entry.quantityUnit || 'Unit' }}
-                            <span class="home-other-ingredients-select-chevron" aria-hidden="true">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M6 9l6 6 6-6" />
-                              </svg>
-                            </span>
-                          </button>
-                        </div>
-                        <div class="home-other-ingredients-pill home-other-ingredients-pill-details">
-                          <input
-                            v-model="entry.additionalDetails"
-                            type="text"
-                            placeholder="Details"
-                            class="home-contact-input"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          class="home-phone-remove"
-                          :aria-label="`Remove row ${i + 1}`"
-                          @click.stop="store.removeOtherIngredientEntry(i)"
-                        >
-                          <span class="home-contact-btn-icon" aria-hidden="true">×</span>
-                        </button>
-                      </div>
-                      <div class="home-contact-dropdown-row home-contact-add-row-wrap">
-                        <span class="home-other-ingredients-add-spacer" />
-                        <button
-                          type="button"
-                          class="home-contact-add-btn-circle"
-                          aria-label="Add row"
-                          @click="store.addOtherIngredientEntry()"
-                        >
-                          <span class="home-contact-btn-icon" aria-hidden="true">+</span>
-                        </button>
-                      </div>
-                      <div class="home-contact-dropdown-footer">
-                        <button
-                          type="button"
-                          class="btn-pill-primary"
-                          :disabled="validOtherIngredientEntries.length < 1 || hasPartialOtherIngredientRows"
-                          @click="handleOtherIngredientsSave"
-                        >
-                          Save
-                        </button>
-                      </div>
-                      </div>
-                    </Teleport>
-                    <Teleport to="body">
-                      <div
-                        v-show="openPackageRowIndex !== null"
-                        ref="packageDropdownRef"
-                        class="country-select-dropdown"
-                        :style="packageDropdownStyle"
-                        role="listbox"
-                        tabindex="-1"
-                      >
-                        <button
-                          v-for="opt in OTHER_INGREDIENT_SIZE_OPTIONS"
-                          :key="opt || 'empty'"
-                          type="button"
-                          role="option"
-                          class="country-select-option"
-                          :aria-selected="openPackageRowIndex !== null && store.otherIngredientEntries[openPackageRowIndex]?.size === opt"
-                          @click.stop="selectPackage(opt)"
-                        >
-                          {{ opt || 'Package' }}
-                        </button>
-                      </div>
-                    </Teleport>
-                    <Teleport to="body">
-                      <div
-                        v-show="openUnitRowIndex !== null"
-                        ref="unitDropdownRef"
-                        class="country-select-dropdown"
-                        :style="unitDropdownStyle"
-                        role="listbox"
-                        tabindex="-1"
-                      >
-                        <button
-                          v-for="u in OTHER_INGREDIENT_QUANTITY_UNITS"
-                          :key="u || 'empty'"
-                          type="button"
-                          role="option"
-                          class="country-select-option"
-                          :aria-selected="openUnitRowIndex !== null && store.otherIngredientEntries[openUnitRowIndex]?.quantityUnit === u"
-                          @click.stop="selectUnit(u)"
-                        >
-                          {{ u || 'Unit' }}
-                        </button>
-                      </div>
-                    </Teleport>
                   </div>
-                </div>
-                <div class="form-section-ingredients-body">
-                  <IngredientList />
-                </div>
-                <div v-if="canAdvancePage1" class="ingredient-list-footer">
+                  <input
+                    v-model="entry.quantity"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="Qty"
+                    class="home-contact-input home-other-ingredients-qty-input home-other-ingredients-pill-qty"
+                    aria-label="Quantity amount"
+                  />
+                  <div class="home-other-ingredients-pill home-other-ingredients-pill-unit">
+                    <button
+                      type="button"
+                      class="home-other-ingredients-select-btn home-other-ingredients-unit-trigger"
+                      :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.quantityUnit }"
+                      aria-haspopup="listbox"
+                      :aria-expanded="openUnitRowIndex === i"
+                      :aria-label="entry.quantityUnit || 'Unit'"
+                      @click="openUnitDropdown(i, $event)"
+                    >
+                      {{ entry.quantityUnit || 'Unit' }}
+                      <span class="home-other-ingredients-select-chevron" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+                  <div class="home-other-ingredients-pill home-other-ingredients-pill-details">
+                    <input
+                      v-model="entry.additionalDetails"
+                      type="text"
+                      placeholder="Details"
+                      class="home-contact-input"
+                    />
+                  </div>
                   <button
                     type="button"
-                    class="btn-pill-primary"
-                    @click="handleNext"
+                    class="home-phone-remove"
+                    :aria-label="`Remove row ${i + 1}`"
+                    @click.stop="store.removeOtherIngredientEntry(i)"
                   >
-                    Next →
+                    <span class="home-contact-btn-icon" aria-hidden="true">×</span>
+                  </button>
+                </div>
+                <div class="home-contact-dropdown-row home-contact-add-row-wrap">
+                  <span class="home-other-ingredients-add-spacer" />
+                  <button
+                    type="button"
+                    class="home-contact-add-btn-circle"
+                    aria-label="Add row"
+                    @click="store.addOtherIngredientEntry()"
+                  >
+                    <span class="home-contact-btn-icon" aria-hidden="true">+</span>
                   </button>
                 </div>
               </div>
-            </template>
-            <template #fallback>
-              <div class="form-section-ingredients">
-                <div class="ingredients-section-fallback" aria-hidden="true" />
+              <Teleport to="body">
+                <div
+                  v-show="openPackageRowIndex !== null"
+                  ref="packageDropdownRef"
+                  class="country-select-dropdown"
+                  :style="packageDropdownStyle"
+                  role="listbox"
+                  tabindex="-1"
+                >
+                  <button
+                    v-for="opt in OTHER_INGREDIENT_SIZE_OPTIONS"
+                    :key="opt || 'empty'"
+                    type="button"
+                    role="option"
+                    class="country-select-option"
+                    :aria-selected="openPackageRowIndex !== null && store.otherIngredientEntries[openPackageRowIndex]?.size === opt"
+                    @click.stop="selectPackage(opt)"
+                  >
+                    {{ opt || 'Package' }}
+                  </button>
+                </div>
+              </Teleport>
+              <Teleport to="body">
+                <div
+                  v-show="openUnitRowIndex !== null"
+                  ref="unitDropdownRef"
+                  class="country-select-dropdown"
+                  :style="unitDropdownStyle"
+                  role="listbox"
+                  tabindex="-1"
+                >
+                  <button
+                    v-for="u in OTHER_INGREDIENT_QUANTITY_UNITS"
+                    :key="u || 'empty'"
+                    type="button"
+                    role="option"
+                    class="country-select-option"
+                    :aria-selected="openUnitRowIndex !== null && store.otherIngredientEntries[openUnitRowIndex]?.quantityUnit === u"
+                    @click.stop="selectUnit(u)"
+                  >
+                    {{ u || 'Unit' }}
+                  </button>
+                </div>
+              </Teleport>
+              <div class="ingredient-list-footer">
+                <button type="button" class="btn-pill-secondary" @click="handleBackToGrocery">← Back</button>
+                <button type="button" class="btn-pill-primary" :disabled="hasPartialOtherIngredientRows" @click="handleNextToMeat">Next →</button>
               </div>
-            </template>
-          </Suspense>
+            </div>
+          </section>
+
+          <!-- SECTION: Meat (collapsible) -->
+          <section
+            class="form-section-ingredients home-collapsible-section"
+            :class="{ 'home-collapsible-section--collapsed': activeSection !== 'meat' }"
+          >
+            <div class="form-section-top-bar-inner form-section-grocery-bar home-collapsible-header">
+              <div class="form-section-pill form-section-pill-label home-collapsible-toggle" @click="toggleSection('meat')">Meat</div>
+              <span v-if="activeSection !== 'meat' && validMeatEntries.length" class="home-collapsible-summary">{{ validMeatEntries.length }} item(s) listed</span>
+              <span
+                class="home-collapsible-chevron"
+                :class="{ 'home-collapsible-chevron-open': activeSection === 'meat' }"
+                aria-hidden="true"
+                @click="toggleSection('meat')"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </span>
+            </div>
+            <div v-if="activeSection === 'meat'" class="home-collapsible-body">
+              <div class="home-other-ingredients-inline-body">
+                <div
+                  v-for="(entry, i) in meatEntries"
+                  :key="i"
+                  class="home-other-ingredients-dropdown-row"
+                >
+                  <div class="home-other-ingredients-pill home-other-ingredients-pill-item">
+                    <button
+                      type="button"
+                      class="home-other-ingredients-select-btn"
+                      :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.meatType }"
+                      aria-haspopup="listbox"
+                      :aria-expanded="openMeatTypeRowIndex === i"
+                      :aria-label="entry.meatType || 'Meat Type'"
+                      @click="openMeatTypeDropdown(i, $event)"
+                    >
+                      {{ entry.meatType || 'Meat Type' }}
+                      <span class="home-other-ingredients-select-chevron" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+                  <div class="home-other-ingredients-pill home-other-ingredients-pill-size">
+                    <button
+                      type="button"
+                      class="home-other-ingredients-select-btn"
+                      :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.cut }"
+                      aria-haspopup="listbox"
+                      :aria-expanded="openMeatCutRowIndex === i"
+                      :aria-label="entry.cut || 'Cut / Type'"
+                      :disabled="!entry.meatType"
+                      @click="openMeatCutDropdown(i, $event)"
+                    >
+                      {{ entry.cut || 'Cut / Type' }}
+                      <span class="home-other-ingredients-select-chevron" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+                  <input
+                    v-model="entry.quantity"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="Qty"
+                    class="home-contact-input home-other-ingredients-qty-input home-other-ingredients-pill-qty"
+                    aria-label="Quantity amount"
+                  />
+                  <div class="home-other-ingredients-pill home-other-ingredients-pill-unit">
+                    <button
+                      type="button"
+                      class="home-other-ingredients-select-btn home-other-ingredients-unit-trigger"
+                      :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.quantityUnit }"
+                      aria-haspopup="listbox"
+                      :aria-expanded="openMeatUnitRowIndex === i"
+                      :aria-label="entry.quantityUnit || 'Unit'"
+                      @click="openMeatUnitDropdown(i, $event)"
+                    >
+                      {{ entry.quantityUnit || 'Unit' }}
+                      <span class="home-other-ingredients-select-chevron" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+                  <div class="home-other-ingredients-pill home-other-ingredients-pill-details">
+                    <input
+                      v-model="entry.additionalDetails"
+                      type="text"
+                      placeholder="Details"
+                      class="home-contact-input"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    class="home-phone-remove"
+                    :aria-label="`Remove row ${i + 1}`"
+                    @click.stop="store.removeMeatEntry(i)"
+                  >
+                    <span class="home-contact-btn-icon" aria-hidden="true">×</span>
+                  </button>
+                </div>
+                <div class="home-contact-dropdown-row home-contact-add-row-wrap">
+                  <span class="home-other-ingredients-add-spacer" />
+                  <button
+                    type="button"
+                    class="home-contact-add-btn-circle"
+                    aria-label="Add row"
+                    @click="store.addMeatEntry()"
+                  >
+                    <span class="home-contact-btn-icon" aria-hidden="true">+</span>
+                  </button>
+                </div>
+              </div>
+              <Teleport to="body">
+                <div
+                  v-show="openMeatTypeRowIndex !== null"
+                  ref="meatTypeDropdownRef"
+                  class="country-select-dropdown"
+                  :style="meatTypeDropdownStyle"
+                  role="listbox"
+                  tabindex="-1"
+                >
+                  <button
+                    v-for="opt in MEAT_TYPE_OPTIONS"
+                    :key="opt || 'empty'"
+                    type="button"
+                    role="option"
+                    class="country-select-option"
+                    :aria-selected="openMeatTypeRowIndex !== null && store.meatEntries[openMeatTypeRowIndex]?.meatType === opt"
+                    @click.stop="selectMeatType(opt)"
+                  >
+                    {{ opt || 'Meat Type' }}
+                  </button>
+                </div>
+              </Teleport>
+              <Teleport to="body">
+                <div
+                  v-show="openMeatCutRowIndex !== null"
+                  ref="meatCutDropdownRef"
+                  class="country-select-dropdown"
+                  :style="meatCutDropdownStyle"
+                  role="listbox"
+                  tabindex="-1"
+                >
+                  <button
+                    v-for="opt in (openMeatCutRowIndex !== null ? meatCutOptionsForRow(openMeatCutRowIndex) : [])"
+                    :key="opt || 'empty'"
+                    type="button"
+                    role="option"
+                    class="country-select-option"
+                    :aria-selected="openMeatCutRowIndex !== null && store.meatEntries[openMeatCutRowIndex]?.cut === opt"
+                    @click.stop="selectMeatCut(opt)"
+                  >
+                    {{ opt || 'Cut / Type' }}
+                  </button>
+                </div>
+              </Teleport>
+              <Teleport to="body">
+                <div
+                  v-show="openMeatUnitRowIndex !== null"
+                  ref="meatUnitDropdownRef"
+                  class="country-select-dropdown"
+                  :style="meatUnitDropdownStyle"
+                  role="listbox"
+                  tabindex="-1"
+                >
+                  <button
+                    v-for="u in MEAT_QUANTITY_UNITS"
+                    :key="u || 'empty'"
+                    type="button"
+                    role="option"
+                    class="country-select-option"
+                    :aria-selected="openMeatUnitRowIndex !== null && store.meatEntries[openMeatUnitRowIndex]?.quantityUnit === u"
+                    @click.stop="selectMeatUnit(u)"
+                  >
+                    {{ u || 'Unit' }}
+                  </button>
+                </div>
+              </Teleport>
+              <div class="ingredient-list-footer">
+                <button type="button" class="btn-pill-secondary" @click="handleBackToOther">← Back</button>
+                <button type="button" class="btn-pill-primary" :disabled="hasPartialMeatRows" @click="handleNextToDetails">Next →</button>
+              </div>
+            </div>
+          </section>
+
         </div>
         <div v-else-if="showEditSubmissionCta && hasLoadedFormLock" class="home-main home-edit-submission-state" aria-live="polite">
           <button
@@ -859,7 +1156,7 @@ async function handleSubmit() {
       </div>
     </div>
 
-    <!-- PAGE 2 -->
+    <!-- PAGE 2 — Additional Details -->
     <div v-show="currentPage === 2" class="page-wrapper" :class="{ 'form-locked': shouldLockForm }">
       <div class="home-layout home-layout-page2">
 
@@ -1484,7 +1781,81 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 1rem;
   flex: none;
+}
+
+/* When footer has both Back and Next, spread them apart */
+.ingredient-list-footer:has(.btn-pill-secondary) {
+  justify-content: space-between;
+}
+
+/* Inline body for Other Ingredients / Meat sections (not teleported dropdown) */
+.home-other-ingredients-inline-body {
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+/* Collapsible sections on page 1 */
+.home-main-collapsible {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.home-collapsible-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.75rem;
+}
+
+.home-collapsible-section {
+  transition: flex 0.25s ease;
+}
+
+.home-collapsible-section--collapsed {
+  flex: none !important;
+  overflow: hidden;
+}
+
+.home-collapsible-section--collapsed .home-collapsible-body,
+.home-collapsible-section--collapsed .form-section-ingredients-body,
+.home-collapsible-section--collapsed .ingredient-list-footer {
+  display: none;
+}
+
+.home-collapsible-header {
+  cursor: default;
+  align-items: center;
+}
+
+.home-collapsible-toggle {
+  cursor: pointer;
+}
+
+.home-collapsible-summary {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.home-collapsible-chevron {
+  display: inline-flex;
+  color: var(--color-lafayette-gray, #3c373c);
+  opacity: 0.7;
+  transition: transform 0.2s;
+  margin-left: auto;
+  cursor: pointer;
+}
+.home-collapsible-chevron-open {
+  transform: rotate(180deg);
 }
 
 /* Page 2 footer — Back on left, Submit on right */
@@ -1761,22 +2132,40 @@ async function handleSubmit() {
   min-width: 5rem;
 }
 .home-other-ingredients-pill-qty {
-  flex: 0 1 18%;
-  min-width: 8rem;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 0.25rem;
 }
-.home-other-ingredients-qty-input {
-  width: 3.5rem;
-  min-width: 3rem;
+.home-other-ingredients-pill-qty-only {
+  flex: 0 0 auto;
+  min-width: 4rem;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border, #e5e5e5);
+  border-radius: 9999px;
+  background: #fff;
   min-height: 2.5rem;
+  padding: 0.25rem 0.75rem;
+  overflow: visible;
+  min-width: 0;
+}
+.home-other-ingredients-pill-unit {
+  flex: 0 1 10%;
+  min-width: 5rem;
+}
+.home-other-ingredients-qty-input {
+  width: auto;
+  min-width: 4ch;
   text-align: center;
   border: 1px solid var(--color-border, #e5e5e5);
   border-radius: 9999px;
-  padding: 0.25rem 0.5rem;
+  padding: 0.5rem 0.75rem;
   background: #fff;
   -moz-appearance: textfield;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
 }
 .home-other-ingredients-qty-input::-webkit-outer-spin-button,
 .home-other-ingredients-qty-input::-webkit-inner-spin-button {
@@ -1791,7 +2180,7 @@ async function handleSubmit() {
 .home-other-ingredients-select-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.375rem;
   width: 100%;
   min-width: 0;
@@ -1830,6 +2219,9 @@ async function handleSubmit() {
 .home-other-ingredients-pill-details {
   flex: 1 1 30%;
   min-width: 5rem;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
 }
 .home-other-ingredients-pill-details .home-contact-input {
   min-height: 2.5rem;
