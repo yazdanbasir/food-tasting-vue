@@ -4,11 +4,10 @@ import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import type { Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
-import IngredientThumb from '@/components/IngredientThumb.vue'
 import IngredientRow from '@/components/IngredientRow.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
 import { DIETARY_FLAGS, type DietaryFlagKey } from '@/data/dietaryFlags'
-import { Plus, X } from 'lucide-vue-next'
+import { Plus, X, Drumstick } from 'lucide-vue-next'
 import KitchenResourceSelect from '@/components/KitchenResourceSelect.vue'
 import KitchenResourceMultiSelect from '@/components/KitchenResourceMultiSelect.vue'
 import { getAllSubmissions, updateSubmission, type SubmissionResponse } from '@/api/submissions'
@@ -22,7 +21,7 @@ import { aggregateDietary, notifRelativeTime, notifDotColor } from '@/utils/subm
 import type { NotificationItem } from '@/api/notifications'
 import type { Ingredient, IngredientDietary } from '@/types/ingredient'
 import { usePlacardExport } from '@/composables/usePlacardExport'
-import { toIngredient, formatUtensilsNotes, formatUtensilsNotesLines, formatUtensilsNotesStructured, parseUtensilsNotes, parseOtherIngredients, parseOtherIngredientQuantity, getOtherIngredientUnit, submissionPhoneNumbers, formatAisleTitle, countryLabel, EMPTY_DIETARY, otherEntryToIngredient, parseMeatItems, meatEntryToIngredient, MEAT_ICON_URL } from '@/utils/organizer'
+import { toIngredient, formatUtensilsNotes, formatUtensilsNotesLines, formatUtensilsNotesStructured, parseUtensilsNotes, parseOtherIngredients, parseOtherIngredientQuantity, getOtherIngredientUnit, submissionPhoneNumbers, formatAisleTitle, countryLabel, EMPTY_DIETARY, otherEntryToIngredient, parseMeatItems, meatEntryToIngredient } from '@/utils/organizer'
 
 const router = useRouter()
 const route = useRoute()
@@ -1885,12 +1884,13 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 <label class="grocery-product-checkbox-wrap">
                   <input type="checkbox" :checked="checkedMeatKeys.has(item.key)" class="grocery-checkbox" @change="toggleMeatCheck(item.key)" />
                 </label>
-                <IngredientThumb :ingredient="{ id: -1, name: item.cut || item.meatType, image_url: MEAT_ICON_URL }" />
                 <div class="grocery-product-info">
                   <span class="grocery-product-name truncate" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.cut || '—' }}</span>
                   <span class="grocery-product-size" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.quantityUnit }}</span>
                 </div>
-                <div class="grocery-product-dietary"></div>
+                <div class="grocery-product-dietary">
+                  <Drumstick :size="18" class="dietary-icon" />
+                </div>
                 <div class="grocery-product-teams truncate" :title="item.teams.join(', ')">
                   {{ item.teams.join(', ') }}
                 </div>
@@ -1923,12 +1923,13 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 <label class="grocery-product-checkbox-wrap">
                   <input type="checkbox" :checked="checkedMeatKeys.has(item.key)" class="grocery-checkbox" @change="toggleMeatCheck(item.key)" />
                 </label>
-                <IngredientThumb :ingredient="{ id: -1, name: item.cut || item.meatType, image_url: MEAT_ICON_URL }" />
                 <div class="grocery-product-info">
                   <span class="grocery-product-name truncate" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.meatType }}{{ item.cut ? ' – ' + item.cut : '' }}</span>
                   <span class="grocery-product-size" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.quantityUnit }}</span>
                 </div>
-                <div class="grocery-product-dietary"></div>
+                <div class="grocery-product-dietary">
+                  <Drumstick :size="18" class="dietary-icon" />
+                </div>
                 <div class="grocery-product-teams truncate" :title="item.teams.join(', ')">
                   {{ item.teams.join(', ') }}
                 </div>
