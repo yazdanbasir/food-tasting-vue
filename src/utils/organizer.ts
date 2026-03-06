@@ -189,9 +189,6 @@ export function parseMeatItems(sub: SubmissionResponse): Array<{ meatType: strin
   return []
 }
 
-export const MEAT_ICON_URL =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='14.5' cy='5.5' r='3'/%3E%3Cpath d='M11.7 8.3 4 16c-.8.8-.8 2.1 0 2.9s2.1.8 2.9 0l7.7-7.7'/%3E%3Cpath d='M4.5 21 3 22.5'/%3E%3Cpath d='M7.5 18 6 19.5'/%3E%3C/svg%3E"
-
 /** Map a meat entry to a minimal Ingredient for IngredientRow */
 export function meatEntryToIngredient(
   entry: { meatType: string; cut: string; quantity: string; quantityUnit: string; additionalDetails: string },
@@ -206,7 +203,7 @@ export function meatEntryToIngredient(
     size: sizePart,
     aisle: null,
     category: null,
-    image_url: MEAT_ICON_URL,
+    image_url: null,
     price_cents: 0,
     price: 0,
     dietary: EMPTY_DIETARY,

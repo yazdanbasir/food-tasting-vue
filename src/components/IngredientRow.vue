@@ -2,6 +2,7 @@
 import '@/styles/form-section.css'
 import IngredientThumb from '@/components/IngredientThumb.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
+import { Drumstick } from 'lucide-vue-next'
 import type { Ingredient } from '@/types/ingredient'
 import { ref, computed, watch, onUnmounted } from 'vue'
 
@@ -28,6 +29,8 @@ const emit = defineEmits<{
 function changeQty(delta: number) {
   emit('changeQty', delta)
 }
+
+const isMeatItem = computed(() => props.ingredient.product_id?.startsWith('meat-'))
 
 // Lightbox
 const lightboxOpen = ref(false)

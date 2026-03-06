@@ -5,6 +5,7 @@ import type { Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createConsumer } from '@rails/actioncable'
 import IngredientRow from '@/components/IngredientRow.vue'
+import IngredientThumb from '@/components/IngredientThumb.vue'
 import DietaryIcons from '@/components/DietaryIcons.vue'
 import { DIETARY_FLAGS, type DietaryFlagKey } from '@/data/dietaryFlags'
 import { Plus, X, Drumstick } from 'lucide-vue-next'
@@ -1046,6 +1047,8 @@ function deleteKuRow(kind: KuListKind, id: number) {
   const row = listRef.value.find((r) => r.id === id)
   if (!row) return
   const deletedName = row.name.trim()
+  if (!confirm(`Delete ${kind === 'helper_driver' ? 'helper/driver' : kind} "${deletedName}"? This cannot be undone.`)) return
+  
   const previous = listRef.value
   listRef.value = listRef.value.filter((r) => r.id !== id)
   if (editingKuCard.value && editingKuCard.value.kind === kind && editingKuCard.value.id === id) {
@@ -1884,16 +1887,13 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 <label class="grocery-product-checkbox-wrap">
                   <input type="checkbox" :checked="checkedMeatKeys.has(item.key)" class="grocery-checkbox" @change="toggleMeatCheck(item.key)" />
                 </label>
+                <IngredientThumb :ingredient="{ id: -1, name: item.cut || item.meatType, image_url: null, product_id: 'meat-grocery' }" />
                 <div class="grocery-product-info">
                   <span class="grocery-product-name truncate" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.cut || '—' }}</span>
                   <span class="grocery-product-size" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.quantityUnit }}</span>
                 </div>
-                <div class="grocery-product-dietary">
-                  <Drumstick :size="18" class="dietary-icon" />
-                </div>
-                <div class="grocery-product-teams truncate" :title="item.teams.join(', ')">
-                  {{ item.teams.join(', ') }}
-                </div>
+                <div class="grocery-product-dietary"></div>
+                <div class="grocery-product-teams truncate" :title="item.teams.join(', ')" style="display: none;"></div>
                 <div class="grocery-product-price tabular-nums"></div>
                 <div class="grocery-product-actions">
                   <span class="qty-controls">
@@ -1923,16 +1923,13 @@ function helperOptionsForSelect(sub: SubmissionResponse): string[] {
                 <label class="grocery-product-checkbox-wrap">
                   <input type="checkbox" :checked="checkedMeatKeys.has(item.key)" class="grocery-checkbox" @change="toggleMeatCheck(item.key)" />
                 </label>
+                <IngredientThumb :ingredient="{ id: -1, name: item.meatType + (item.cut ? ' – ' + item.cut : ''), image_url: null, product_id: 'meat-grocery' }" />
                 <div class="grocery-product-info">
                   <span class="grocery-product-name truncate" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.meatType }}{{ item.cut ? ' – ' + item.cut : '' }}</span>
                   <span class="grocery-product-size" :class="{ 'line-through': checkedMeatKeys.has(item.key) }">{{ item.quantityUnit }}</span>
                 </div>
-                <div class="grocery-product-dietary">
-                  <Drumstick :size="18" class="dietary-icon" />
-                </div>
-                <div class="grocery-product-teams truncate" :title="item.teams.join(', ')">
-                  {{ item.teams.join(', ') }}
-                </div>
+                <div class="grocery-product-dietary"></div>
+                <div class="grocery-product-teams truncate" :title="item.teams.join(', ')" style="display: none;"></div>
                 <div class="grocery-product-price tabular-nums"></div>
                 <div class="grocery-product-actions">
                   <span class="qty-controls">

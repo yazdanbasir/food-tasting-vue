@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { Drumstick } from 'lucide-vue-next'
 import type { Ingredient } from '@/types/ingredient'
 
 const props = defineProps<{
-  ingredient: Pick<Ingredient, 'id' | 'name' | 'image_url'>
+  ingredient: Pick<Ingredient, 'id' | 'name' | 'image_url' | 'product_id'>
 }>()
 
 const imageLoadFailed = ref(false)
@@ -30,6 +31,7 @@ const imageSrc = computed(() => {
 })
 
 const isDataUri = computed(() => !!imageSrc.value?.startsWith('data:'))
+const isMeatItem = computed(() => props.ingredient?.product_id?.startsWith('meat-'))
 
 const showImage = computed(
   () => imageSrc.value && !imageLoadFailed.value && (imageLoaded.value || isDataUri.value)
@@ -53,7 +55,8 @@ const showImage = computed(
       class="ingredient-thumb ingredient-thumb-placeholder"
       aria-hidden="true"
     >
-      <svg class="ingredient-thumb-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <Drumstick v-if="isMeatItem" :size="24" class="ingredient-thumb-placeholder-icon" />
+      <svg v-else class="ingredient-thumb-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
         <path d="M3.27 6.96L12 12.01l8.73-5.05" />
         <path d="M12 22.08V12" />
