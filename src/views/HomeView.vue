@@ -121,18 +121,14 @@ function toggleContactDropdown() {
   }
 }
 
-function phoneDigits(val: string): string {
-  return val.replace(/\D/g, '')
-}
-
-function storedPhonesDigits(submission: { phone_number?: string | null }): string[] {
-  const raw = (submission.phone_number ?? '').trim()
-  if (!raw) return []
-  return raw.split(/\s*,\s*/).map((s) => phoneDigits(s)).filter(Boolean)
+function normalizedConflictPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length >= 10) return digits.slice(-10)
+  return digits || raw.trim()
 }
 
 function conflictMessageForPhone(raw: string): string {
-  return `${raw} has already been added to another group`
+  return `${normalizedConflictPhone(raw)} has already been added to another group`
 }
 
 async function hasPhoneConflictWithAnotherGroup(): Promise<boolean> {
@@ -143,10 +139,7 @@ async function hasPhoneConflictWithAnotherGroup(): Promise<boolean> {
     for (const phone of validPhoneNumbers.value) {
       try {
         const { submission } = await lookupSubmissionByPhone(phone)
-        if (editingId != null && submission.id === editingId) continue
-        const queryDigits = phoneDigits(phone)
-        const stored = storedPhonesDigits(submission)
-        if (stored.some((d) => d === queryDigits)) {
+        if (editingId == null || submission.id !== editingId) {
           contactPhoneConflictError.value = conflictMessageForPhone(phone)
           return true
         }
@@ -217,27 +210,6 @@ function handleContactClickOutside(e: MouseEvent) {
     utensilsTriggerRef.value && !utensilsTriggerRef.value.contains(target)
   ) {
     utensilsDropdownOpen.value = false
-  }
-  if (
-    openMeatTypeRowIndex.value !== null &&
-    !(target as Element).closest?.('.home-meat-type-trigger') &&
-    !meatTypeDropdownRef.value?.contains(target)
-  ) {
-    openMeatTypeRowIndex.value = null
-  }
-  if (
-    openMeatCutRowIndex.value !== null &&
-    !(target as Element).closest?.('.home-meat-cut-trigger') &&
-    !meatCutDropdownRef.value?.contains(target)
-  ) {
-    openMeatCutRowIndex.value = null
-  }
-  if (
-    openMeatUnitRowIndex.value !== null &&
-    !(target as Element).closest?.('.home-meat-unit-trigger') &&
-    !meatUnitDropdownRef.value?.contains(target)
-  ) {
-    openMeatUnitRowIndex.value = null
   }
 }
 
@@ -318,6 +290,7 @@ function handleUtensilsSave() {
 }
 
 function openMeatTypeDropdown(i: number, e: MouseEvent) {
+  if (openMeatTypeRowIndex.value === i) { openMeatTypeRowIndex.value = null; return }
   const el = e.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
   meatTypeDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
@@ -333,6 +306,7 @@ function selectMeatType(opt: string) {
 }
 
 function openMeatCutDropdown(i: number, e: MouseEvent) {
+  if (openMeatCutRowIndex.value === i) { openMeatCutRowIndex.value = null; return }
   const el = e.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
   meatCutDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
@@ -348,6 +322,7 @@ function selectMeatCut(opt: string) {
 }
 
 function openMeatUnitDropdown(i: number, e: MouseEvent) {
+  if (openMeatUnitRowIndex.value === i) { openMeatUnitRowIndex.value = null; return }
   const el = e.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
   meatUnitDropdownStyle.value = { position: 'fixed', top: `${rect.bottom + 4}px`, left: `${rect.left}px`, minWidth: `${rect.width}px` }
@@ -618,7 +593,7 @@ async function handleSubmit() {
               <li><span class="home-reminders-line">Please remain available on <strong>DATE</strong> around <strong>TIME</strong> so we can call you while we are shopping in case we need clarification</span></li>
               <li><span class="home-reminders-line">If you need to edit your submission, click Submissions in the top right and enter your phone number</span></li>
               <li><span class="home-reminders-line">We will provide basic equipment on the day of the event - gloves, trays, serving utensils, heating units - so please don't request those. Anything else you may need, feel free to add (pots, pans, strainers, ladles etc)</span></li>
-              <li><span class="home-reminders-line">Please do not submit from the Giant search. There will be another section to specify what you need. We will buy it in bulk from the Halal store</span></li>
+              <li><span class="home-reminders-line">Please do not submit meat from the Giant search. There will be another section to specify what you need. We will buy it in bulk from the Halal store</span></li>
             </ul>
           </div>
         </div>
@@ -1004,7 +979,7 @@ async function handleSubmit() {
                   <div class="home-other-ingredients-pill home-other-ingredients-pill-item">
                     <button
                       type="button"
-                      class="home-other-ingredients-select-btn home-meat-type-trigger"
+                      class="home-other-ingredients-select-btn"
                       :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.meatType }"
                       aria-haspopup="listbox"
                       :aria-expanded="openMeatTypeRowIndex === i"
@@ -1022,7 +997,7 @@ async function handleSubmit() {
                   <div class="home-other-ingredients-pill home-other-ingredients-pill-size">
                     <button
                       type="button"
-                      class="home-other-ingredients-select-btn home-meat-cut-trigger"
+                      class="home-other-ingredients-select-btn"
                       :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.cut }"
                       aria-haspopup="listbox"
                       :aria-expanded="openMeatCutRowIndex === i"
@@ -1050,7 +1025,7 @@ async function handleSubmit() {
                   <div class="home-other-ingredients-pill home-other-ingredients-pill-unit">
                     <button
                       type="button"
-                      class="home-other-ingredients-select-btn home-meat-unit-trigger"
+                      class="home-other-ingredients-select-btn home-other-ingredients-unit-trigger"
                       :class="{ 'home-other-ingredients-select-btn--placeholder': !entry.quantityUnit }"
                       aria-haspopup="listbox"
                       :aria-expanded="openMeatUnitRowIndex === i"
@@ -2157,7 +2132,8 @@ async function handleSubmit() {
   min-width: 5rem;
 }
 .home-other-ingredients-pill-qty {
-  flex: 0 0 auto;
+  flex: 0 1 18%;
+  min-width: 8rem;
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -2180,15 +2156,16 @@ async function handleSubmit() {
   min-width: 5rem;
 }
 .home-other-ingredients-qty-input {
-  width: auto;
-  min-width: 4ch;
+  width: 3.5rem;
+  min-width: 3rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
   text-align: center;
   border: 1px solid var(--color-border, #e5e5e5);
   border-radius: 9999px;
-  padding: 0.5rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   background: #fff;
   -moz-appearance: textfield;
-  appearance: textfield;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -2206,7 +2183,7 @@ async function handleSubmit() {
 .home-other-ingredients-select-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 0.375rem;
   width: 100%;
   min-width: 0;
