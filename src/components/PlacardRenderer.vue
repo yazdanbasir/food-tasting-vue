@@ -77,7 +77,7 @@ const flag = computed(() =>
           class="placard-dietary-icon"
           :title="label"
         >
-          <component :is="icon" :size="22" aria-hidden="true" />
+          <component :is="icon" :size="32" aria-hidden="true" />
           <span class="placard-dietary-label">{{ label }}</span>
         </span>
       </div>
@@ -206,12 +206,12 @@ const flag = computed(() =>
 
 .placard-dietary-icon svg {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
 }
 
 .placard-dietary-label {
-  font-size: 6.5pt;
+  font-size: 9pt;
   white-space: nowrap;
   opacity: 0.7;
 }
