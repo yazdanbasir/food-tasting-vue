@@ -643,6 +643,22 @@
 .grocery-master-card-checked .grocery-aisle-dish-text {
   text-decoration: line-through;
 }
+/* Allow the name col and pill to shrink/wrap so long item names stay inside the card */
+.grocery-master-card .grocery-aisle-name-col {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.grocery-master-card .grocery-aisle-dish-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.grocery-master-card .grocery-aisle-dish-pill .form-section-pill-input,
+.grocery-master-card .grocery-aisle-dish-text {
+  white-space: normal;
+  word-break: break-word;
+}
 
 .grocery-utensils-row {
   cursor: default;
