@@ -115,7 +115,8 @@ onUnmounted(() => {
 }
 
 .resource-select-btn {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
@@ -131,6 +132,7 @@ onUnmounted(() => {
   text-align: center;
   white-space: normal;
   word-break: break-word;
+  overflow: hidden;
   outline: none;
 }
 

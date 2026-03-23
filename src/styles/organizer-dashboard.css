@@ -171,6 +171,7 @@
 /* Col 1: pill structure styles */
 .submission-bar {
   min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -196,9 +197,9 @@
 }
 
 .submission-bar .submission-dish-pill {
-  flex: none;
-  width: fit-content;
+  flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .submission-dish-pill .form-section-pill-input {
@@ -1108,7 +1109,7 @@
 }
 
 .kitchen-cell-editable {
-  overflow: visible;
+  overflow: hidden;
   cursor: default;
 }
 
